@@ -26,12 +26,6 @@ public class ChecklistRunController {
         return service.authorizeByManager(id, manager);
     }
 
-    // Manager rejects checklist
-    @PostMapping("/reject/{id}")
-    public ChecklistRun rejectChecklist(@PathVariable Long id, @RequestBody User manager) {
-        return service.rejectChecklist(id, manager);
-    }
-
     // Get all pending checklists (for manager dashboard)
     @GetMapping("/pending")
     public List<ChecklistRun> getPendingChecklists() {

@@ -1,7 +1,6 @@
 package com.example.seed2stem;
 
 import jakarta.persistence.*;
-import org.springframework.data.annotation.Id;
 
 @Entity
 @Table(name = "users") // "user" is a reserved keyword in many DBs
@@ -57,5 +56,25 @@ public class User {
     }
     public void setAccountType(AccountType accountType) {
         this.accountType = accountType;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+    public String getLastName() {
+        return lastName;
+    }
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
+
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
     }
 }

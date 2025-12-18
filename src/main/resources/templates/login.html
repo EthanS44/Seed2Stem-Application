@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -63,17 +63,28 @@
 <body>
 
 <div class="login-container">
-    <img src="static.images/Seed2Stem_Logo.png" style="width: 100%; height: auto;" alt="Seed2Stem Logo" class="logo">
+    <img src="/Seed2Stem_Logo.png" style="width: 100%; height: auto;" alt="Seed2Stem Logo" class="logo">
 
     <h2>Login</h2>
 
-    <form action="/login" method="POST">
+    <form th:action="@{/auth/login}" method="POST">
         <input type="text" id="username" name="username" placeholder="Username" required>
 
         <input type="password" id="password" name="password" placeholder="Password" required>
 
         <button type="submit">Sign In</button>
     </form>
+
+    <!-- Show error/success messages via query params -->
+    <div style="color:red;">
+        <span th:text="${param.error}"></span>
+    </div>
+    <div style="color:green;">
+        <span th:text="${param.success}"></span>
+        <span th:text="${param.logout}"></span>
+    </div>
+
+    <a th:href="@{/auth/register}">Create an account</a>
 
     <div class="footer">
         © Seed2Stem

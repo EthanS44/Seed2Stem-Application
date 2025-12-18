@@ -40,19 +40,19 @@ public class ChecklistRunService {
         return runRepo.save(run);
     }
 
-    // Optionally reject
+    // Manager edits responses (while still PENDING)
     @Transactional
-    public ChecklistRun rejectChecklist(Long runId, User manager) {
+    public ChecklistRun updateResponses(Long runId, List<ChecklistResponse> responses) {
         ChecklistRun run = runRepo.findById(runId)
-                .orElseThrow(() -> new RuntimeException("ChecklistRun not found"));
+                .orElseThrow(() -> new RuntimeException("Checklist not found"));
 
         if (run.getStatus() != ChecklistRunStatus.PENDING) {
-            throw new RuntimeException("ChecklistRun is not pending approval");
+            throw new RuntimeException("Cannot edit approved checklist");
         }
 
-        run.setAuthorizedBy(manager);
-        run.setAuthorizedAt(LocalDateTime.now());
-        run.setStatus(ChecklistRunStatus.REJECTED);
+        run.getResponses().clear();
+        responses.forEach(r -> r.setChecklistRun(run));
+        run.getResponses().addAll(responses);
 
         return runRepo.save(run);
     }

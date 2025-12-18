@@ -21,6 +21,41 @@ public class ChecklistItem {
     @JoinColumn(name = "checklist_id")
     private Checklist checklist;
 
-    // getters and setters
+    public Checklist getChecklist() {
+        return checklist;
+    }
+    public void setChecklist(Checklist checklist) {
+        this.checklist = checklist;
+    }
+    public Long getId() {
+        return id;
+    }
+    public void setId(Long id) {
+        this.id = id;
+    }
+    public String getQuestion() {
+        return question;
+    }
+    public void setQuestion(String question) {
+        this.question = question;
+    }
+    public String getResponseType() {
+        return responseType;
+    }
+    public void setResponseType(String responseType) {
+        this.responseType = responseType;
+    }
+    public Integer getItemOrder() {
+        return itemOrder;
+    }
+    public void setItemOrder(Integer itemOrder) {
+        this.itemOrder = itemOrder;
+    }
+    public Boolean getRequired() {
+        return required;
+    }
+    public void setRequired(Boolean required) {
+        this.required = required;
+    }
 }
 
