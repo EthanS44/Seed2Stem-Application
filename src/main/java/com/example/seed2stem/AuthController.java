@@ -39,11 +39,7 @@ public class AuthController {
         try {
             User user = authService.login(username, password);
             session.setAttribute("loggedInUser", user);
-            if (user.getAccountType() == AccountType.MANAGER) {
-                return "redirect:/manager-dashboard";
-            } else {
-                return "redirect:/technician-dashboard";
-            }
+            return "redirect:/dashboard/home-dashboard";
         } catch (RuntimeException e) {
             redirectAttributes.addAttribute("error", e.getMessage());
             return "redirect:/auth/login";
