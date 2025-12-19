@@ -142,9 +142,9 @@
 
         <div class="task-list">
             <div class="task-item"
-                 th:each="checklist : ${pendingApprovalChecklists}"
-                 th:text="${checklist.name}"
-                 th:onclick="|window.location='/checklists/approve/' + ${checklist.id}|">
+                 th:each="checklistRun : ${pendingApprovalChecklists}"
+                 th:text="${checklistRun.get(name)} + '-' + ${checklistRun.getCompletedAt()}"
+                 th:onclick="|window.location='/checklists/approve/' + ${checklistRun.getId()}|">
             </div>
 
             <div th:if="${#lists.isEmpty(pendingApprovalChecklists)}">

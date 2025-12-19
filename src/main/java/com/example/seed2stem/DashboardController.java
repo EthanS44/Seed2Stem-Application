@@ -12,6 +12,9 @@ public class DashboardController {
     @GetMapping("/home-dashboard")
     public String homeDashboard(HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) {
+            return "redirect:/auth/login";
+        }
         if (user.getAccountType() == AccountType.MANAGER) {
             return "redirect:/dashboard/manager-dashboard";
         } else {
@@ -20,12 +23,22 @@ public class DashboardController {
     }
 
     @GetMapping("/technician-dashboard")
-    public String technicianDashboard(){
+    public String technicianDashboard(HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+
+        if (user == null) {
+            return "redirect:/auth/login";
+        }
         return  "technician-dashboard";
     }
 
     @GetMapping("/manager-dashboard")
-    public String managerDashboard(){
+    public String managerDashboard(HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+
+        if (user == null) {
+            return "redirect:/auth/login";
+        }
         return  "manager-dashboard";
     }
 
@@ -44,12 +57,22 @@ public class DashboardController {
     }
 
     @GetMapping("/technician-task-dashboard")
-    public String technicianTaskDashboard(){
+    public String technicianTaskDashboard(HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+
+        if (user == null) {
+            return "redirect:/auth/login";
+        }
         return  "technician-task-dashboard";
     }
 
-    @GetMapping("manager-task-dashboard")
-    public String managerTaskDashboard(){
+    @GetMapping("/manager-task-dashboard")
+    public String managerTaskDashboard(HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+
+        if (user == null) {
+            return "redirect:/auth/login";
+        }
         return  "manager-task-dashboard";
     }
 
