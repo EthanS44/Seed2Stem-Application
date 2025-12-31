@@ -16,7 +16,8 @@ public class ChecklistRun {
     @ManyToOne
     @JoinColumn(name = "completed_by_user_id", nullable = false)
     private User completedBy;
-    private LocalDateTime completedAt;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
 
     @ManyToOne
     @JoinColumn(name = "authorized_by_user_id")
@@ -35,7 +36,7 @@ public class ChecklistRun {
     private List<ChecklistResponse> responses;
 
     public void setCompletedAt(LocalDateTime completedAt) {
-        this.completedAt = completedAt;
+        this.startTime = completedAt;
     }
 
     public void setStatus(ChecklistRunStatus checklistRunStatus) {
@@ -66,8 +67,11 @@ public class ChecklistRun {
     public User getCompletedBy() {
         return completedBy;
     }
-    public LocalDateTime getCompletedAt() {
-        return completedAt;
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+    public LocalDateTime getEndTime() {
+        return endTime;
     }
     public User getAuthorizedBy() {
         return authorizedBy;

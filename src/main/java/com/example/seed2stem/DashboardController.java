@@ -2,12 +2,21 @@ package com.example.seed2stem;
 
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+
+import java.util.List;
 
 @Controller
 @RequestMapping("/dashboard")
 public class DashboardController {
+
+    private final TaskRepository taskRepo;
+
+    public DashboardController(TaskRepository taskRepo) {
+        this.taskRepo = taskRepo;
+    }
 
     @GetMapping("/home-dashboard")
     public String homeDashboard(HttpSession session) {
@@ -57,12 +66,15 @@ public class DashboardController {
     }
 
     @GetMapping("/technician-task-dashboard")
-    public String technicianTaskDashboard(HttpSession session) {
+    public String technicianTaskDashboard(HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
 
         if (user == null) {
             return "redirect:/auth/login";
         }
+        List<Task> myTasks = taskRepo.findAll();
+
+        model.addAttribute("myTasks", myTasks);
         return  "technician-task-dashboard";
     }
 

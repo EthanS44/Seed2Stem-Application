@@ -2,6 +2,7 @@ package com.example.seed2stem;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -16,7 +17,7 @@ public class Checklist {
     private Integer version;
 
     @OneToMany(mappedBy = "checklist", cascade = CascadeType.ALL)
-    private List<ChecklistItem> items;
+    private List<ChecklistItem> items = new ArrayList<>();
 
     public Checklist() {
     }
@@ -49,6 +50,9 @@ public class Checklist {
     }
     public void setItems(List<ChecklistItem> items) {
         this.items = items;
+    }
+    public void addItem(ChecklistItem item) {
+        this.items.add(item);
     }
 
 }

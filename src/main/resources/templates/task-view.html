@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seed2Stem Home</title>
+    <title>Task View</title>
+
     <style>
         body {
             margin: 0;
@@ -11,7 +12,6 @@
             background-color: #f4f7f9;
         }
 
-        /* Top Navigation Bar */
         .topbar {
             width: 100%;
             height: 60px;
@@ -38,13 +38,12 @@
             padding-right: 40px;
         }
 
-        /* Left Sidebar */
         .sidebar {
             width: 200px;
             background-color: #2e7d32;
             color: white;
             height: 100vh;
-            padding-top: 80px; /* space for topbar */
+            padding-top: 80px;
             position: fixed;
             top: 0;
             left: 0;
@@ -62,42 +61,43 @@
             background-color: #1b5e20;
         }
 
-        /* Main Content */
         .content {
             margin-left: 200px;
-            padding: 80px 30px 30px 30px; /* top padding for topbar */
+            padding: 100px 40px 40px 40px;
+            max-width: 800px;
         }
 
-        h1 {
-            color: #333;
-        }
-
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 25px;
-            margin-top: 100px;
-            margin-left: 300px;
-            margin-right: 100px;
-        }
-
-        .menu-card {
+        .task-card {
             background-color: white;
             border-radius: 12px;
-            padding: 40px 20px;
-            text-align: center;
-            text-decoration: none;
-            font-size: 20px;
-            font-weight: bold;
-            color: #2e7d32;
-            cursor: pointer;
+            padding: 40px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .menu-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 18px rgba(0,0,0,0.15);
+        .task-card h1 {
+            margin-top: 0;
+            color: #2e7d32;
+        }
+
+        .task-description {
+            font-size: 18px;
+            color: #555;
+            margin: 20px 0 40px;
+            line-height: 1.5;
+        }
+
+        .start-btn {
+            background-color: #2e7d32;
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .start-btn:hover {
+            background-color: #1b5e20;
         }
     </style>
 </head>
@@ -106,7 +106,7 @@
 <!-- Top Bar -->
 <div class="topbar">
     <div class="topbar-title">Seed2Stem</div>
-    <img src="/Seed2Stem_Logo.png" alt="Seed2Stem Logo" class="topbar-logo">
+    <img src="/Seed2Stem_Logo.png" class="topbar-logo">
 </div>
 
 <!-- Sidebar -->
@@ -116,41 +116,19 @@
     <a th:href="@{/auth/login}">Logout</a>
 </div>
 
-<!-- Main Content -->
-<div class="menu-grid">
+<!-- Content -->
+<div class="content">
+    <div class="task-card">
+        <h1 th:text="${task.getTitle()}">Task Name</h1>
+        <div class="task-description" th:text="${task.getDescription()}">
+            Task description goes here.
+        </div>
 
-    <a class="menu-card">
-        <span class="menu-icon">🏭</span>
-        Facility
-    </a>
-
-    <a class="menu-card">
-        <span class="menu-icon">⚙️</span>
-        Processing
-    </a>
-
-    <a th:href="@{/dashboard/task-dashboard}" class="menu-card">
-        <span class="menu-icon">🌱</span>
-        Production
-    </a>
-
-    <a class="menu-card">
-        <span class="menu-icon">📦</span>
-        Inventory
-    </a>
-
-    <a class="menu-card">
-        <span class="menu-icon">📄</span>
-        SOP
-    </a>
-
-    <a class="menu-card">
-        <span class="menu-icon">🧩</span>
-        Other
-    </a>
-
+        <a th:href="@{/tasks/{id}/start(id=${task.getId()})}">
+            <button class="start-btn">Start Task</button>
+        </a>
+    </div>
 </div>
 
 </body>
 </html>
-

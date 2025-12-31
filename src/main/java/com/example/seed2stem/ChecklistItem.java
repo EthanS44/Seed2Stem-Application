@@ -13,9 +13,8 @@ public class ChecklistItem {
     @Column(columnDefinition = "TEXT")
     private String question;
 
-    private String responseType; // BOOLEAN, TEXT, NUMBER
+    private String responseType; // BOOLEAN_TEXT, TEXT, NUMBER, NONE
     private Integer itemOrder;
-    private Boolean required;
 
     @ManyToOne
     @JoinColumn(name = "checklist_id")
@@ -50,12 +49,6 @@ public class ChecklistItem {
     }
     public void setItemOrder(Integer itemOrder) {
         this.itemOrder = itemOrder;
-    }
-    public Boolean getRequired() {
-        return required;
-    }
-    public void setRequired(Boolean required) {
-        this.required = required;
     }
 }
 
