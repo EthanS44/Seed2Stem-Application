@@ -53,6 +53,9 @@ public class ChecklistResponse {
     public String getTextAnswer() {
         return textAnswer;
     }
+    public Double getNumericAnswer() {
+        return numericAnswer;
+    }
     public ChecklistRun getChecklistRun() {
         return checklistRun;
     }

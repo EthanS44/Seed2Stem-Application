@@ -1,10 +1,13 @@
 package com.example.seed2stem;
 
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+
+import java.time.LocalDateTime;
 
 @Controller
 @RequestMapping("/tasks")
@@ -12,11 +15,13 @@ public class TaskViewController {
 
     private final TaskRepository taskRepo;
     private final ChecklistItemRepository itemRepo;
+    private final ChecklistRunRepository runRepo;
 
     public TaskViewController(TaskRepository taskRepo,
-                          ChecklistItemRepository itemRepo) {
+                          ChecklistItemRepository itemRepo, ChecklistRunRepository runRepo) {
         this.taskRepo = taskRepo;
         this.itemRepo = itemRepo;
+        this.runRepo = runRepo;
     }
 
     /* ---------------- Task View ---------------- */
@@ -34,15 +39,24 @@ public class TaskViewController {
     /* -------------- Checklist View -------------- */
 
     @GetMapping("/{taskId}/start")
-    public String startTask(@PathVariable Long taskId, Model model) {
+    public String startTask(@PathVariable Long taskId, Model model, HttpSession session) {
 
         Task task = taskRepo.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        User user = (User) session.getAttribute("loggedInUser");
+
+        ChecklistRun run = new ChecklistRun();
+        run.setTask(task);
+        run.setCompletedBy(user);
+        run.setStartTime(LocalDateTime.now());
+        runRepo.save(run);
 
         Checklist checklist = task.getChecklist();
 
         model.addAttribute("task", task);
         model.addAttribute("checklist", checklist);
+        model.addAttribute("runId", run.getId());
         model.addAttribute(
                 "items",
                 itemRepo.findByChecklistIdOrderByItemOrder(checklist.getId())

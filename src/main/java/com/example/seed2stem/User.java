@@ -70,7 +70,9 @@ public class User {
     public void setLastName(String lastName) {
         this.lastName = lastName;
     }
-
+    public String getName() {
+        return firstName + " " + lastName;
+    }
     public Long getId() {
         return id;
     }

@@ -13,9 +13,11 @@ import java.util.List;
 public class DashboardController {
 
     private final TaskRepository taskRepo;
+    private ChecklistRunService checklistRunService;
 
-    public DashboardController(TaskRepository taskRepo) {
+    public DashboardController(TaskRepository taskRepo, ChecklistRunService checklistRunService) {
         this.taskRepo = taskRepo;
+        this.checklistRunService = checklistRunService;
     }
 
     @GetMapping("/home-dashboard")
@@ -79,12 +81,19 @@ public class DashboardController {
     }
 
     @GetMapping("/manager-task-dashboard")
-    public String managerTaskDashboard(HttpSession session) {
+    public String managerTaskDashboard(HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
 
         if (user == null) {
             return "redirect:/auth/login";
         }
+        List<Task> myTasks = taskRepo.findAll();
+
+        model.addAttribute("myTasks", myTasks);
+        model.addAttribute(
+                "pendingRuns",
+                checklistRunService.getPendingChecklists()
+        );
         return  "manager-task-dashboard";
     }
 

@@ -15,17 +15,21 @@ public class ChecklistRunService {
         this.runRepo = runRepo;
     }
 
+    public ChecklistRun getChecklistById(Long runId){
+        return runRepo.findById(runId).orElseThrow();
+    }
+
     // Technician submits checklist
     @Transactional
     public ChecklistRun submitByTechnician(ChecklistRun run) {
-        run.setCompletedAt(LocalDateTime.now());
+        run.setEndTime(LocalDateTime.now());
         run.setStatus(ChecklistRunStatus.PENDING);
         return runRepo.save(run);
     }
 
     // Manager approves checklist
     @Transactional
-    public ChecklistRun authorizeByManager(Long runId, User manager) {
+    public ChecklistRun authorizeByManager(Long runId, User manager, String managerComments) {
         ChecklistRun run = runRepo.findById(runId)
                 .orElseThrow(() -> new RuntimeException("ChecklistRun not found"));
 
@@ -35,6 +39,7 @@ public class ChecklistRunService {
 
         run.setAuthorizedBy(manager);
         run.setAuthorizedAt(LocalDateTime.now());
+        run.setManagerComments(managerComments);
         run.setStatus(ChecklistRunStatus.APPROVED);
 
         return runRepo.save(run);

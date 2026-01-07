@@ -25,6 +25,8 @@ public class ChecklistRun {
 
     private LocalDateTime authorizedAt;
 
+    private String managerComments;
+
     @Enumerated(EnumType.STRING)
     private ChecklistRunStatus status = ChecklistRunStatus.PENDING;
 
@@ -35,7 +37,11 @@ public class ChecklistRun {
     @OneToMany(mappedBy = "checklistRun", cascade = CascadeType.ALL)
     private List<ChecklistResponse> responses;
 
-    public void setCompletedAt(LocalDateTime completedAt) {
+    public void setEndTime(LocalDateTime completedAt) {
+        this.endTime = completedAt;
+    }
+
+    public void setStartTime(LocalDateTime completedAt) {
         this.startTime = completedAt;
     }
 
@@ -81,6 +87,16 @@ public class ChecklistRun {
     }
     public List<ChecklistResponse> getResponses() {
         return responses;
+    }
+
+    public Task getTask() {
+        return task;
+    }
+    public String getManagerComments() {
+        return managerComments;
+    }
+    public void setManagerComments(String managerComments) {
+        this.managerComments = managerComments;
     }
 
 }

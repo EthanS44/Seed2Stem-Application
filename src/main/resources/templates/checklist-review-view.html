@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checklist</title>
+    <title>Manager Checklist Review</title>
 
     <style>
-        /* Boolean buttons */
+        /* Boolean buttons for display */
         .boolean-buttons {
             display: flex;
             gap: 20px;
@@ -23,48 +23,18 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            background-color: #a0a0a0; /* default gray */
-            transition: background-color 0.2s ease;
+            cursor: default; /* not editable */
             position: relative;
         }
 
-        /* hide the input inside the label */
-        .boolean-buttons input {
-            position: absolute;
-            opacity: 0;
-            cursor: pointer;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-        }
-
-        /* Hover effect for unselected buttons */
-        .boolean-buttons label:hover {
-            background-color: #888888; /* slightly darker on hover */
-        }
-
-        /* Trick: use label:has() for modern browsers */
-        .yes-btn:has(input:checked) {
+        .yes-btn {
             background-color: #4CAF50;
         }
 
-        .no-btn:has(input:checked) {
+        .no-btn {
             background-color: #f44336;
         }
 
-        /* Hover effect for selected buttons (slightly darker) */
-        .yes-btn:has(input:checked):hover {
-            background-color: #3e8e41; /* slightly darker green */
-        }
-
-        .no-btn:has(input:checked):hover {
-            background-color: #d32f2f; /* slightly darker red */
-        }
-
-
-        /* Smaller textarea */
         .small-textarea {
             width: 100%;
             max-width: 500px;
@@ -76,6 +46,7 @@
             border-radius: 6px;
             border: 1px solid #ccc;
         }
+
         body {
             margin: 0;
             font-family: Arial, sans-serif;
@@ -164,26 +135,6 @@
             margin-left: 10px;
         }
 
-        .answers label {
-            margin-right: 20px;
-            font-size: 16px;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        textarea {
-            width: 100%;
-            max-width: 500px;
-            padding: 10px;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
         .submit-btn {
             margin-top: 30px;
             background-color: #2e7d32;
@@ -199,7 +150,10 @@
             background-color: #1b5e20;
         }
 
-
+        .checklist-divider {
+            margin: 25px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
     </style>
 </head>
 <body>
@@ -221,58 +175,73 @@
 <div class="content">
     <div class="checklist-card">
 
-        <h1 th:text="${checklist.getName()}">Checklist Name</h1>
+        <h1 th:text="${task.getTitle()}">Checklist Name</h1>
+        <p>
+            <strong>Completed by:</strong>
+            <span th:text="${run.getCompletedBy().getName()}">Name</span>
+        </p>
 
-        <form th:action="@{/checklist-runs/submit}" method="post">
+        <p>
+            <strong>Inspection Date:</strong>
+            <span th:text="${#temporals.format(run.getStartTime(), 'MMM d, yyyy')}">Date</span>
+        </p>
 
-            <input type="hidden" name="taskId" th:value="${task.getId()}" />
-            <input type="hidden" name="runId" th:value="${runId}">
+        <p>
+            <strong>Start Time:</strong>
+            <span th:text="${#temporals.format(run.getStartTime(), 'h:mm a')}">Start</span>
+        </p>
 
-            <div th:each="item : ${items}" class="checklist-item">
+        <p>
+            <strong>End Time:</strong>
+            <span th:text="${#temporals.format(run.getEndTime(), 'h:mm a')}">End</span>
+        </p>
 
-                <div class="question" th:text="${item.getItemOrder() + '. ' + item.getQuestion()}">
+        <div class="checklist-divider"></div>
+
+        <form th:action="@{/checklist-runs/runs/{runId}/approve(runId=${run.getId()})}" method="post">
+
+        <input type="hidden" th:name="runId" th:value="${run.getId()}" />
+
+            <div th:each="response : ${responses}" class="checklist-item">
+                <div class="question" th:text="${response.getChecklistItem().getItemOrder() + '. ' + response.getChecklistItem().getQuestion()}">
                     Question text
                 </div>
 
                 <div class="answers">
 
                     <!-- BOOLEAN + TEXT -->
-                    <div th:if="${item.responseType == 'BOOLEAN_TEXT'}">
-
+                    <div th:if="${response.getChecklistItem().getResponseType() == 'BOOLEAN_TEXT'}">
                         <div class="boolean-buttons">
-                            <label class="yes-btn">
-                                <input type="radio" th:name="'bool_' + ${item.getId()}" value="true">
-                                YES
-                            </label>
-
-                            <label class="no-btn">
-                                <input type="radio" th:name="'bool_' + ${item.getId()}" value="false">
-                                NO
-                            </label>
+                            <label class="yes-btn" th:if="${response.getBooleanAnswer() == true}">YES</label>
+                            <label class="no-btn" th:if="${response.getBooleanAnswer() == false}">NO</label>
+                            <label th:if="${response.getBooleanAnswer() == null}" style="background-color:#a0a0a0;color:white;">N/A</label>
                         </div>
-
-                        <textarea class="small-textarea" th:name="'text_' + ${item.getId()}" placeholder="Additional details (optional)"></textarea>
-
+                        <!-- Only display text if technician entered something -->
+                        <div th:if="${response.getTextAnswer() != null and !#strings.isEmpty(response.getTextAnswer())}">
+                            <textarea class="small-textarea" readonly th:text="${response.getTextAnswer()}"></textarea>
+                        </div>
                     </div>
 
                     <!-- INTEGER -->
-                    <div th:if="${item.responseType == 'INTEGER'}">
-                        <input type="number"
-                               th:name="'num_' + ${item.getId()}"
-                               step="any"
-                               placeholder="Enter value">
+                    <div th:if="${response.getChecklistItem().getResponseType() == 'INTEGER'}">
+                        <input type="number" th:value="${response.getNumericAnswer()}" readonly>
                     </div>
 
                     <!-- NONE -->
-                    <div th:if="${item.responseType == 'NONE'}">
-                        <!-- No input required -->
+                    <div th:if="${response.getChecklistItem().getResponseType() == 'NONE'}">
+                        <!-- nothing -->
                     </div>
 
                 </div>
             </div>
 
-            <button type="submit" class="submit-btn">Submit Checklist</button>
+            <!-- Manager comments -->
+            <div class="checklist-item">
+                <div class="question">Manager Comments:</div>
+                <textarea class="small-textarea" name="managerComments" placeholder="Enter your comments here"></textarea>
+            </div>
 
+            <button type="submit" class="submit-btn">Approve Checklist</button>
         </form>
     </div>
 </div>

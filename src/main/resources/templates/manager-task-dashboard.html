@@ -123,13 +123,15 @@
         <h1>New Task</h1>
 
         <div class="task-list">
-            <div class="task-item"
-                 th:each="checklist : ${myChecklists}"
-                 th:text="${checklist.name}"
-                 th:onclick="|window.location='/checklists/' + ${checklist.id}|">
+            <!-- Loop through tasks -->
+            <div th:each="task : ${myTasks}"
+                 class="task-item"
+                 th:text="${task.getTitle()}"
+                 th:onclick="|window.location='@{/tasks/{id}(id=${task.getId()})}'|">
             </div>
 
-            <div th:if="${#lists.isEmpty(myChecklists)}">
+            <!-- Show message if empty -->
+            <div th:if="${#lists.isEmpty(myTasks)}">
                 No tasks assigned.
             </div>
         </div>
@@ -139,14 +141,16 @@
         <h1>Tasks Pending Approval</h1>
 
         <div class="task-list">
-            <div class="task-item"
-                 th:each="checklistRun : ${pendingApprovalChecklists}"
-                 th:text="${checklistRun.get(name)} + '-' + ${checklistRun.getCompletedAt()}"
-                 th:onclick="|window.location='/checklists/approve/' + ${checklistRun.getId()}|">
+            <!-- Loop through pending checklist runs -->
+            <div th:each="run : ${pendingRuns}"
+                 class="task-item"
+                 th:text="|${run.getTask().getTitle()} – ${#temporals.format(run.getEndTime(), 'MMM d, yyyy ''at'' h:mm a')}|"
+                 th:onclick="|window.location='@{/checklist-runs/runs/{id}(id=${run.getId()})}'|">
             </div>
 
-            <div th:if="${#lists.isEmpty(pendingApprovalChecklists)}">
-                No tasks pending approval.
+            <!-- Show message if empty -->
+            <div th:if="${#lists.isEmpty(pendingRuns)}">
+                No pending checklists.
             </div>
         </div>
     </div>
