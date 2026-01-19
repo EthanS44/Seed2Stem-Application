@@ -199,6 +199,15 @@
             background-color: #1b5e20;
         }
 
+        .checklist-header {
+            margin-top: 50px;        /* extra spacing above */
+            margin-bottom: 25px;
+            font-size: 20px;
+            font-weight: 700;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 6px;
+        }
+
 
     </style>
 </head>
@@ -228,47 +237,67 @@
             <input type="hidden" name="taskId" th:value="${task.getId()}" />
             <input type="hidden" name="runId" th:value="${runId}">
 
-            <div th:each="item : ${items}" class="checklist-item">
+            <div th:each="item : ${items}">
 
-                <div class="question" th:text="${item.getItemOrder() + '. ' + item.getQuestion()}">
-                    Question text
+                <!-- HEADER -->
+                <div th:if="${item.getItemType() == 'HEADER'}"
+                     class="checklist-header">
+                    <span th:text="${item.getText()}">Section Header</span>
                 </div>
 
-                <div class="answers">
+                <!-- QUESTION -->
+                <div th:if="${item.getItemType() == 'QUESTION'}"
+                     class="checklist-item">
 
-                    <!-- BOOLEAN + TEXT -->
-                    <div th:if="${item.responseType == 'BOOLEAN_TEXT'}">
+                    <div class="question"
+                         th:text="${item.getQuestionOrder() + '. ' + item.getText()}">
+                        Question text
+                    </div>
 
-                        <div class="boolean-buttons">
-                            <label class="yes-btn">
-                                <input type="radio" th:name="'bool_' + ${item.getId()}" value="true">
-                                YES
-                            </label>
+                    <div class="answers">
 
-                            <label class="no-btn">
-                                <input type="radio" th:name="'bool_' + ${item.getId()}" value="false">
-                                NO
-                            </label>
+                        <!-- BOOLEAN + TEXT -->
+                        <div th:if="${item.getResponseType() == 'BOOLEAN_TEXT'}">
+
+                            <div class="boolean-buttons">
+                                <label class="yes-btn">
+                                    <input type="radio"
+                                           th:name="'bool_' + ${item.getId()}"
+                                           value="true"
+                                           th:checked="true">
+                                    PASS
+                                </label>
+
+                                <label class="no-btn">
+                                    <input type="radio"
+                                           th:name="'bool_' + ${item.getId()}"
+                                           value="false">
+                                    FAIL
+                                </label>
+                            </div>
+
+                            <textarea class="small-textarea"
+                                      th:name="'text_' + ${item.getId()}"
+                                      placeholder="Additional details (optional)"></textarea>
+
                         </div>
 
-                        <textarea class="small-textarea" th:name="'text_' + ${item.getId()}" placeholder="Additional details (optional)"></textarea>
+                        <!-- INTEGER -->
+                        <div th:if="${item.getResponseType() == 'INTEGER'}">
+                            <input type="number"
+                                   th:name="'num_' + ${item.getId()}"
+                                   step="any"
+                                   placeholder="Enter value">
+                        </div>
+
+                        <!-- NONE -->
+                        <div th:if="${item.getResponseType() == 'NONE'}">
+                            <!-- No input required -->
+                        </div>
 
                     </div>
-
-                    <!-- INTEGER -->
-                    <div th:if="${item.responseType == 'INTEGER'}">
-                        <input type="number"
-                               th:name="'num_' + ${item.getId()}"
-                               step="any"
-                               placeholder="Enter value">
-                    </div>
-
-                    <!-- NONE -->
-                    <div th:if="${item.responseType == 'NONE'}">
-                        <!-- No input required -->
-                    </div>
-
                 </div>
+
             </div>
 
             <button type="submit" class="submit-btn">Submit Checklist</button>

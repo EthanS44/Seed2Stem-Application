@@ -59,7 +59,7 @@ public class TaskViewController {
         model.addAttribute("runId", run.getId());
         model.addAttribute(
                 "items",
-                itemRepo.findByChecklistIdOrderByItemOrder(checklist.getId())
+                itemRepo.findByChecklistIdOrderByDisplayOrder(checklist.getId())
         );
 
         return "checklist-view";

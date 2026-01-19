@@ -8,7 +8,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/checklist-runs")
@@ -73,11 +76,42 @@ public class ChecklistRunController {
 
     @GetMapping("/runs/{runId}")
     public String reviewChecklistRun(@PathVariable Long runId, Model model) {
+
         ChecklistRun run = runService.getChecklistById(runId);
+        if (run == null) {
+            // handle missing run
+            return "redirect:/dashboard/home-dashboard";
+        }
+
+        List<ChecklistItem> items = run.getTask().getChecklist().getItems();
+        List<ChecklistResponse> responses = run.getResponses();
+
+        // Map itemId -> response for quick lookup
+        Map<Long, ChecklistResponse> responseMap = responses.stream()
+                .collect(Collectors.toMap(r -> r.getChecklistItem().getId(), r -> r));
+
+        Map<Long, List<ChecklistResponse>> responsesByHeader = new LinkedHashMap<>();
+        ChecklistItem currentHeader = null;
+
+        for (ChecklistItem item : items) {
+            if ("HEADER".equals(item.getItemType())) {
+                currentHeader = item;
+                responsesByHeader.put(item.getId(), new ArrayList<>());
+            } else if (currentHeader != null) {
+                ChecklistResponse r = responseMap.get(item.getId());
+                if (r != null) {
+                    responsesByHeader.get(currentHeader.getId()).add(r);
+                }
+            }
+        }
 
         model.addAttribute("run", run);
         model.addAttribute("task", run.getTask());
-        model.addAttribute("responses", run.getResponses());
+        model.addAttribute("responsesByHeader", responsesByHeader);
+        model.addAttribute("headers", items.stream()
+                .filter(i -> "HEADER".equals(i.getItemType()))
+                .toList()
+        );
 
         return "checklist-review-view";
     }

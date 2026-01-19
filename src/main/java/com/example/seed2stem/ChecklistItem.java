@@ -11,10 +11,13 @@ public class ChecklistItem {
     private Long id;
 
     @Column(columnDefinition = "TEXT")
-    private String question;
+    private String text;
 
+    private String itemType; // QUESTION, HEADING, TEXT
     private String responseType; // BOOLEAN_TEXT, TEXT, NUMBER, NONE
-    private Integer itemOrder;
+
+    private Integer displayOrder;   // visual ordering
+    private Integer questionOrder;  // numbering (questions only)
 
     @ManyToOne
     @JoinColumn(name = "checklist_id")
@@ -32,11 +35,11 @@ public class ChecklistItem {
     public void setId(Long id) {
         this.id = id;
     }
-    public String getQuestion() {
-        return question;
+    public String getText() {
+        return text;
     }
-    public void setQuestion(String question) {
-        this.question = question;
+    public void setText(String question) {
+        this.text = question;
     }
     public String getResponseType() {
         return responseType;
@@ -44,11 +47,23 @@ public class ChecklistItem {
     public void setResponseType(String responseType) {
         this.responseType = responseType;
     }
-    public Integer getItemOrder() {
-        return itemOrder;
+    public Integer getDisplayOrder() {
+        return displayOrder;
     }
-    public void setItemOrder(Integer itemOrder) {
-        this.itemOrder = itemOrder;
+    public void setDisplayOrder(Integer displayOrder) {
+        this.displayOrder = displayOrder;
+    }
+    public Integer getQuestionOrder() {
+        return questionOrder;
+    }
+    public void setQuestionOrder(Integer questionOrder) {
+        this.questionOrder = questionOrder;
+    }
+    public String getItemType() {
+        return itemType;
+    }
+    public void setItemType(String itemType) {
+        this.itemType = itemType;
     }
 }
 

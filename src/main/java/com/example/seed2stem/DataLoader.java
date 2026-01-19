@@ -22,95 +22,371 @@ public class DataLoader implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        //createProductionAreaInspection();
+        //createAMProductionAreaInspection();
+        //createPMProductionAreaInspection();
 
         // add more tasks/checklists here
     }
 
-    private void createProductionAreaInspection() {
+    private ChecklistItem header(String text, int displayOrder, Checklist checklist) {
+        ChecklistItem item = new ChecklistItem();
+        item.setText(text);
+        item.setItemType("HEADER");
+        item.setResponseType("NONE");
+        item.setDisplayOrder(displayOrder);
+        item.setChecklist(checklist);
+        return item;
+    }
+
+    private ChecklistItem question(String text, String responseType, int questionOrder, int displayOrder, Checklist checklist) {
+        ChecklistItem item = new ChecklistItem();
+        item.setText(text);
+        item.setItemType("QUESTION");
+        item.setResponseType(responseType);
+        item.setQuestionOrder(questionOrder);
+        item.setDisplayOrder(displayOrder);
+        item.setChecklist(checklist);
+        return item;
+    }
+
+    private void createAMProductionAreaInspection() {
+
         Task task = new Task();
-        task.setTitle("Production Area Inspection");
-        task.setDescription("This task is to be performed every day first thing every morning and last thing every afternoon.");
+        task.setTitle("AM Production Area Inspection");
+        task.setDescription("This task is to be performed every day first thing every morning.");
 
         Checklist checklist = new Checklist();
-        checklist.setName("Production Area Inspection");
+        checklist.setName("AM Production Area Inspection");
 
-        ChecklistItem checklistItem1 = new ChecklistItem();
-        checklistItem1.setQuestion("Are all lights working in lit rooms? If no, record which lights are defective.");
-        checklistItem1.setResponseType("BOOLEAN_TEXT");
-        checklistItem1.setItemOrder(1);
-        checklistItem1.setChecklist(checklist);
-        checklist.addItem(checklistItem1);
+        int displayOrder = 1;
+        int questionOrder = 1;
 
-        ChecklistItem checklistItem2 = new ChecklistItem();
-        checklistItem2.setQuestion("Are all fans working and pointed in the right direction? If no, record which fans are defective.");
-        checklistItem2.setResponseType("BOOLEAN_TEXT");
-        checklistItem2.setItemOrder(2);
-        checklistItem2.setChecklist(checklist);
-        checklist.addItem(checklistItem2);
+        // ===== Room B1 =====
+        checklist.addItem(header("Room B1 (Lights Off):", displayOrder++, checklist));
 
-        ChecklistItem checklistItem3 = new ChecklistItem();
-        checklistItem3.setQuestion("Record humidity level. (%)");
-        checklistItem3.setResponseType("INTEGER");
-        checklistItem3.setItemOrder(3);
-        checklistItem3.setChecklist(checklist);
-        checklist.addItem(checklistItem3);
+        checklist.addItem(question(
+                "Record humidity level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
 
-        ChecklistItem checklistItem4 = new ChecklistItem();
-        checklistItem4.setQuestion("Record temperature level. (°C)");
-        checklistItem4.setResponseType("INTEGER");
-        checklistItem4.setItemOrder(4);
-        checklistItem4.setChecklist(checklist);
-        checklist.addItem(checklistItem4);
+        checklist.addItem(question(
+                "Record temperature level. (°C)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
 
-        ChecklistItem checklistItem5 = new ChecklistItem();
-        checklistItem5.setQuestion("Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.");
-        checklistItem5.setResponseType("BOOLEAN_TEXT");
-        checklistItem5.setItemOrder(5);
-        checklistItem5.setChecklist(checklist);
-        checklist.addItem(checklistItem5);
+        checklist.addItem(question(
+                "Record reservoir water level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
 
-        ChecklistItem checklistItem6 = new ChecklistItem();
-        checklistItem6.setQuestion("Walk down each isle and check for:");
-        checklistItem6.setResponseType("NONE");
-        checklistItem6.setItemOrder(6);
-        checklistItem6.setChecklist(checklist);
-        checklist.addItem(checklistItem6);
+        checklist.addItem(question(
+                "Record reservoir EC.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
 
-        ChecklistItem checklistItem7 = new ChecklistItem();
-        checklistItem7.setQuestion("Are there any light plants? If yes, record location and number.");
-        checklistItem7.setResponseType("BOOLEAN_TEXT");
-        checklistItem7.setItemOrder(7);
-        checklistItem7.setChecklist(checklist);
-        checklist.addItem(checklistItem7);
+        checklist.addItem(question(
+                "Record reservoir pH.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
 
-        ChecklistItem checklistItem8 = new ChecklistItem();
-        checklistItem8.setQuestion("Are there any missing emitters? If yes, record location and number.");
-        checklistItem8.setResponseType("BOOLEAN_TEXT");
-        checklistItem8.setItemOrder(8);
-        checklistItem8.setChecklist(checklist);
-        checklist.addItem(checklistItem8);
+        checklist.addItem(question(
+                "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
 
-        ChecklistItem checklistItem9 = new ChecklistItem();
-        checklistItem9.setQuestion("Is there any pooling water? If yes, record location and estimate of size of pool.");
-        checklistItem9.setResponseType("BOOLEAN_TEXT");
-        checklistItem9.setItemOrder(9);
-        checklistItem9.setChecklist(checklist);
-        checklist.addItem(checklistItem9);
+        // ===== Room B2 =====
+        checklist.addItem(header("Room B2 (Lights On):", displayOrder++, checklist));
 
-        ChecklistItem checklistItem10 = new ChecklistItem();
-        checklistItem10.setQuestion("Are there any wilting leaves? If yes, remove them.");
-        checklistItem10.setResponseType("NONE");
-        checklistItem10.setItemOrder(10);
-        checklistItem10.setChecklist(checklist);
-        checklist.addItem(checklistItem10);
+        checklist.addItem(question(
+                "Are all lights working? If not, record which lights are defective.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
 
-        ChecklistItem checklistItem11 = new ChecklistItem();
-        checklistItem11.setQuestion("Ensure tables are all in proper alignment and foot stools are located at front of tables.");
-        checklistItem11.setResponseType("NONE");
-        checklistItem11.setItemOrder(11);
-        checklistItem11.setChecklist(checklist);
-        checklist.addItem(checklistItem11);
+        checklist.addItem(question(
+                "Are all fans working and pointed in the right direction? If not, record which fans are defective.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record humidity level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record temperature level. (°C)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir water level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir EC.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir pH.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Are there any light plants? If yes, record location and number.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Are there any missing emitters? If yes, record location and number.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Is there any pooling water? If yes, record location and estimate of size of pool.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Remove any wilting leaves.",
+                "NONE",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Ensure tables are all in proper alignment and foot stools are located at front of tables.",
+                "NONE",
+                questionOrder++, displayOrder++, checklist));
+
+
+
+        // ===== Room B3 =====
+        checklist.addItem(header("Room B3 (Lights Off):", displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record humidity level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record temperature level. (°C)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir water level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir EC.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir pH.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        task.setChecklist(checklist);
+
+        checklistRepo.save(checklist);
+        taskRepo.save(task);
+
+        System.out.println("Seeded checklist and task: " + task.getTitle());
+    }
+
+    private void createPMProductionAreaInspection() {
+
+        Task task = new Task();
+        task.setTitle("PM Production Area Inspection");
+        task.setDescription("This task is to be performed every day last thing in the evening.");
+
+        Checklist checklist = new Checklist();
+        checklist.setName("PM Production Area Inspection");
+
+        int displayOrder = 1;
+        int questionOrder = 1;
+
+        // ===== Room B1 =====
+        checklist.addItem(header("Room B1 (Lights On):", displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Are all lights working? If not, record which lights are defective.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Are all fans working and pointed in the right direction? If not, record which fans are defective.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record humidity level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record temperature level. (°C)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir water level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir EC.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir pH.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Are there any light plants? If yes, record location and number.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Are there any missing emitters? If yes, record location and number.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Is there any pooling water? If yes, record location and estimate of size of pool.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Remove any wilting leaves.",
+                "NONE",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Ensure tables are all in proper alignment and foot stools are located at front of tables.",
+                "NONE",
+                questionOrder++, displayOrder++, checklist));
+
+
+
+        // ===== Room B2 =====
+        checklist.addItem(header("Room B2 (Lights Off):", displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record humidity level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record temperature level. (°C)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir water level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir EC.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir pH.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        // ===== Room B3 =====
+        checklist.addItem(header("Room B3 (Lights On):", displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Are all lights working? If not, record which lights are defective.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Are all fans working and pointed in the right direction? If not, record which fans are defective.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record humidity level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record temperature level. (°C)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir water level. (%)",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir EC.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Record reservoir pH.",
+                "INTEGER",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Are there any light plants? If yes, record location and number.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Are there any missing emitters? If yes, record location and number.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Is there any pooling water? If yes, record location and estimate of size of pool.",
+                "BOOLEAN_TEXT",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Remove any wilting leaves.",
+                "NONE",
+                questionOrder++, displayOrder++, checklist));
+
+        checklist.addItem(question(
+                "Ensure tables are all in proper alignment and foot stools are located at front of tables.",
+                "NONE",
+                questionOrder++, displayOrder++, checklist));
 
         task.setChecklist(checklist);
 

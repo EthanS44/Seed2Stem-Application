@@ -17,6 +17,7 @@ public class Checklist {
     private Integer version;
 
     @OneToMany(mappedBy = "checklist", cascade = CascadeType.ALL)
+    @OrderBy("displayOrder ASC")
     private List<ChecklistItem> items = new ArrayList<>();
 
     public Checklist() {
