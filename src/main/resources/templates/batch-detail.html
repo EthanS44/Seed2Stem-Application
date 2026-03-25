@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Batch Detail')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <div class="d-flex align-items-center mb-4">
+        <a th:href="@{/batches}" class="btn btn-outline-secondary me-3">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h4 class="mb-0">
+            Batch: <span th:text="${batch.getBatchCode()}"></span>
+        </h4>
+        <span class="badge ms-3 fs-6"
+              th:classappend="'badge-' + ${batch.getStatus().name().toLowerCase()}"
+              th:text="${batch.getStatus().getDisplayName()}"></span>
+    </div>
+
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row g-4">
+        <!-- Batch Info -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>Batch Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-borderless mb-0">
+                        <tr>
+                            <td class="text-muted" style="width:40%">Strain</td>
+                            <td class="fw-semibold" th:text="${batch.getStrain()}"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Acronym</td>
+                            <td th:text="${batch.getStrainAcronym()}"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Room</td>
+                            <td th:text="${batch.getRoom()}"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Plant Count</td>
+                            <td th:text="${batch.getPlantCount()}"></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Start Date</td>
+                            <td th:text="${#temporals.format(batch.getStartDate(), 'MMM d, yyyy')}"></td>
+                        </tr>
+                        <tr th:if="${batch.getHarvestDate() != null}">
+                            <td class="text-muted">Harvest Date</td>
+                            <td th:text="${#temporals.format(batch.getHarvestDate(), 'MMM d, yyyy')}"></td>
+                        </tr>
+                        <tr th:if="${batch.getHarvestWeightGrams() != null}">
+                            <td class="text-muted">Harvest Weight</td>
+                            <td th:text="${batch.getHarvestWeightGrams() + ' g'}"></td>
+                        </tr>
+                        <tr th:if="${batch.getCoaSampleWeightGrams() != null}">
+                            <td class="text-muted">CoA Sample Weight</td>
+                            <td th:text="${batch.getCoaSampleWeightGrams() + ' g'}"></td>
+                        </tr>
+                        <tr th:if="${batch.getCreatedBy() != null}">
+                            <td class="text-muted">Created By</td>
+                            <td th:text="${batch.getCreatedBy().getName()}"></td>
+                        </tr>
+                        <tr th:if="${batch.getNotes() != null and !batch.getNotes().isEmpty()}">
+                            <td class="text-muted">Notes</td>
+                            <td th:text="${batch.getNotes()}"></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions (Manager Only) -->
+        <div class="col-lg-6" th:if="${isManager}">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-gear me-2"></i>Actions</h5>
+                </div>
+                <div class="card-body">
+
+                    <!-- Advance Status -->
+                    <div class="mb-4"
+                         th:if="${batch.getStatus().name() != 'PACKAGED' and batch.getStatus().name() != 'DESTROYED'}">
+                        <h6>Advance Status</h6>
+                        <p class="text-muted small mb-2">Move this batch to the next stage in the lifecycle.</p>
+                        <form th:action="@{/batches/{id}/advance(id=${batch.getId()})}" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-s2s">
+                                <i class="bi bi-arrow-right-circle me-1"></i> Advance to Next Stage
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Record Harvest (visible when FLOWERING) -->
+                    <div class="mb-4" th:if="${batch.getStatus().name() == 'FLOWERING'}">
+                        <h6>Record Harvest</h6>
+                        <form th:action="@{/batches/{id}/harvest(id=${batch.getId()})}" method="post">
+                            <div class="row g-2 mb-2">
+                                <div class="col-auto">
+                                    <label class="form-label small">Harvest Date</label>
+                                    <input type="date" class="form-control form-control-sm" name="harvestDate" required>
+                                </div>
+                                <div class="col-auto">
+                                    <label class="form-label small">Weight (g)</label>
+                                    <input type="number" class="form-control form-control-sm" name="harvestWeight"
+                                           step="0.01" required placeholder="grams">
+                                </div>
+                                <div class="col-auto">
+                                    <label class="form-label small">CoA Sample (g)</label>
+                                    <input type="number" class="form-control form-control-sm" name="coaWeight"
+                                           step="0.01" placeholder="optional">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-outline-warning btn-sm">
+                                <i class="bi bi-clipboard-data me-1"></i> Record Harvest
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Destroy -->
+                    <div th:if="${batch.getStatus().name() != 'PACKAGED' and batch.getStatus().name() != 'DESTROYED'}">
+                        <h6 class="text-danger">Mark as Destroyed</h6>
+                        <p class="text-muted small mb-2">Permanently mark this batch as destroyed.</p>
+                        <form th:action="@{/batches/{id}/destroy(id=${batch.getId()})}" method="post"
+                              onsubmit="return confirm('Are you sure you want to mark this batch as destroyed?')">
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-trash me-1"></i> Mark Destroyed
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Worker Sessions Section -->
+    <div class="row g-4 mt-1"
+         th:if="${batch.getStatus().name() == 'DEBUCKING' or batch.getStatus().name() == 'TRIMMING' or batch.getStatus().name() == 'PACKAGING' or !#lists.isEmpty(workerSessions)}">
+
+        <!-- Add Worker Session Form -->
+        <div class="col-lg-6"
+             th:if="${batch.getStatus().name() == 'DEBUCKING' or batch.getStatus().name() == 'TRIMMING' or batch.getStatus().name() == 'PACKAGING'}">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-person-plus me-2"></i>Record Worker Session</h5>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/batches/{id}/worker-session(id=${batch.getId()})}" method="post">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label small">Session Type</label>
+                                <select class="form-select form-select-sm" name="sessionType" required>
+                                    <option value="DEBUCKING" th:selected="${batch.getStatus().name() == 'DEBUCKING'}">Debucking</option>
+                                    <option value="TRIMMING" th:selected="${batch.getStatus().name() == 'TRIMMING'}">Trimming</option>
+                                    <option value="PACKAGING" th:selected="${batch.getStatus().name() == 'PACKAGING'}">Packaging</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small">Worker Name</label>
+                                <input type="text" class="form-control form-control-sm" name="workerName" required placeholder="Worker name">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Date</label>
+                                <input type="date" class="form-control form-control-sm" name="sessionDate" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Weight (g)</label>
+                                <input type="number" class="form-control form-control-sm" name="weightGrams" step="0.01" placeholder="optional">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Hours Worked</label>
+                                <input type="number" class="form-control form-control-sm" name="hoursWorked" step="0.25" placeholder="optional">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Bag Count</label>
+                                <input type="number" class="form-control form-control-sm" name="bagCount" placeholder="optional">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label small">Bag Size</label>
+                                <select class="form-select form-select-sm" name="bagSize">
+                                    <option value="">N/A</option>
+                                    <option value="3.5g">3.5g</option>
+                                    <option value="7g">7g</option>
+                                    <option value="14g">14g</option>
+                                    <option value="28g">28g</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small">Notes</label>
+                                <input type="text" class="form-control form-control-sm" name="notes" placeholder="optional">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-s2s btn-sm mt-3">
+                            <i class="bi bi-plus-lg me-1"></i> Add Session
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Worker Sessions Table -->
+        <div th:classappend="${batch.getStatus().name() == 'DEBUCKING' or batch.getStatus().name() == 'TRIMMING' or batch.getStatus().name() == 'PACKAGING'} ? 'col-lg-6' : 'col-lg-12'"
+             th:if="${!#lists.isEmpty(workerSessions)}">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-people me-2"></i>Worker Sessions</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Worker</th>
+                                <th>Weight</th>
+                                <th>Hours</th>
+                                <th>Bags</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="ws : ${workerSessions}">
+                                <td th:text="${#temporals.format(ws.getSessionDate(), 'MMM d')}"></td>
+                                <td><span class="badge bg-secondary" th:text="${ws.getSessionType()}"></span></td>
+                                <td th:text="${ws.getWorkerName()}"></td>
+                                <td th:text="${ws.getWeightGrams() != null ? ws.getWeightGrams() + 'g' : '-'}"></td>
+                                <td th:text="${ws.getHoursWorked() != null ? ws.getHoursWorked() + 'h' : '-'}"></td>
+                                <td th:text="${ws.getBagCount() != null ? ws.getBagCount() + ' x ' + ws.getBagSize() : '-'}"></td>
+                                <td class="small text-muted" th:text="${ws.getNotes() ?: ''}"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="row mt-4" th:if="${!#lists.isEmpty(activityLog)}">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0"><i class="bi bi-clock-history me-2"></i>Activity Log</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <div th:each="log : ${activityLog}" class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span th:if="${log.getFromStatus() != null}">
+                                        <span class="badge badge-sm"
+                                              th:classappend="'badge-' + ${log.getFromStatus().name().toLowerCase()}"
+                                              th:text="${log.getFromStatus().getDisplayName()}"></span>
+                                        <i class="bi bi-arrow-right mx-1"></i>
+                                    </span>
+                                    <span class="badge"
+                                          th:classappend="'badge-' + ${log.getToStatus().name().toLowerCase()}"
+                                          th:text="${log.getToStatus().getDisplayName()}"></span>
+                                    <span class="ms-2 text-muted small" th:text="${log.getNotes()}"></span>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted" th:text="${#temporals.format(log.getTimestamp(), 'MMM d, h:mm a')}"></small>
+                                    <br th:if="${log.getPerformedBy() != null}">
+                                    <small class="text-muted" th:if="${log.getPerformedBy() != null}"
+                                           th:text="'by ' + ${log.getPerformedBy().getName()}"></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

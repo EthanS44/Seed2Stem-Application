@@ -1,109 +1,45 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Seed2Stem Register</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f7f9;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Register')}"></head>
+<body class="auth-wrapper">
 
-    .login-container {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      width: 320px;
-      text-align: center;
-    }
+<div class="auth-card">
+    <div class="card shadow-sm">
+        <div class="card-body p-4 text-center">
+            <img th:src="@{/Seed2Stem_Logo.png}" alt="Seed2Stem" class="img-fluid mb-3">
+            <h4 class="mb-3">Register</h4>
 
-    .logo {
-      width: 150px;
-      margin-bottom: 20px;
-    }
+            <div th:if="${param.error}" class="alert alert-danger py-2" th:text="${param.error}"></div>
 
-    input[type="text"],
-    input[type="password"],
-    select {
-      width: 90%;
-      padding: 12px;
-      margin: 10px 0;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 14px;
-    }
+            <form th:action="@{/auth/register}" method="post">
+                <div class="mb-2">
+                    <input type="text" class="form-control" name="firstName" placeholder="First Name" required>
+                </div>
+                <div class="mb-2">
+                    <input type="text" class="form-control" name="lastName" placeholder="Last Name" required>
+                </div>
+                <div class="mb-2">
+                    <input type="text" class="form-control" name="username" placeholder="Username" required>
+                </div>
+                <div class="mb-2">
+                    <input type="password" class="form-control" name="password" placeholder="Password" required>
+                </div>
+                <div class="mb-3">
+                    <select class="form-select" name="accountType" required>
+                        <option value="" disabled selected>Select Account Type</option>
+                        <option value="TECHNICIAN">Technician</option>
+                        <option value="MANAGER">Manager</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-s2s w-100">Register</button>
+            </form>
 
-    button {
-      width: 100%;
-      padding: 12px;
-      background-color: #4CAF50;
-      border: none;
-      color: white;
-      font-size: 16px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background-color: #45a049;
-    }
-
-    .footer {
-      margin-top: 15px;
-      font-size: 12px;
-      color: #777;
-    }
-
-    a {
-      display: block;
-      margin-top: 12px;
-      font-size: 14px;
-    }
-  </style>
-</head>
-<body>
-
-<div class="login-container">
-  <img src="/Seed2Stem_Logo.png"
-       style="width: 100%; height: auto;"
-       alt="Seed2Stem Logo"
-       class="logo">
-
-  <h2>Register</h2>
-
-  <form th:action="@{/auth/register}" method="post">
-    <input type="text" name="firstName" placeholder="First Name" required>
-    <input type="text" name="lastName" placeholder="Last Name" required>
-    <input type="text" name="username" placeholder="Username" required>
-    <input type="password" name="password" placeholder="Password" required>
-
-    <select name="accountType" required>
-      <option value="" disabled selected>Select Account Type</option>
-      <option value="TECHNICIAN">Technician</option>
-      <option value="MANAGER">Manager</option>
-    </select>
-
-    <button type="submit">Register</button>
-  </form>
-
-  <a th:href="@{/auth/login}">Back to login</a>
-
-  <div>
-    <span th:if="${param.error}"></span>
-  </div>
-
-  <div class="footer">
-    © Seed2Stem
-  </div>
+            <a th:href="@{/auth/login}" class="d-block mt-3 text-decoration-none">Back to login</a>
+            <div class="text-muted small mt-3">&copy; Seed2Stem</div>
+        </div>
+    </div>
 </div>
 
+<div th:replace="~{fragments/layout :: scripts}"></div>
 </body>
 </html>
-

@@ -1,310 +1,108 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checklist</title>
-
-    <style>
-        /* Boolean buttons */
-        .boolean-buttons {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 10px;
-        }
-
-        .boolean-buttons label {
-            width: 120px;
-            height: 45px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            background-color: #a0a0a0; /* default gray */
-            transition: background-color 0.2s ease;
-            position: relative;
-        }
-
-        /* hide the input inside the label */
-        .boolean-buttons input {
-            position: absolute;
-            opacity: 0;
-            cursor: pointer;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-        }
-
-        /* Hover effect for unselected buttons */
-        .boolean-buttons label:hover {
-            background-color: #888888; /* slightly darker on hover */
-        }
-
-        /* Trick: use label:has() for modern browsers */
-        .yes-btn:has(input:checked) {
-            background-color: #4CAF50;
-        }
-
-        .no-btn:has(input:checked) {
-            background-color: #f44336;
-        }
-
-        /* Hover effect for selected buttons (slightly darker) */
-        .yes-btn:has(input:checked):hover {
-            background-color: #3e8e41; /* slightly darker green */
-        }
-
-        .no-btn:has(input:checked):hover {
-            background-color: #d32f2f; /* slightly darker red */
-        }
-
-
-        /* Smaller textarea */
-        .small-textarea {
-            width: 100%;
-            max-width: 500px;
-            height: 60px;
-            resize: none;
-            padding: 8px;
-            font-size: 14px;
-            margin-top: 10px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-        }
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f4f7f9;
-        }
-
-        /* Top bar */
-        .topbar {
-            width: 100%;
-            height: 60px;
-            background-color: #ffffff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            position: fixed;
-            top: 0;
-            z-index: 100;
-        }
-
-        .topbar-title {
-            font-size: 22px;
-            font-weight: bold;
-        }
-
-        .topbar-logo {
-            height: 45px;
-            padding-right: 40px;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 200px;
-            background-color: #2e7d32;
-            height: 100vh;
-            padding-top: 80px;
-            position: fixed;
-            top: 0;
-            left: 0;
-        }
-
-        .sidebar a {
-            display: block;
-            padding: 15px 20px;
-            color: white;
-            text-decoration: none;
-            font-size: 18px;
-        }
-
-        .sidebar a:hover {
-            background-color: #1b5e20;
-        }
-
-        /* Content */
-        .content {
-            margin-left: 200px;
-            padding: 100px 40px 40px;
-            max-width: 900px;
-        }
-
-        .checklist-card {
-            background-color: white;
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-        }
-
-        .checklist-item {
-            margin-bottom: 35px;
-            padding-bottom: 25px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .checklist-item:last-child {
-            border-bottom: none;
-        }
-
-        .question {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 15px;
-        }
-
-        .answers {
-            margin-left: 10px;
-        }
-
-        .answers label {
-            margin-right: 20px;
-            font-size: 16px;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        textarea {
-            width: 100%;
-            max-width: 500px;
-            padding: 10px;
-            font-size: 16px;
-            margin-top: 10px;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .submit-btn {
-            margin-top: 30px;
-            background-color: #2e7d32;
-            color: white;
-            border: none;
-            padding: 14px 30px;
-            font-size: 18px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        .submit-btn:hover {
-            background-color: #1b5e20;
-        }
-
-        .checklist-header {
-            margin-top: 50px;        /* extra spacing above */
-            margin-bottom: 25px;
-            font-size: 20px;
-            font-weight: 700;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 6px;
-        }
-
-
-    </style>
-</head>
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Checklist')}"></head>
 <body>
 
-<!-- Top Bar -->
-<div class="topbar">
-    <div class="topbar-title">Seed2Stem</div>
-    <img src="/Seed2Stem_Logo.png" class="topbar-logo">
-</div>
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
-<!-- Sidebar -->
-<div class="sidebar">
-    <a th:href="@{/dashboard/home-dashboard}">Home</a>
-    <a href="#">Settings</a>
-    <a th:href="@{/auth/login}">Logout</a>
-</div>
+<main class="s2s-content">
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
 
-<!-- Content -->
-<div class="content">
-    <div class="checklist-card">
+                    <h3 class="mb-4" th:text="${checklist.getName()}">Checklist Name</h3>
 
-        <h1 th:text="${checklist.getName()}">Checklist Name</h1>
+                    <!-- Show validation error if any -->
+                    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
 
-        <form th:action="@{/checklist-runs/submit}" method="post">
+                    <form th:action="@{/checklist-runs/submit}" method="post">
+                        <input type="hidden" name="taskId" th:value="${task.getId()}"/>
+                        <input type="hidden" name="runId" th:value="${runId}">
 
-            <input type="hidden" name="taskId" th:value="${task.getId()}" />
-            <input type="hidden" name="runId" th:value="${runId}">
+                        <div th:each="item : ${items}">
 
-            <div th:each="item : ${items}">
-
-                <!-- HEADER -->
-                <div th:if="${item.getItemType() == 'HEADER'}"
-                     class="checklist-header">
-                    <span th:text="${item.getText()}">Section Header</span>
-                </div>
-
-                <!-- QUESTION -->
-                <div th:if="${item.getItemType() == 'QUESTION'}"
-                     class="checklist-item">
-
-                    <div class="question"
-                         th:text="${item.getQuestionOrder() + '. ' + item.getText()}">
-                        Question text
-                    </div>
-
-                    <div class="answers">
-
-                        <!-- BOOLEAN + TEXT -->
-                        <div th:if="${item.getResponseType() == 'BOOLEAN_TEXT'}">
-
-                            <div class="boolean-buttons">
-                                <label class="yes-btn">
-                                    <input type="radio"
-                                           th:name="'bool_' + ${item.getId()}"
-                                           value="true"
-                                           th:checked="true">
-                                    PASS
-                                </label>
-
-                                <label class="no-btn">
-                                    <input type="radio"
-                                           th:name="'bool_' + ${item.getId()}"
-                                           value="false">
-                                    FAIL
-                                </label>
+                            <!-- HEADER -->
+                            <div th:if="${item.getItemType().name() == 'HEADER'}" class="mt-4 mb-3">
+                                <h5 class="border-bottom pb-2" th:text="${item.getText()}">Section Header</h5>
                             </div>
 
-                            <textarea class="small-textarea"
-                                      th:name="'text_' + ${item.getId()}"
-                                      placeholder="Additional details (optional)"></textarea>
+                            <!-- QUESTION -->
+                            <div th:if="${item.getItemType().name() == 'QUESTION'}" class="mb-4 pb-3 border-bottom">
+                                <label class="form-label fw-semibold"
+                                       th:text="${item.getQuestionOrder() + '. ' + item.getText()}">
+                                    Question text
+                                </label>
+
+                                <!-- BOOLEAN + TEXT -->
+                                <div th:if="${item.getResponseType().name() == 'BOOLEAN_TEXT'}">
+                                    <div class="boolean-buttons mb-2">
+                                        <label class="yes-btn">
+                                            <input type="radio"
+                                                   th:name="'bool_' + ${item.getId()}"
+                                                   value="true"
+                                                   th:checked="${responses.containsKey(item.getId()) and responses.get(item.getId()).getBooleanAnswer() != null ? responses.get(item.getId()).getBooleanAnswer() : true}">
+                                            PASS
+                                        </label>
+                                        <label class="no-btn">
+                                            <input type="radio"
+                                                   th:name="'bool_' + ${item.getId()}"
+                                                   value="false"
+                                                   th:checked="${responses.containsKey(item.getId()) and responses.get(item.getId()).getBooleanAnswer() != null and !responses.get(item.getId()).getBooleanAnswer()}">
+                                            FAIL
+                                        </label>
+                                    </div>
+                                    <textarea class="form-control"
+                                              rows="2"
+                                              th:name="'text_' + ${item.getId()}"
+                                              th:text="${responses.containsKey(item.getId()) and responses.get(item.getId()).getTextAnswer() != null ? responses.get(item.getId()).getTextAnswer() : ''}"
+                                              placeholder="Additional details (optional)"></textarea>
+                                </div>
+
+                                <!-- TEXT -->
+                                <div th:if="${item.getResponseType().name() == 'TEXT'}">
+                                    <textarea class="form-control"
+                                              rows="2"
+                                              th:name="'text_' + ${item.getId()}"
+                                              th:text="${responses.containsKey(item.getId()) and responses.get(item.getId()).getTextAnswer() != null ? responses.get(item.getId()).getTextAnswer() : ''}"
+                                              placeholder="Enter details"></textarea>
+                                </div>
+
+                                <!-- INTEGER / NUMBER / DECIMAL -->
+                                <div th:if="${item.getResponseType().name() == 'INTEGER' or item.getResponseType().name() == 'NUMBER' or item.getResponseType().name() == 'DECIMAL'}">
+                                    <input type="number"
+                                           class="form-control"
+                                           style="max-width: 300px;"
+                                           th:name="'num_' + ${item.getId()}"
+                                           th:value="${responses.containsKey(item.getId()) and responses.get(item.getId()).getNumericAnswer() != null ? responses.get(item.getId()).getNumericAnswer() : ''}"
+                                           step="any"
+                                           placeholder="Enter value">
+                                </div>
+
+                                <!-- NONE -->
+                                <div th:if="${item.getResponseType().name() == 'NONE'}">
+                                    <span class="text-muted small">No input required</span>
+                                </div>
+                            </div>
 
                         </div>
 
-                        <!-- INTEGER -->
-                        <div th:if="${item.getResponseType() == 'INTEGER'}">
-                            <input type="number"
-                                   th:name="'num_' + ${item.getId()}"
-                                   step="any"
-                                   placeholder="Enter value">
+                        <div class="d-flex gap-3 mt-3">
+                            <button type="submit" class="btn btn-s2s btn-lg">
+                                <i class="bi bi-check-lg me-1"></i> Submit Checklist
+                            </button>
+                            <button type="submit" formaction="/checklist-runs/pause" formnovalidate class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-pause-fill me-1"></i> Pause
+                            </button>
                         </div>
-
-                        <!-- NONE -->
-                        <div th:if="${item.getResponseType() == 'NONE'}">
-                            <!-- No input required -->
-                        </div>
-
-                    </div>
+                    </form>
                 </div>
-
             </div>
-
-            <button type="submit" class="submit-btn">Submit Checklist</button>
-
-        </form>
+        </div>
     </div>
-</div>
+</main>
 
+<div th:replace="~{fragments/layout :: scripts}"></div>
 </body>
 </html>

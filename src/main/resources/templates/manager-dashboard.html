@@ -1,155 +1,86 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seed2Stem Home</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f4f7f9;
-        }
-
-        /* Top Navigation Bar */
-        .topbar {
-            width: 100%;
-            height: 60px;
-            background-color: #ffffff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 100;
-        }
-
-        .topbar-title {
-            font-size: 22px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .topbar-logo {
-            height: 45px;
-            padding-right: 40px;
-        }
-
-        /* Left Sidebar */
-        .sidebar {
-            width: 200px;
-            background-color: #2e7d32;
-            color: white;
-            height: 100vh;
-            padding-top: 80px; /* space for topbar */
-            position: fixed;
-            top: 0;
-            left: 0;
-        }
-
-        .sidebar a {
-            display: block;
-            padding: 15px 20px;
-            color: white;
-            text-decoration: none;
-            font-size: 18px;
-        }
-
-        .sidebar a:hover {
-            background-color: #1b5e20;
-        }
-
-        /* Main Content */
-        .content {
-            margin-left: 200px;
-            padding: 80px 30px 30px 30px; /* top padding for topbar */
-        }
-
-        h1 {
-            color: #333;
-        }
-
-        .menu-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 25px;
-            margin-top: 100px;
-            margin-left: 300px;
-            margin-right: 100px;
-        }
-
-        .menu-card {
-            background-color: white;
-            border-radius: 12px;
-            padding: 40px 20px;
-            text-align: center;
-            text-decoration: none;
-            font-size: 20px;
-            font-weight: bold;
-            color: #2e7d32;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .menu-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 18px rgba(0,0,0,0.15);
-        }
-    </style>
-</head>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Dashboard')}"></head>
 <body>
 
-<!-- Top Bar -->
-<div class="topbar">
-    <div class="topbar-title">Triton Cannabis Group</div>
-    <img src="/Seed2Stem_Logo.png" alt="Seed2Stem Logo" class="topbar-logo">
-</div>
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
-<!-- Sidebar -->
-<div class="sidebar">
-    <a th:href="@{/dashboard/home-dashboard}">Home</a>
-    <a href="#">Settings</a>
-    <a th:href="@{/auth/login}">Logout</a>
-</div>
+<main class="s2s-content">
+    <h4 class="mb-4">Manager Dashboard</h4>
 
-<!-- Main Content -->
-<div class="menu-grid">
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-warning h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-clock-history me-1"></i> Pending Approvals</h6>
+                    <h2 class="mb-0" th:text="${pendingCount != null ? pendingCount : 0}">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white h-100" style="background-color: var(--s2s-green);">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-flower1 me-1"></i> Active Batches</h6>
+                    <h2 class="mb-0" th:text="${batchCount != null ? batchCount : 0}">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-list-task me-1"></i> Available Tasks</h6>
+                    <h2 class="mb-0" th:text="${taskCount != null ? taskCount : 0}">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-secondary h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-people me-1"></i> Technicians</h6>
+                    <h2 class="mb-0" th:text="${technicianCount != null ? technicianCount : 0}">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <a class="menu-card">
-        <span class="menu-icon">🏭</span>
-        Facility
-    </a>
+    <!-- Quick Access Grid -->
+    <h5 class="mb-3">Quick Access</h5>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <a th:href="@{/dashboard/task-dashboard}" class="text-decoration-none">
+                <div class="card menu-card shadow-sm h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="menu-icon"><i class="bi bi-list-task"></i></div>
+                        <h6 class="card-title mt-2">Tasks &amp; SOPs</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a th:href="@{/batches}" class="text-decoration-none">
+                <div class="card menu-card shadow-sm h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="menu-icon"><i class="bi bi-flower1"></i></div>
+                        <h6 class="card-title mt-2">Batches</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a th:href="@{/batches/create}" class="text-decoration-none">
+                <div class="card menu-card shadow-sm h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="menu-icon"><i class="bi bi-plus-circle"></i></div>
+                        <h6 class="card-title mt-2">New Batch</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</main>
 
-    <a class="menu-card">
-        <span class="menu-icon">⚙️</span>
-        Processing
-    </a>
-
-    <a th:href="@{/dashboard/task-dashboard}" class="menu-card">
-        <span class="menu-icon">🌱</span>
-        Production
-    </a>
-
-    <a class="menu-card">
-        <span class="menu-icon">📦</span>
-        Inventory
-    </a>
-
-    <a class="menu-card">
-        <span class="menu-icon">📄</span>
-        SOP
-    </a>
-
-    <a class="menu-card">
-        <span class="menu-icon">🧩</span>
-        Other
-    </a>
-
-</div>
-
+<div th:replace="~{fragments/layout :: scripts}"></div>
 </body>
 </html>

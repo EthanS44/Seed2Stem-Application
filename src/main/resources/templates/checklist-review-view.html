@@ -1,301 +1,136 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager Checklist Review</title>
-
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f4f7f9;
-        }
-
-        /* Top bar */
-        .topbar {
-            width: 100%;
-            height: 60px;
-            background-color: #ffffff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            position: fixed;
-            top: 0;
-            z-index: 100;
-        }
-
-        .topbar-title {
-            font-size: 22px;
-            font-weight: bold;
-        }
-
-        .topbar-logo {
-            height: 45px;
-            padding-right: 40px;
-        }
-
-        /* Sidebar */
-        .sidebar {
-            width: 200px;
-            background-color: #2e7d32;
-            height: 100vh;
-            padding-top: 80px;
-            position: fixed;
-            top: 0;
-            left: 0;
-        }
-
-        .sidebar a {
-            display: block;
-            padding: 15px 20px;
-            color: white;
-            text-decoration: none;
-            font-size: 18px;
-        }
-
-        .sidebar a:hover {
-            background-color: #1b5e20;
-        }
-
-        /* Content */
-        .content {
-            margin-left: 200px;
-            padding: 100px 40px 40px;
-            max-width: 1200px;
-        }
-
-        .checklist-card {
-            background-color: white;
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-        }
-
-        .divider {
-            margin: 25px 0;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        /* Room layout */
-        .room-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 30px;
-            margin-top: 30px;
-        }
-
-        .room-column {
-            background: #fafafa;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        }
-
-        .room-title {
-            font-size: 20px;
-            font-weight: 700;
-            border-bottom: 2px solid #e0e0e0;
-            margin-bottom: 15px;
-            padding-bottom: 5px;
-        }
-
-        .status-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 8px 0;
-        }
-
-        .green-dot, .red-dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-        }
-
-        .green-dot { background-color: #4CAF50; }
-        .red-dot { background-color: #f44336; }
-
-        .numeric-row {
-            margin: 6px 0;
-            font-size: 14px;
-        }
-
-        .issue-text {
-            font-size: 14px;
-            margin-left: 10px;
-            color: #333;
-        }
-
-        textarea {
-            width: 100%;
-            max-width: 500px;
-            height: 80px;
-            resize: none;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-        }
-
-        .submit-btn {
-            margin-top: 30px;
-            background-color: #2e7d32;
-            color: white;
-            border: none;
-            padding: 14px 30px;
-            font-size: 18px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        .submit-btn:hover {
-            background-color: #1b5e20;
-        }
-    </style>
-</head>
-
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Checklist Review')}"></head>
 <body>
 
-<!-- Top Bar -->
-<div class="topbar">
-    <div class="topbar-title">Seed2Stem</div>
-    <img src="/Seed2Stem_Logo.png" class="topbar-logo">
-</div>
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
-<!-- Sidebar -->
-<div class="sidebar">
-    <a th:href="@{/dashboard/home-dashboard}">Home</a>
-    <a href="#">Settings</a>
-    <a th:href="@{/auth/login}">Logout</a>
-</div>
+<main class="s2s-content">
+    <div class="row">
+        <div class="col-lg-10">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
 
-<!-- Content -->
-<div class="content">
-    <div class="checklist-card">
+                    <h3 class="mb-3" th:text="${task.getTitle()}">Checklist Name</h3>
 
-        <!-- Header info (UNCHANGED) -->
-        <h1 th:text="${task.getTitle()}">Checklist Name</h1>
-
-        <p><strong>Completed by:</strong>
-            <span th:text="${run.getCompletedBy().getName()}">Name</span>
-        </p>
-
-        <p><strong>Inspection Date:</strong>
-            <span th:text="${#temporals.format(run.getStartTime(), 'MMM d, yyyy')}">Date</span>
-        </p>
-
-        <p><strong>Start Time:</strong>
-            <span th:text="${#temporals.format(run.getStartTime(), 'h:mm a')}">Start</span>
-        </p>
-
-        <p><strong>End Time:</strong>
-            <span th:text="${#temporals.format(run.getEndTime(), 'h:mm a')}">End</span>
-        </p>
-
-        <div class="divider"></div>
-
-        <!-- ROOMS -->
-        <div class="room-grid">
-            <div class="room-column" th:each="header : ${headers}">
-                <!-- Room name -->
-                <div class="room-title" th:text="${header.text}">Room</div>
-
-                <!-- Room responses -->
-                <div th:each="resp : ${responsesByHeader[header.id]}">
-
-                    <!-- Lights -->
-                    <div th:if="${#strings.containsIgnoreCase(resp.checklistItem.text,'lights')}">
-                        <div class="status-row">
-                            <strong>Lights:</strong>
-                            <span th:class="${(resp.booleanAnswer ?: false) ? 'green-dot' : 'red-dot'}"></span>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Completed by:</strong>
+                                <span th:text="${run.getCompletedBy().getName()}">Name</span></p>
+                            <p class="mb-1"><strong>Inspection Date:</strong>
+                                <span th:text="${#temporals.format(run.getStartTime(), 'MMM d, yyyy')}">Date</span></p>
                         </div>
-                        <div th:if="${(resp.booleanAnswer ?: false) == false and !#strings.isEmpty(resp.textAnswer)}"
-                             class="issue-text"
-                             th:text="${resp.textAnswer}"></div>
+                        <div class="col-md-6">
+                            <p class="mb-1"><strong>Start Time:</strong>
+                                <span th:text="${#temporals.format(run.getStartTime(), 'h:mm a')}">Start</span></p>
+                            <p class="mb-1"><strong>End Time:</strong>
+                                <span th:text="${#temporals.format(run.getEndTime(), 'h:mm a')}">End</span></p>
+                            <p class="mb-1" th:if="${run.getChecklistVersion() != null}">
+                                <strong>Checklist Version:</strong>
+                                <span th:text="${run.getChecklistVersion()}">1</span>
+                            </p>
+                        </div>
                     </div>
 
-                    <!-- Fans -->
-                    <div th:if="${#strings.containsIgnoreCase(resp.checklistItem.text,'fans')}">
-                        <div class="status-row">
-                            <strong>Fans:</strong>
-                            <span th:class="${(resp.booleanAnswer ?: false) ? 'green-dot' : 'red-dot'}"></span>
-                        </div>
-                        <div th:if="${(resp.booleanAnswer ?: false) == false and !#strings.isEmpty(resp.textAnswer)}"
-                             class="issue-text"
-                             th:text="${resp.textAnswer}"></div>
+                    <!-- Status badge -->
+                    <div class="mb-3" th:if="${run.getStatus().name() == 'REJECTED'}">
+                        <span class="badge bg-danger fs-6">REJECTED</span>
+                    </div>
+                    <div class="mb-3" th:if="${run.getStatus().name() == 'APPROVED'}">
+                        <span class="badge bg-success fs-6">APPROVED</span>
                     </div>
 
-                    <!-- Numeric -->
-                    <div th:if="${resp.checklistItem.responseType == 'INTEGER'}" class="numeric-row">
-                        <strong th:text="${resp.checklistItem.text}"></strong>:
-                        <span th:text="${resp.numericAnswer}"></span>
+                    <hr>
+
+                    <!-- Rooms Grid -->
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-4" th:each="header : ${headers}">
+                            <div class="card bg-light h-100">
+                                <div class="card-body">
+                                    <h6 class="card-title border-bottom pb-2" th:text="${header.text}">Room</h6>
+
+                                    <div th:each="resp : ${responsesByHeader[header.id]}">
+
+                                        <!-- BOOLEAN_TEXT items: use category displayName -->
+                                        <div th:if="${resp.checklistItem.responseType.name() == 'BOOLEAN_TEXT'}"
+                                             class="d-flex justify-content-between align-items-center mb-1">
+                                            <strong class="small"
+                                                    th:text="${resp.checklistItem.category != null ? resp.checklistItem.category.displayName : resp.checklistItem.text}">
+                                                Label
+                                            </strong>
+                                            <span class="status-dot"
+                                                  th:classappend="${(resp.booleanAnswer ?: false) ? 'green' : 'red'}"></span>
+                                        </div>
+                                        <div th:if="${resp.checklistItem.responseType.name() == 'BOOLEAN_TEXT' and (resp.booleanAnswer ?: false) == false and resp.textAnswer != null and !resp.textAnswer.isBlank()}"
+                                             class="text-danger small mb-2" th:text="${resp.textAnswer}"></div>
+
+                                        <!-- TEXT items -->
+                                        <div th:if="${resp.checklistItem.responseType.name() == 'TEXT'}" class="small mb-1">
+                                            <strong th:text="${resp.checklistItem.category != null ? resp.checklistItem.category.displayName : resp.checklistItem.text}">Label</strong>:
+                                            <span th:text="${resp.textAnswer}"></span>
+                                        </div>
+
+                                        <!-- INTEGER / NUMBER / DECIMAL items: use category displayName -->
+                                        <div th:if="${resp.checklistItem.responseType.name() == 'INTEGER' or resp.checklistItem.responseType.name() == 'NUMBER' or resp.checklistItem.responseType.name() == 'DECIMAL'}" class="small mb-1">
+                                            <strong th:text="${resp.checklistItem.category != null ? resp.checklistItem.category.displayName : resp.checklistItem.text}">Label</strong>:
+                                            <span th:text="${resp.numericAnswer}"></span>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Light Plants -->
-                    <div th:if="${#strings.containsIgnoreCase(resp.checklistItem.text,'plants')}">
-                        <div class="status-row">
-                            <strong>Light Plants:</strong>
-                            <span th:class="${(resp.booleanAnswer ?: false) ? 'green-dot' : 'red-dot'}"></span>
+                    <hr class="mt-4">
+
+                    <!-- Manager Approval / Rejection (only show if PENDING) -->
+                    <div th:if="${run.getStatus().name() == 'PENDING'}">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Manager Comments:</label>
+                            <textarea class="form-control" id="managerComments" name="managerComments" rows="3"
+                                      placeholder="Enter your comments here" form="approveForm"></textarea>
                         </div>
-                        <div th:if="${(resp.booleanAnswer ?: false) == false and !#strings.isEmpty(resp.textAnswer)}"
-                             class="issue-text"
-                             th:text="${resp.textAnswer}"></div>
+
+                        <div class="d-flex gap-3">
+                            <form id="approveForm"
+                                  th:action="@{/checklist-runs/runs/{runId}/approve(runId=${run.getId()})}"
+                                  method="post">
+                                <input type="hidden" name="runId" th:value="${run.getId()}"/>
+                                <button type="submit" class="btn btn-s2s btn-lg">
+                                    <i class="bi bi-check-circle me-1"></i> Approve
+                                </button>
+                            </form>
+
+                            <form th:action="@{/checklist-runs/runs/{runId}/reject(runId=${run.getId()})}"
+                                  method="post">
+                                <input type="hidden" name="runId" th:value="${run.getId()}"/>
+                                <input type="hidden" name="managerComments" id="rejectComments"/>
+                                <button type="submit" class="btn btn-danger btn-lg"
+                                        onclick="document.getElementById('rejectComments').value = document.getElementById('managerComments').value;">
+                                    <i class="bi bi-x-circle me-1"></i> Reject
+                                </button>
+                            </form>
+                        </div>
                     </div>
 
-                    <!-- Missing Emitters -->
-                    <div th:if="${#strings.containsIgnoreCase(resp.checklistItem.text,'emitters')}">
-                        <div class="status-row">
-                            <strong>Missing Emitters:</strong>
-                            <span th:class="${(resp.booleanAnswer ?: false) ? 'green-dot' : 'red-dot'}"></span>
-                        </div>
-                        <div th:if="${(resp.booleanAnswer ?: false) == false and !#strings.isEmpty(resp.textAnswer)}"
-                             class="issue-text"
-                             th:text="${resp.textAnswer}"></div>
-                    </div>
-
-                    <!-- Water Leaks -->
-                    <div th:if="${#strings.containsIgnoreCase(resp.checklistItem.text,'pool')}">
-                        <div class="status-row">
-                            <strong>Water Leaks:</strong>
-                            <span th:class="${(resp.booleanAnswer ?: false) ? 'green-dot' : 'red-dot'}"></span>
-                        </div>
-                        <div th:if="${(resp.booleanAnswer ?: false) == false and !#strings.isEmpty(resp.textAnswer)}"
-                             class="issue-text"
-                             th:text="${resp.textAnswer}"></div>
-                    </div>
-
-                    <!-- Jug Nutrient Levels -->
-                    <div th:if="${#strings.containsIgnoreCase(resp.checklistItem.text,'jugs')}">
-                        <div class="status-row">
-                            <strong>Jug Nutrient Levels:</strong>
-                            <span th:class="${(resp.booleanAnswer ?: false) ? 'green-dot' : 'red-dot'}"></span>
-                        </div>
-                        <div th:if="${(resp.booleanAnswer ?: false) == false and !#strings.isEmpty(resp.textAnswer)}"
-                             class="issue-text"
-                             th:text="${resp.textAnswer}"></div>
+                    <!-- Show previous manager comments if already reviewed -->
+                    <div th:if="${run.getStatus().name() != 'PENDING' and run.getManagerComments() != null and !run.getManagerComments().isBlank()}">
+                        <h6>Manager Comments:</h6>
+                        <p th:text="${run.getManagerComments()}">Comments</p>
+                        <p class="small text-muted" th:if="${run.getAuthorizedBy() != null}">
+                            Reviewed by <span th:text="${run.getAuthorizedBy().getName()}">Manager</span>
+                            on <span th:text="${#temporals.format(run.getAuthorizedAt(), 'MMM d, yyyy h:mm a')}">Date</span>
+                        </p>
                     </div>
 
                 </div>
             </div>
         </div>
-
-        <div class="divider"></div>
-
-        <!-- Manager approval -->
-        <form th:action="@{/checklist-runs/runs/{runId}/approve(runId=${run.getId()})}" method="post">
-            <input type="hidden" name="runId" th:value="${run.getId()}"/>
-
-            <p><strong>Manager Comments:</strong></p>
-            <textarea name="managerComments" placeholder="Enter your comments here"></textarea>
-
-            <br>
-            <button type="submit" class="submit-btn">Approve Checklist</button>
-        </form>
-
     </div>
-</div>
+</main>
 
+<div th:replace="~{fragments/layout :: scripts}"></div>
 </body>
 </html>

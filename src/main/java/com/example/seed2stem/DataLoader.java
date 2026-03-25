@@ -1,5 +1,9 @@
 package com.example.seed2stem;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.Statement;
+
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,39 +14,66 @@ public class DataLoader implements CommandLineRunner {
     private final ChecklistRepository checklistRepo;
     private final ChecklistItemRepository itemRepo;
     private final TaskRepository taskRepo;
+    private final DataSource dataSource;
 
     public DataLoader(ChecklistRepository checklistRepo,
                       ChecklistItemRepository itemRepo,
-                      TaskRepository taskRepo) {
+                      TaskRepository taskRepo,
+                      DataSource dataSource) {
         this.checklistRepo = checklistRepo;
         this.itemRepo = itemRepo;
         this.taskRepo = taskRepo;
+        this.dataSource = dataSource;
     }
 
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+        migrateCheckConstraints();
         //createAMProductionAreaInspection();
         //createPMProductionAreaInspection();
+    }
 
-        // add more tasks/checklists here
+    private void migrateCheckConstraints() {
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+
+            // Update checklist_run status constraint
+            stmt.execute("ALTER TABLE checklist_run DROP CONSTRAINT IF EXISTS checklist_run_status_check");
+            stmt.execute("ALTER TABLE checklist_run ADD CONSTRAINT checklist_run_status_check " +
+                    "CHECK (status IN ('IN_PROGRESS','PENDING','APPROVED','REJECTED'))");
+
+            // Drop old checklist_item constraints (don't re-add — let Hibernate manage)
+            stmt.execute("ALTER TABLE checklist_item DROP CONSTRAINT IF EXISTS checklist_item_item_type_check");
+            stmt.execute("ALTER TABLE checklist_item DROP CONSTRAINT IF EXISTS checklist_item_response_type_check");
+
+            // Drop obsolete columns from task table
+            stmt.execute("ALTER TABLE task DROP COLUMN IF EXISTS assigned_to_user_id");
+            stmt.execute("ALTER TABLE task DROP COLUMN IF EXISTS completed");
+
+        } catch (Exception e) {
+            System.out.println("Check constraint migration skipped: " + e.getMessage());
+        }
     }
 
     private ChecklistItem header(String text, int displayOrder, Checklist checklist) {
         ChecklistItem item = new ChecklistItem();
         item.setText(text);
-        item.setItemType("HEADER");
-        item.setResponseType("NONE");
+        item.setItemType(ChecklistItemType.HEADER);
+        item.setResponseType(ChecklistResponseType.NONE);
         item.setDisplayOrder(displayOrder);
         item.setChecklist(checklist);
         return item;
     }
 
-    private ChecklistItem question(String text, String responseType, int questionOrder, int displayOrder, Checklist checklist) {
+    private ChecklistItem question(String text, ChecklistResponseType responseType,
+                                   ChecklistItemCategory category,
+                                   int questionOrder, int displayOrder, Checklist checklist) {
         ChecklistItem item = new ChecklistItem();
         item.setText(text);
-        item.setItemType("QUESTION");
+        item.setItemType(ChecklistItemType.QUESTION);
         item.setResponseType(responseType);
+        item.setCategory(category);
         item.setQuestionOrder(questionOrder);
         item.setDisplayOrder(displayOrder);
         item.setChecklist(checklist);
@@ -57,6 +88,7 @@ public class DataLoader implements CommandLineRunner {
 
         Checklist checklist = new Checklist();
         checklist.setName("AM Production Area Inspection");
+        checklist.setVersion(1);
 
         int displayOrder = 1;
         int questionOrder = 1;
@@ -66,32 +98,32 @@ public class DataLoader implements CommandLineRunner {
 
         checklist.addItem(question(
                 "Record humidity level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.HUMIDITY,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
-                "Record temperature level. (°C)",
-                "INTEGER",
+                "Record temperature level. (\u00b0C)",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.TEMPERATURE,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir water level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.WATER_LEVEL,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir EC.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.EC,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir pH.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.PH,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.NUTRIENTS,
                 questionOrder++, displayOrder++, checklist));
 
         // ===== Room B2 =====
@@ -99,102 +131,100 @@ public class DataLoader implements CommandLineRunner {
 
         checklist.addItem(question(
                 "Are all lights working? If not, record which lights are defective.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.LIGHTS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Are all fans working and pointed in the right direction? If not, record which fans are defective.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.FANS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record humidity level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.HUMIDITY,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
-                "Record temperature level. (°C)",
-                "INTEGER",
+                "Record temperature level. (\u00b0C)",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.TEMPERATURE,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir water level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.WATER_LEVEL,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir EC.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.EC,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir pH.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.PH,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.NUTRIENTS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Are there any light plants? If yes, record location and number.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.PLANTS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Are there any missing emitters? If yes, record location and number.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.EMITTERS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Is there any pooling water? If yes, record location and estimate of size of pool.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.WATER_LEAKS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Remove any wilting leaves.",
-                "NONE",
+                ChecklistResponseType.NONE, ChecklistItemCategory.WILTING_LEAVES,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Ensure tables are all in proper alignment and foot stools are located at front of tables.",
-                "NONE",
+                ChecklistResponseType.NONE, ChecklistItemCategory.TABLE_ALIGNMENT,
                 questionOrder++, displayOrder++, checklist));
-
-
 
         // ===== Room B3 =====
         checklist.addItem(header("Room B3 (Lights Off):", displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record humidity level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.HUMIDITY,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
-                "Record temperature level. (°C)",
-                "INTEGER",
+                "Record temperature level. (\u00b0C)",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.TEMPERATURE,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir water level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.WATER_LEVEL,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir EC.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.EC,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir pH.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.PH,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.NUTRIENTS,
                 questionOrder++, displayOrder++, checklist));
 
         task.setChecklist(checklist);
@@ -213,6 +243,7 @@ public class DataLoader implements CommandLineRunner {
 
         Checklist checklist = new Checklist();
         checklist.setName("PM Production Area Inspection");
+        checklist.setVersion(1);
 
         int displayOrder = 1;
         int questionOrder = 1;
@@ -222,102 +253,100 @@ public class DataLoader implements CommandLineRunner {
 
         checklist.addItem(question(
                 "Are all lights working? If not, record which lights are defective.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.LIGHTS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Are all fans working and pointed in the right direction? If not, record which fans are defective.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.FANS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record humidity level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.HUMIDITY,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
-                "Record temperature level. (°C)",
-                "INTEGER",
+                "Record temperature level. (\u00b0C)",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.TEMPERATURE,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir water level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.WATER_LEVEL,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir EC.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.EC,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir pH.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.PH,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.NUTRIENTS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Are there any light plants? If yes, record location and number.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.PLANTS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Are there any missing emitters? If yes, record location and number.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.EMITTERS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Is there any pooling water? If yes, record location and estimate of size of pool.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.WATER_LEAKS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Remove any wilting leaves.",
-                "NONE",
+                ChecklistResponseType.NONE, ChecklistItemCategory.WILTING_LEAVES,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Ensure tables are all in proper alignment and foot stools are located at front of tables.",
-                "NONE",
+                ChecklistResponseType.NONE, ChecklistItemCategory.TABLE_ALIGNMENT,
                 questionOrder++, displayOrder++, checklist));
-
-
 
         // ===== Room B2 =====
         checklist.addItem(header("Room B2 (Lights Off):", displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record humidity level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.HUMIDITY,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
-                "Record temperature level. (°C)",
-                "INTEGER",
+                "Record temperature level. (\u00b0C)",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.TEMPERATURE,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir water level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.WATER_LEVEL,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir EC.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.EC,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir pH.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.PH,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.NUTRIENTS,
                 questionOrder++, displayOrder++, checklist));
 
         // ===== Room B3 =====
@@ -325,67 +354,67 @@ public class DataLoader implements CommandLineRunner {
 
         checklist.addItem(question(
                 "Are all lights working? If not, record which lights are defective.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.LIGHTS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Are all fans working and pointed in the right direction? If not, record which fans are defective.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.FANS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record humidity level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.HUMIDITY,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
-                "Record temperature level. (°C)",
-                "INTEGER",
+                "Record temperature level. (\u00b0C)",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.TEMPERATURE,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir water level. (%)",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.WATER_LEVEL,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir EC.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.EC,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Record reservoir pH.",
-                "INTEGER",
+                ChecklistResponseType.INTEGER, ChecklistItemCategory.PH,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Check nutrient levels of jugs at tables 1 to 5. Are all levels the same? Record nutrient levels.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.NUTRIENTS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Are there any light plants? If yes, record location and number.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.PLANTS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Are there any missing emitters? If yes, record location and number.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.EMITTERS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Is there any pooling water? If yes, record location and estimate of size of pool.",
-                "BOOLEAN_TEXT",
+                ChecklistResponseType.BOOLEAN_TEXT, ChecklistItemCategory.WATER_LEAKS,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Remove any wilting leaves.",
-                "NONE",
+                ChecklistResponseType.NONE, ChecklistItemCategory.WILTING_LEAVES,
                 questionOrder++, displayOrder++, checklist));
 
         checklist.addItem(question(
                 "Ensure tables are all in proper alignment and foot stools are located at front of tables.",
-                "NONE",
+                ChecklistResponseType.NONE, ChecklistItemCategory.TABLE_ALIGNMENT,
                 questionOrder++, displayOrder++, checklist));
 
         task.setChecklist(checklist);

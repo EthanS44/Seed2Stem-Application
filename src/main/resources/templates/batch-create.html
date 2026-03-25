@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - New Batch')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="d-flex align-items-center mb-4">
+                <a th:href="@{/batches}" class="btn btn-outline-secondary me-3">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h4 class="mb-0">Create New Batch</h4>
+            </div>
+
+            <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form th:action="@{/batches/create}" method="post">
+
+                        <div class="mb-3">
+                            <label class="form-label">Strain Name</label>
+                            <input type="text" class="form-control" name="strain"
+                                   placeholder="e.g. Blue Dream" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Strain Acronym (3 letters)</label>
+                            <input type="text" class="form-control" name="strainAcronym"
+                                   placeholder="e.g. BLD" maxlength="3" required
+                                   style="text-transform: uppercase; max-width: 150px;">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Room</label>
+                            <select class="form-select" name="room" required style="max-width: 200px;">
+                                <option value="" disabled selected>Select room</option>
+                                <option value="B1">B1</option>
+                                <option value="B2">B2</option>
+                                <option value="B3">B3</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Plant Count</label>
+                            <input type="number" class="form-control" name="plantCount"
+                                   min="1" required style="max-width: 200px;">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" name="startDate"
+                                   required style="max-width: 250px;">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Notes (optional)</label>
+                            <textarea class="form-control" name="notes" rows="3"
+                                      placeholder="Any additional notes about this batch"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-s2s btn-lg">
+                            <i class="bi bi-plus-lg me-1"></i> Create Batch
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
