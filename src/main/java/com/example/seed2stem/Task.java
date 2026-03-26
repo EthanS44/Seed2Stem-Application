@@ -16,7 +16,7 @@ public class Task {
     private String description;
 
     @ManyToOne
-    @JoinColumn(name = "checklist_id", nullable = false)
+    @JoinColumn(name = "checklist_id")
     private Checklist checklist;
 
     public Checklist getChecklist() {
@@ -50,6 +50,4 @@ public class Task {
     public void setDescription(String description) {
         this.description = description;
     }
-
 }
-

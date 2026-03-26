@@ -1,0 +1,268 @@
+/* ===== Seed2Stem Custom Styles ===== */
+/* Supplements Bootstrap 5 with app-specific branding and layout */
+
+:root {
+    --s2s-green: #2e7d32;
+    --s2s-green-dark: #1b5e20;
+    --s2s-green-light: #4CAF50;
+    --s2s-bg: #f4f7f9;
+    --sidebar-width: 220px;
+    --topbar-height: 56px;
+}
+
+body {
+    background-color: var(--s2s-bg);
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* ===== Topbar ===== */
+.s2s-topbar {
+    height: var(--topbar-height);
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 1030;
+}
+
+.s2s-topbar .navbar-brand {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #333;
+}
+
+.s2s-topbar .topbar-logo {
+    height: 40px;
+}
+
+/* ===== Sidebar ===== */
+.s2s-sidebar {
+    width: var(--sidebar-width);
+    background-color: var(--s2s-green);
+    position: fixed;
+    top: var(--topbar-height);
+    bottom: 0;
+    left: 0;
+    z-index: 1020;
+    overflow-y: auto;
+    padding-top: 1rem;
+}
+
+.s2s-sidebar .nav-link {
+    color: rgba(255,255,255,0.85);
+    padding: 0.75rem 1.25rem;
+    font-size: 0.95rem;
+    border-radius: 0;
+    transition: background-color 0.15s;
+}
+
+.s2s-sidebar .nav-link:hover,
+.s2s-sidebar .nav-link.active {
+    background-color: var(--s2s-green-dark);
+    color: #fff;
+}
+
+.s2s-sidebar .nav-link i {
+    width: 1.5rem;
+    text-align: center;
+}
+
+.s2s-sidebar .sidebar-heading {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05rem;
+    color: rgba(255,255,255,0.5);
+    padding: 1.25rem 1.25rem 0.5rem;
+}
+
+/* ===== Main Content ===== */
+.s2s-content {
+    margin-left: var(--sidebar-width);
+    padding: calc(var(--topbar-height) + 1.5rem) 2rem 2rem;
+    min-height: 100vh;
+}
+
+/* ===== Auth Pages (login/register) ===== */
+.auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--s2s-bg);
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 400px;
+}
+
+/* ===== Dashboard Menu Cards ===== */
+.menu-card {
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.menu-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.15) !important;
+}
+
+.menu-card .menu-icon {
+    font-size: 2rem;
+}
+
+.menu-card .card-title {
+    color: var(--s2s-green);
+    font-weight: 600;
+}
+
+/* ===== Task Items ===== */
+.task-item {
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.task-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* ===== Checklist Styles ===== */
+.boolean-buttons {
+    display: flex;
+    gap: 12px;
+}
+
+.boolean-buttons label {
+    width: 100px;
+    height: 40px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background-color: #a0a0a0;
+    transition: background-color 0.2s ease;
+    position: relative;
+}
+
+.boolean-buttons input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+}
+
+.boolean-buttons label:hover {
+    background-color: #888;
+}
+
+.yes-btn:has(input:checked) {
+    background-color: var(--s2s-green-light);
+}
+
+.no-btn:has(input:checked) {
+    background-color: #f44336;
+}
+
+.yes-btn:has(input:checked):hover {
+    background-color: #3e8e41;
+}
+
+.no-btn:has(input:checked):hover {
+    background-color: #d32f2f;
+}
+
+/* ===== Status Indicators ===== */
+.status-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.green { background-color: var(--s2s-green-light); }
+.status-dot.red { background-color: #f44336; }
+
+/* ===== Buttons ===== */
+.btn-s2s {
+    background-color: var(--s2s-green);
+    color: white;
+    border: none;
+}
+
+.btn-s2s:hover {
+    background-color: var(--s2s-green-dark);
+    color: white;
+}
+
+/* ===== Batch Status Badges ===== */
+.badge-cloning { background-color: #8e24aa; }
+.badge-vegetative { background-color: #2e7d32; }
+.badge-flowering { background-color: #f9a825; color: #333; }
+.badge-harvested { background-color: #e65100; }
+.badge-debucking { background-color: #4e342e; }
+.badge-trimming { background-color: #0277bd; }
+.badge-packaging { background-color: #00695c; }
+.badge-packaged { background-color: #1b5e20; }
+.badge-destroyed { background-color: #b71c1c; }
+
+/* ===== Calendar ===== */
+#calendar {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.fc .fc-button-primary {
+    background-color: var(--s2s-green);
+    border-color: var(--s2s-green);
+}
+.fc .fc-button-primary:hover {
+    background-color: var(--s2s-green-dark);
+    border-color: var(--s2s-green-dark);
+}
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+    background-color: var(--s2s-green-dark);
+    border-color: var(--s2s-green-dark);
+}
+.fc .fc-today-button {
+    background-color: var(--s2s-green-light);
+    border-color: var(--s2s-green-light);
+}
+.fc .fc-daygrid-day.fc-day-today {
+    background-color: rgba(46, 125, 50, 0.08);
+}
+
+.calendar-legend {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+.calendar-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+    user-select: none;
+}
+.calendar-legend-item.legend-disabled {
+    opacity: 0.4;
+    text-decoration: line-through;
+}
+.calendar-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}

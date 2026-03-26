@@ -1,134 +1,44 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Task View</title>
-
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f4f7f9;
-        }
-
-        .topbar {
-            width: 100%;
-            height: 60px;
-            background-color: #ffffff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 100;
-        }
-
-        .topbar-title {
-            font-size: 22px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .topbar-logo {
-            height: 45px;
-            padding-right: 40px;
-        }
-
-        .sidebar {
-            width: 200px;
-            background-color: #2e7d32;
-            color: white;
-            height: 100vh;
-            padding-top: 80px;
-            position: fixed;
-            top: 0;
-            left: 0;
-        }
-
-        .sidebar a {
-            display: block;
-            padding: 15px 20px;
-            color: white;
-            text-decoration: none;
-            font-size: 18px;
-        }
-
-        .sidebar a:hover {
-            background-color: #1b5e20;
-        }
-
-        .content {
-            margin-left: 200px;
-            padding: 100px 40px 40px 40px;
-            max-width: 800px;
-        }
-
-        .task-card {
-            background-color: white;
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-        }
-
-        .task-card h1 {
-            margin-top: 0;
-            color: #2e7d32;
-        }
-
-        .task-description {
-            font-size: 18px;
-            color: #555;
-            margin: 20px 0 40px;
-            line-height: 1.5;
-        }
-
-        .start-btn {
-            background-color: #2e7d32;
-            color: white;
-            border: none;
-            padding: 14px 30px;
-            font-size: 18px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        .start-btn:hover {
-            background-color: #1b5e20;
-        }
-    </style>
-</head>
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Task')}"></head>
 <body>
 
-<!-- Top Bar -->
-<div class="topbar">
-    <div class="topbar-title">Seed2Stem</div>
-    <img src="/Seed2Stem_Logo.png" class="topbar-logo">
-</div>
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
-<!-- Sidebar -->
-<div class="sidebar">
-    <a th:href="@{/dashboard/home-dashboard}">Home</a>
-    <a href="#">Settings</a>
-    <a th:href="@{/auth/login}">Logout</a>
-</div>
+<main class="s2s-content">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="d-flex align-items-center mb-4">
+                <a th:href="@{/dashboard/task-dashboard}" class="btn btn-outline-secondary me-3">
+                    <i class="bi bi-arrow-left"></i>
+                </a>
+                <h4 class="mb-0" th:text="${task.getTitle()}">Task Name</h4>
+            </div>
 
-<!-- Content -->
-<div class="content">
-    <div class="task-card">
-        <h1 th:text="${task.getTitle()}">Task Name</h1>
-        <div class="task-description" th:text="${task.getDescription()}">
-            Task description goes here.
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <p class="text-muted fs-5" th:text="${task.getDescription()}">
+                        Task description goes here.
+                    </p>
+
+                    <!-- Show Start button only if there's a linked checklist -->
+                    <a th:if="${task.getChecklist() != null}"
+                       th:href="@{/tasks/{id}/start(id=${task.getId()})}"
+                       class="btn btn-s2s btn-lg mt-2">
+                        <i class="bi bi-play-fill me-1"></i> Start Task
+                    </a>
+
+                    <div th:if="${task.getChecklist() == null}" class="alert alert-info mt-3 mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        This task has no linked checklist. Complete it and mark as done.
+                    </div>
+                </div>
+            </div>
         </div>
-
-        <a th:href="@{/tasks/{id}/start(id=${task.getId()})}">
-            <button class="start-btn">Start Task</button>
-        </a>
     </div>
-</div>
+</main>
 
+<div th:replace="~{fragments/layout :: scripts}"></div>
 </body>
 </html>

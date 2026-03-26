@@ -5,6 +5,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -29,64 +30,141 @@ public class ChecklistRunController {
         this.itemRepo = itemRepo;
     }
 
-    // Technician submits checklist
     @PostMapping("/submit")
-    public String submitChecklist(@RequestParam Long taskId, @RequestParam Long runId, @RequestParam MultiValueMap<String, String> params, HttpSession session) {
+    public String submitChecklist(@RequestParam Long taskId,
+                                  @RequestParam Long runId,
+                                  @RequestParam MultiValueMap<String, String> params,
+                                  HttpSession session,
+                                  RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("loggedInUser");
-        Task task = taskRepo.findById(taskId).orElseThrow();
+        if (user == null) return "redirect:/auth/login";
 
+        Task task = taskRepo.findById(taskId).orElseThrow();
         ChecklistRun run = runService.getChecklistById(runId);
-        run.setEndTime(LocalDateTime.now());
+
+        List<ChecklistItem> items = itemRepo.findByChecklistIdOrderByDisplayOrder(
+                task.getChecklist().getId());
 
         List<ChecklistResponse> responses = new ArrayList<>();
 
-        for (String key : params.keySet()) {
+        for (ChecklistItem item : items) {
+            if (item.getItemType() != ChecklistItemType.QUESTION) continue;
+            if (item.getResponseType() == ChecklistResponseType.NONE) continue;
 
-            if (key.startsWith("bool_")) {
-                Long itemId = Long.valueOf(key.substring(5));
-                ChecklistItem item = itemRepo.findById(itemId).orElseThrow();
+            ChecklistResponse resp = new ChecklistResponse();
+            resp.setChecklistItem(item);
+            resp.setChecklistRun(run);
 
-                ChecklistResponse r = new ChecklistResponse();
-                r.setChecklistItem(item);
-                r.setBooleanAnswer(Boolean.valueOf(params.getFirst(key)));
-                r.setTextAnswer(params.getFirst("text_" + itemId));
-                r.setChecklistRun(run);
-
-                responses.add(r);
+            switch (item.getResponseType()) {
+                case BOOLEAN_TEXT -> {
+                    String boolVal = params.getFirst("bool_" + item.getId());
+                    if (boolVal == null) {
+                        redirectAttributes.addFlashAttribute("error",
+                                "Missing answer for: " + item.getText());
+                        return "redirect:/tasks/" + taskId + "/resume/" + runId;
+                    }
+                    resp.setBooleanAnswer(Boolean.valueOf(boolVal));
+                    resp.setTextAnswer(params.getFirst("text_" + item.getId()));
+                }
+                case TEXT -> {
+                    resp.setTextAnswer(params.getFirst("text_" + item.getId()));
+                }
+                case INTEGER, NUMBER, DECIMAL -> {
+                    String numVal = params.getFirst("num_" + item.getId());
+                    if (numVal == null || numVal.isBlank()) {
+                        redirectAttributes.addFlashAttribute("error",
+                                "Missing numeric value for: " + item.getText());
+                        return "redirect:/tasks/" + taskId + "/resume/" + runId;
+                    }
+                    try {
+                        resp.setNumericAnswer(Double.valueOf(numVal));
+                    } catch (NumberFormatException e) {
+                        redirectAttributes.addFlashAttribute("error",
+                                "Invalid number for: " + item.getText());
+                        return "redirect:/tasks/" + taskId + "/resume/" + runId;
+                    }
+                }
+                default -> { /* NONE items are skipped above */ }
             }
 
-            if (key.startsWith("num_")) {
-                Long itemId = Long.valueOf(key.substring(4));
-                ChecklistItem item = itemRepo.findById(itemId).orElseThrow();
-
-                ChecklistResponse r = new ChecklistResponse();
-                r.setChecklistItem(item);
-                r.setNumericAnswer(Double.valueOf(params.getFirst(key)));
-                r.setChecklistRun(run);
-
-                responses.add(r);
-            }
+            responses.add(resp);
         }
 
+        run.setEndTime(LocalDateTime.now());
         run.setResponses(responses);
         runService.submitByTechnician(run);
 
         return "redirect:/dashboard/task-dashboard";
     }
 
+    @PostMapping("/pause")
+    public String pauseChecklist(@RequestParam Long taskId,
+                                 @RequestParam Long runId,
+                                 @RequestParam MultiValueMap<String, String> params,
+                                 HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+
+        Task task = taskRepo.findById(taskId).orElseThrow();
+        ChecklistRun run = runService.getChecklistById(runId);
+
+        List<ChecklistItem> items = itemRepo.findByChecklistIdOrderByDisplayOrder(
+                task.getChecklist().getId());
+
+        List<ChecklistResponse> responses = new ArrayList<>();
+
+        for (ChecklistItem item : items) {
+            if (item.getItemType() != ChecklistItemType.QUESTION) continue;
+            if (item.getResponseType() == ChecklistResponseType.NONE) continue;
+
+            ChecklistResponse resp = new ChecklistResponse();
+            resp.setChecklistItem(item);
+            resp.setChecklistRun(run);
+
+            switch (item.getResponseType()) {
+                case BOOLEAN_TEXT -> {
+                    String boolVal = params.getFirst("bool_" + item.getId());
+                    if (boolVal != null) {
+                        resp.setBooleanAnswer(Boolean.valueOf(boolVal));
+                    }
+                    resp.setTextAnswer(params.getFirst("text_" + item.getId()));
+                }
+                case TEXT -> {
+                    resp.setTextAnswer(params.getFirst("text_" + item.getId()));
+                }
+                case INTEGER, NUMBER, DECIMAL -> {
+                    String numVal = params.getFirst("num_" + item.getId());
+                    if (numVal != null && !numVal.isBlank()) {
+                        try {
+                            resp.setNumericAnswer(Double.valueOf(numVal));
+                        } catch (NumberFormatException e) {
+                            // Silently ignore invalid numbers on pause
+                        }
+                    }
+                }
+                default -> { /* NONE items skipped above */ }
+            }
+
+            responses.add(resp);
+        }
+
+        runService.pauseByUser(runId, responses);
+        return "redirect:/dashboard/task-dashboard";
+    }
+
     @GetMapping("/runs/{runId}")
-    public String reviewChecklistRun(@PathVariable Long runId, Model model) {
+    public String reviewChecklistRun(@PathVariable Long runId, Model model, HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
 
         ChecklistRun run = runService.getChecklistById(runId);
         if (run == null) {
-            // handle missing run
             return "redirect:/dashboard/home-dashboard";
         }
 
         List<ChecklistItem> items = run.getTask().getChecklist().getItems();
         List<ChecklistResponse> responses = run.getResponses();
 
-        // Map itemId -> response for quick lookup
         Map<Long, ChecklistResponse> responseMap = responses.stream()
                 .collect(Collectors.toMap(r -> r.getChecklistItem().getId(), r -> r));
 
@@ -94,7 +172,7 @@ public class ChecklistRunController {
         ChecklistItem currentHeader = null;
 
         for (ChecklistItem item : items) {
-            if ("HEADER".equals(item.getItemType())) {
+            if (item.getItemType() == ChecklistItemType.HEADER) {
                 currentHeader = item;
                 responsesByHeader.put(item.getId(), new ArrayList<>());
             } else if (currentHeader != null) {
@@ -109,32 +187,39 @@ public class ChecklistRunController {
         model.addAttribute("task", run.getTask());
         model.addAttribute("responsesByHeader", responsesByHeader);
         model.addAttribute("headers", items.stream()
-                .filter(i -> "HEADER".equals(i.getItemType()))
+                .filter(i -> i.getItemType() == ChecklistItemType.HEADER)
                 .toList()
         );
 
         return "checklist-review-view";
     }
 
-    // Manager approves checklist
     @PostMapping("/runs/{runId}/approve")
     public String approveChecklistRun(
             @PathVariable Long runId,
             @RequestParam("managerComments") String managerComments,
-            HttpSession session
-    ) {
+            HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
-        runService.authorizeByManager(runId, user, managerComments);
+        if (user == null) return "redirect:/auth/login";
 
-        // Redirect back to the manager dashboard
+        runService.authorizeByManager(runId, user, managerComments);
         return "redirect:/dashboard/task-dashboard";
     }
 
-    // Get all pending checklists (for manager dashboard)
+    @PostMapping("/runs/{runId}/reject")
+    public String rejectChecklistRun(
+            @PathVariable Long runId,
+            @RequestParam("managerComments") String managerComments,
+            HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+
+        runService.rejectByManager(runId, user, managerComments);
+        return "redirect:/dashboard/task-dashboard";
+    }
+
     @GetMapping("/pending")
     public List<ChecklistRun> getPendingChecklists() {
         return runService.getPendingChecklists();
     }
 }
-
-

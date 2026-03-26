@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Calendar')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <h4 class="mb-3">Calendar</h4>
+
+    <div class="calendar-legend">
+        <span class="calendar-legend-item" data-event-type="batch-start">
+            <span class="calendar-legend-dot" style="background:#2e7d32"></span> Batch Start
+        </span>
+        <span class="calendar-legend-item" data-event-type="batch-harvest">
+            <span class="calendar-legend-dot" style="background:#e65100"></span> Harvest
+        </span>
+        <span class="calendar-legend-item" data-event-type="checklist-run">
+            <span class="calendar-legend-dot" style="background:#0277bd"></span> Checklist Run
+        </span>
+        <span class="calendar-legend-item" data-event-type="status-change">
+            <span class="calendar-legend-dot" style="background:#8e24aa"></span> Status Change
+        </span>
+        <span class="calendar-legend-item" data-event-type="worker-session">
+            <span class="calendar-legend-dot" style="background:#00695c"></span> Worker Session
+        </span>
+    </div>
+
+    <div id="calendar"></div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var hiddenTypes = {};
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridDay,listWeek'
+        },
+        dateClick: function (info) {
+            calendar.changeView('timeGridDay', info.dateStr);
+        },
+        events: function (fetchInfo, successCallback, failureCallback) {
+            fetch('/api/calendar/events?start=' +
+                  fetchInfo.startStr + '&end=' + fetchInfo.endStr)
+                .then(function (resp) {
+                    if (!resp.ok) throw new Error('Unauthorized');
+                    return resp.json();
+                })
+                .then(function (data) {
+                    var filtered = data.filter(function (e) {
+                        return !hiddenTypes[e.eventType];
+                    });
+                    successCallback(filtered);
+                })
+                .catch(failureCallback);
+        },
+        eventClick: function (info) {
+            info.jsEvent.preventDefault();
+            if (info.event.url) {
+                window.location.href = info.event.url;
+            }
+        },
+        height: 'auto'
+    });
+    calendar.render();
+
+    document.querySelectorAll('.calendar-legend-item').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var type = this.dataset.eventType;
+            this.classList.toggle('legend-disabled');
+            hiddenTypes[type] = !hiddenTypes[type];
+            calendar.refetchEvents();
+        });
+    });
+});
+</script>
+
+</body>
+</html>

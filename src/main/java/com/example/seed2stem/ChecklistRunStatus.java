@@ -1,7 +1,8 @@
 package com.example.seed2stem;
 
 public enum ChecklistRunStatus {
-    PENDING,   // waiting for approval
-    APPROVED,  // authorized
+    IN_PROGRESS, // technician is filling it out
+    PENDING,     // submitted, waiting for manager approval
+    APPROVED,    // manager authorized
+    REJECTED     // manager rejected, technician must redo
 }
-

@@ -13,19 +13,24 @@ import java.util.List;
 public class DashboardController {
 
     private final TaskRepository taskRepo;
-    private ChecklistRunService checklistRunService;
+    private final ChecklistRunService checklistRunService;
+    private final BatchService batchService;
+    private final UserRepository userRepo;
 
-    public DashboardController(TaskRepository taskRepo, ChecklistRunService checklistRunService) {
+    public DashboardController(TaskRepository taskRepo,
+                               ChecklistRunService checklistRunService,
+                               BatchService batchService,
+                               UserRepository userRepo) {
         this.taskRepo = taskRepo;
         this.checklistRunService = checklistRunService;
+        this.batchService = batchService;
+        this.userRepo = userRepo;
     }
 
     @GetMapping("/home-dashboard")
     public String homeDashboard(HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
-        if (user == null) {
-            return "redirect:/auth/login";
-        }
+        if (user == null) return "redirect:/auth/login";
         if (user.getAccountType() == AccountType.MANAGER) {
             return "redirect:/dashboard/manager-dashboard";
         } else {
@@ -34,67 +39,47 @@ public class DashboardController {
     }
 
     @GetMapping("/technician-dashboard")
-    public String technicianDashboard(HttpSession session) {
+    public String technicianDashboard(HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
 
-        if (user == null) {
-            return "redirect:/auth/login";
-        }
-        return  "technician-dashboard";
+        model.addAttribute("taskCount", taskRepo.count());
+        model.addAttribute("batchCount", batchService.countActive());
+        return "technician-dashboard";
     }
 
     @GetMapping("/manager-dashboard")
-    public String managerDashboard(HttpSession session) {
+    public String managerDashboard(HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
 
-        if (user == null) {
-            return "redirect:/auth/login";
-        }
-        return  "manager-dashboard";
+        model.addAttribute("pendingCount", checklistRunService.getPendingChecklists().size());
+        model.addAttribute("batchCount", batchService.countActive());
+        model.addAttribute("taskCount", taskRepo.count());
+        model.addAttribute("technicianCount", userRepo.countByAccountType(AccountType.TECHNICIAN));
+        return "manager-dashboard";
     }
 
     @GetMapping("/task-dashboard")
-    public String taskDashboard(HttpSession session) {
+    public String taskDashboard(HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
 
-        if (user == null) {
-            return "redirect:/auth/login";
+        // Available Tasks — static list, same for all roles
+        List<Task> availableTasks = taskRepo.findAll();
+        model.addAttribute("availableTasks", availableTasks);
+
+        // Active Tasks — user's own IN_PROGRESS checklist runs
+        List<ChecklistRun> activeTasks = checklistRunService.getActiveRunsForUser(user);
+        model.addAttribute("activeTasks", activeTasks);
+
+        // Pending Approval — manager only
+        boolean isManager = user.getAccountType() == AccountType.MANAGER;
+        model.addAttribute("isManager", isManager);
+        if (isManager) {
+            model.addAttribute("pendingRuns", checklistRunService.getPendingChecklists());
         }
-        if (user.getAccountType() == AccountType.MANAGER) {
-            return "redirect:/dashboard/manager-task-dashboard";
-        } else {
-            return "redirect:/dashboard/technician-task-dashboard";
-        }
+
+        return "task-dashboard";
     }
-
-    @GetMapping("/technician-task-dashboard")
-    public String technicianTaskDashboard(HttpSession session, Model model) {
-        User user = (User) session.getAttribute("loggedInUser");
-
-        if (user == null) {
-            return "redirect:/auth/login";
-        }
-        List<Task> myTasks = taskRepo.findAll();
-
-        model.addAttribute("myTasks", myTasks);
-        return  "technician-task-dashboard";
-    }
-
-    @GetMapping("/manager-task-dashboard")
-    public String managerTaskDashboard(HttpSession session, Model model) {
-        User user = (User) session.getAttribute("loggedInUser");
-
-        if (user == null) {
-            return "redirect:/auth/login";
-        }
-        List<Task> myTasks = taskRepo.findAll();
-
-        model.addAttribute("myTasks", myTasks);
-        model.addAttribute(
-                "pendingRuns",
-                checklistRunService.getPendingChecklists()
-        );
-        return  "manager-task-dashboard";
-    }
-
 }

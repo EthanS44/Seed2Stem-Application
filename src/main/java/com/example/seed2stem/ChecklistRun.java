@@ -34,6 +34,9 @@ public class ChecklistRun {
     @JoinColumn(name = "task_id")
     private Task task;
 
+    private String checklistName;
+    private Integer checklistVersion;
+
     @OneToMany(mappedBy = "checklistRun", cascade = CascadeType.ALL)
     private List<ChecklistResponse> responses;
 
@@ -98,5 +101,16 @@ public class ChecklistRun {
     public void setManagerComments(String managerComments) {
         this.managerComments = managerComments;
     }
-
+    public String getChecklistName() {
+        return checklistName;
+    }
+    public void setChecklistName(String checklistName) {
+        this.checklistName = checklistName;
+    }
+    public Integer getChecklistVersion() {
+        return checklistVersion;
+    }
+    public void setChecklistVersion(Integer checklistVersion) {
+        this.checklistVersion = checklistVersion;
+    }
 }

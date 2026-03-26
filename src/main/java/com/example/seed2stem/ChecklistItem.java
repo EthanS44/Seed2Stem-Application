@@ -13,22 +13,24 @@ public class ChecklistItem {
     @Column(columnDefinition = "TEXT")
     private String text;
 
-    private String itemType; // QUESTION, HEADING, TEXT
-    private String responseType; // BOOLEAN_TEXT, TEXT, NUMBER, NONE
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ChecklistItemType itemType;
 
-    private Integer displayOrder;   // visual ordering
-    private Integer questionOrder;  // numbering (questions only)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ChecklistResponseType responseType;
+
+    @Enumerated(EnumType.STRING)
+    private ChecklistItemCategory category;
+
+    private Integer displayOrder;
+    private Integer questionOrder;
 
     @ManyToOne
     @JoinColumn(name = "checklist_id")
     private Checklist checklist;
 
-    public Checklist getChecklist() {
-        return checklist;
-    }
-    public void setChecklist(Checklist checklist) {
-        this.checklist = checklist;
-    }
     public Long getId() {
         return id;
     }
@@ -38,14 +40,26 @@ public class ChecklistItem {
     public String getText() {
         return text;
     }
-    public void setText(String question) {
-        this.text = question;
+    public void setText(String text) {
+        this.text = text;
     }
-    public String getResponseType() {
+    public ChecklistItemType getItemType() {
+        return itemType;
+    }
+    public void setItemType(ChecklistItemType itemType) {
+        this.itemType = itemType;
+    }
+    public ChecklistResponseType getResponseType() {
         return responseType;
     }
-    public void setResponseType(String responseType) {
+    public void setResponseType(ChecklistResponseType responseType) {
         this.responseType = responseType;
+    }
+    public ChecklistItemCategory getCategory() {
+        return category;
+    }
+    public void setCategory(ChecklistItemCategory category) {
+        this.category = category;
     }
     public Integer getDisplayOrder() {
         return displayOrder;
@@ -59,11 +73,10 @@ public class ChecklistItem {
     public void setQuestionOrder(Integer questionOrder) {
         this.questionOrder = questionOrder;
     }
-    public String getItemType() {
-        return itemType;
+    public Checklist getChecklist() {
+        return checklist;
     }
-    public void setItemType(String itemType) {
-        this.itemType = itemType;
+    public void setChecklist(Checklist checklist) {
+        this.checklist = checklist;
     }
 }
-
