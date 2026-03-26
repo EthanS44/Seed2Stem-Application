@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Technician Profile')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <a th:href="@{/technicians}" class="btn btn-outline-secondary btn-sm mb-3">
+        <i class="bi bi-arrow-left me-1"></i> All Technicians
+    </a>
+
+    <div class="d-flex align-items-center mb-4">
+        <i class="bi bi-person-circle me-3" style="font-size:2.5rem; color:var(--s2s-green)"></i>
+        <div>
+            <h4 class="mb-0" th:text="${technician.getName()}">Name</h4>
+            <small class="text-muted" th:text="'@' + ${technician.username}">@username</small>
+        </div>
+    </div>
+
+    <h5 class="mb-3">Completed Tasks</h5>
+
+    <div th:if="${#lists.isEmpty(completedRuns)}" class="text-muted">
+        No completed tasks yet.
+    </div>
+
+    <div th:if="${!#lists.isEmpty(completedRuns)}">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Task</th>
+                    <th>Checklist</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="run : ${completedRuns}">
+                    <td th:text="${run.task != null ? run.task.title : '—'}">Task</td>
+                    <td th:text="${run.checklistName}">Checklist</td>
+                    <td th:text="${#temporals.format(run.startTime, 'MMM d, yyyy')}">Mar 25, 2026</td>
+                    <td th:text="${#temporals.format(run.startTime, 'h:mm a')}">9:30 AM</td>
+                    <td>
+                        <span class="badge bg-success" th:if="${run.status.name() == 'APPROVED'}">Approved</span>
+                        <span class="badge bg-warning text-dark" th:if="${run.status.name() == 'PENDING'}">Pending</span>
+                    </td>
+                    <td>
+                        <a th:href="@{/checklist-runs/runs/{id}(id=${run.id})}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
