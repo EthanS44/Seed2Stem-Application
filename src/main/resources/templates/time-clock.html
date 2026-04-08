@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Time Clock')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <h4 class="mb-4">Time Clock</h4>
+
+    <!-- Flash messages -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Clock Status Card -->
+    <div class="card mb-4">
+        <div class="card-body text-center py-5">
+            <!-- Not Clocked In -->
+            <div th:if="${!isClockedIn}">
+                <i class="bi bi-clock" style="font-size: 3rem; color: var(--s2s-green);"></i>
+                <h5 class="mt-3 text-muted">You are not clocked in</h5>
+                <form method="post" th:action="@{/time-clock/clock-in}" class="mt-3">
+                    <button type="submit" class="btn btn-s2s btn-lg px-5">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Clock In
+                    </button>
+                </form>
+            </div>
+
+            <!-- Clocked In -->
+            <div th:if="${isClockedIn}">
+                <i class="bi bi-clock-fill text-success" style="font-size: 3rem;"></i>
+                <h5 class="mt-3 text-success">Clocked In</h5>
+                <p class="text-muted mb-1">
+                    Since <span th:text="${#temporals.format(activeEntry.clockInTime, 'h:mm a')}">9:00 AM</span>
+                </p>
+                <h3 id="elapsed-time" class="mb-3" data-clock-in-time th:attr="data-clock-in-time=${activeEntry.clockInTime}">--:--:--</h3>
+                <form method="post" th:action="@{/time-clock/clock-out}">
+                    <div class="mb-3" style="max-width: 400px; margin: 0 auto;">
+                        <textarea name="notes" class="form-control" rows="2" placeholder="Notes (optional)"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-danger btn-lg px-5">
+                        <i class="bi bi-box-arrow-right me-2"></i> Clock Out
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Summary -->
+    <div class="card mb-4">
+        <div class="card-header"><h6 class="mb-0">Today's Time</h6></div>
+        <div class="card-body">
+            <div th:if="${#lists.isEmpty(todayEntries)}" class="text-muted">No entries today.</div>
+            <table th:if="${!#lists.isEmpty(todayEntries)}" class="table table-sm mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Clock In</th>
+                        <th>Clock Out</th>
+                        <th>Hours</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="entry : ${todayEntries}">
+                        <td th:text="${#temporals.format(entry.clockInTime, 'h:mm a')}">9:00 AM</td>
+                        <td>
+                            <span th:if="${entry.clockOutTime != null}" th:text="${#temporals.format(entry.clockOutTime, 'h:mm a')}">5:00 PM</span>
+                            <span th:if="${entry.clockOutTime == null}" class="badge bg-success">Active</span>
+                        </td>
+                        <td>
+                            <span th:if="${entry.totalHours != null}" th:text="${entry.totalHours + 'h'}">8.0h</span>
+                            <span th:if="${entry.totalHours == null}">—</span>
+                        </td>
+                        <td th:text="${entry.notes != null ? entry.notes : '—'}">—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent History -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Recent History (Last 7 Days)</h6>
+            <a th:href="@{/time-clock/history}" class="btn btn-sm btn-outline-secondary">View All</a>
+        </div>
+        <div class="card-body">
+            <div th:if="${#lists.isEmpty(recentEntries)}" class="text-muted">No recent entries.</div>
+            <table th:if="${!#lists.isEmpty(recentEntries)}" class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Clock In</th>
+                        <th>Clock Out</th>
+                        <th>Hours</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="entry : ${recentEntries}">
+                        <td th:text="${#temporals.format(entry.date, 'EEE, MMM d')}">Mon, Mar 25</td>
+                        <td th:text="${#temporals.format(entry.clockInTime, 'h:mm a')}">9:00 AM</td>
+                        <td>
+                            <span th:if="${entry.clockOutTime != null}" th:text="${#temporals.format(entry.clockOutTime, 'h:mm a')}">5:00 PM</span>
+                            <span th:if="${entry.clockOutTime == null}" class="badge bg-success">Active</span>
+                        </td>
+                        <td>
+                            <span th:if="${entry.totalHours != null}" th:text="${entry.totalHours + 'h'}">8.0h</span>
+                            <span th:if="${entry.totalHours == null}">—</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script th:if="${isClockedIn}">
+    (function() {
+        const el = document.getElementById('elapsed-time');
+        const clockIn = new Date(el.getAttribute('data-clock-in-time'));
+        function update() {
+            const now = new Date();
+            const diff = Math.floor((now - clockIn) / 1000);
+            const h = Math.floor(diff / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            const s = diff % 60;
+            el.textContent = String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+        }
+        update();
+        setInterval(update, 1000);
+    })();
+</script>
+</body>
+</html>

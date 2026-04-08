@@ -157,7 +157,7 @@ public class ChecklistRunController {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
-        ChecklistRun run = runService.getChecklistById(runId);
+        ChecklistRun run = runService.getChecklistByIdWithDetails(runId);
         if (run == null) {
             return "redirect:/dashboard/home-dashboard";
         }

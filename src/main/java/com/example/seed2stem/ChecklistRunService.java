@@ -20,6 +20,17 @@ public class ChecklistRunService {
         return runRepo.findById(runId).orElseThrow();
     }
 
+    @Transactional(readOnly = true)
+    public ChecklistRun getChecklistByIdWithDetails(Long runId) {
+        ChecklistRun run = runRepo.findById(runId).orElse(null);
+        if (run != null) {
+            // Force lazy loading within the transaction
+            run.getTask().getChecklist().getItems().size();
+            run.getResponses().forEach(r -> r.getChecklistItem().getId());
+        }
+        return run;
+    }
+
     @Transactional
     public ChecklistRun submitByTechnician(ChecklistRun run) {
         if (run.getStatus() != ChecklistRunStatus.IN_PROGRESS

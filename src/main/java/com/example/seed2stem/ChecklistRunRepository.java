@@ -10,6 +10,7 @@ import java.util.Optional;
 
 public interface ChecklistRunRepository
         extends JpaRepository<ChecklistRun, Long> {
+
     List<ChecklistRun> findByStatus(ChecklistRunStatus status);
     List<ChecklistRun> findByCompletedByAndStatus(User completedBy, ChecklistRunStatus status);
     Optional<ChecklistRun> findByCompletedByAndTaskAndStatus(User completedBy, Task task, ChecklistRunStatus status);

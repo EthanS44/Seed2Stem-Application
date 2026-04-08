@@ -16,15 +16,18 @@ public class DashboardController {
     private final ChecklistRunService checklistRunService;
     private final BatchService batchService;
     private final UserRepository userRepo;
+    private final TimeEntryService timeEntryService;
 
     public DashboardController(TaskRepository taskRepo,
                                ChecklistRunService checklistRunService,
                                BatchService batchService,
-                               UserRepository userRepo) {
+                               UserRepository userRepo,
+                               TimeEntryService timeEntryService) {
         this.taskRepo = taskRepo;
         this.checklistRunService = checklistRunService;
         this.batchService = batchService;
         this.userRepo = userRepo;
+        this.timeEntryService = timeEntryService;
     }
 
     @GetMapping("/home-dashboard")
@@ -45,6 +48,7 @@ public class DashboardController {
 
         model.addAttribute("taskCount", taskRepo.count());
         model.addAttribute("batchCount", batchService.countActive());
+        model.addAttribute("clockedIn", timeEntryService.isClockedIn(user));
         return "technician-dashboard";
     }
 
@@ -57,6 +61,7 @@ public class DashboardController {
         model.addAttribute("batchCount", batchService.countActive());
         model.addAttribute("taskCount", taskRepo.count());
         model.addAttribute("technicianCount", userRepo.countByAccountType(AccountType.TECHNICIAN));
+        model.addAttribute("clockedInCount", timeEntryService.countClockedIn());
         return "manager-dashboard";
     }
 

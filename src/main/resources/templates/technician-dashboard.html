@@ -27,6 +27,14 @@
                 </div>
             </div>
         </div>
+        <div class="col-md-4">
+            <div class="card text-white h-100" th:classappend="${clockedIn ? 'bg-success' : 'bg-secondary'}">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-clock me-1"></i> Clock Status</h6>
+                    <h2 class="mb-0" th:text="${clockedIn ? 'Clocked In' : 'Not Clocked In'}">Status</h2>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Quick Access Grid -->
@@ -48,6 +56,16 @@
                     <div class="card-body text-center py-4">
                         <div class="menu-icon"><i class="bi bi-flower1"></i></div>
                         <h6 class="card-title mt-2">View Batches</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a th:href="@{/time-clock}" class="text-decoration-none">
+                <div class="card menu-card shadow-sm h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="menu-icon"><i class="bi bi-clock"></i></div>
+                        <h6 class="card-title mt-2">Time Clock</h6>
                     </div>
                 </div>
             </a>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Time History')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <a th:href="@{/time-clock}" class="btn btn-outline-secondary btn-sm mb-3">
+        <i class="bi bi-arrow-left me-1"></i> Back to Time Clock
+    </a>
+
+    <h4 class="mb-4">Time History</h4>
+
+    <!-- Date Range Filter -->
+    <form class="row g-2 mb-4" method="get" th:action="@{/time-clock/history}">
+        <div class="col-auto">
+            <label class="form-label mb-0">From</label>
+            <input type="date" name="startDate" class="form-control" th:value="${startDate}">
+        </div>
+        <div class="col-auto">
+            <label class="form-label mb-0">To</label>
+            <input type="date" name="endDate" class="form-control" th:value="${endDate}">
+        </div>
+        <div class="col-auto d-flex align-items-end">
+            <button type="submit" class="btn btn-s2s">Filter</button>
+        </div>
+    </form>
+
+    <!-- Total Hours -->
+    <div class="alert alert-light border mb-3">
+        <strong>Total Hours:</strong> <span th:text="${totalHours}">0</span>h
+        <span class="text-muted ms-2">(
+            <span th:text="${#temporals.format(startDate, 'MMM d')}">Mar 1</span> –
+            <span th:text="${#temporals.format(endDate, 'MMM d, yyyy')}">Mar 31, 2026</span>
+        )</span>
+    </div>
+
+    <!-- Entries Table -->
+    <div th:if="${#lists.isEmpty(entries)}" class="text-muted">No entries in this period.</div>
+    <div th:if="${!#lists.isEmpty(entries)}" class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Date</th>
+                    <th>Clock In</th>
+                    <th>Clock Out</th>
+                    <th>Hours</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="entry : ${entries}">
+                    <td th:text="${#temporals.format(entry.date, 'EEE, MMM d, yyyy')}">Mon, Mar 25, 2026</td>
+                    <td th:text="${#temporals.format(entry.clockInTime, 'h:mm a')}">9:00 AM</td>
+                    <td>
+                        <span th:if="${entry.clockOutTime != null}" th:text="${#temporals.format(entry.clockOutTime, 'h:mm a')}">5:00 PM</span>
+                        <span th:if="${entry.clockOutTime == null}" class="badge bg-success">Active</span>
+                    </td>
+                    <td>
+                        <span th:if="${entry.totalHours != null}" th:text="${entry.totalHours + 'h'}">8.0h</span>
+                        <span th:if="${entry.totalHours == null}">—</span>
+                    </td>
+                    <td th:text="${entry.notes != null ? entry.notes : '—'}">—</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

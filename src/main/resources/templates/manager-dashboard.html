@@ -44,6 +44,16 @@
             </div>
         </div>
     </div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-success h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-clock me-1"></i> Clocked In Now</h6>
+                    <h2 class="mb-0" th:text="${clockedInCount != null ? clockedInCount : 0}">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Quick Access Grid -->
     <h5 class="mb-3">Quick Access</h5>
