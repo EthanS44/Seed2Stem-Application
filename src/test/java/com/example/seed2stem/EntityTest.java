@@ -198,14 +198,77 @@ class EntityTest {
         assertEquals("Destroyed", BatchStatus.DESTROYED.getDisplayName());
     }
 
+    // --- Task (userCreated fields) ---
+
+    @Test
+    void task_userCreatedFields() {
+        Task task = new Task();
+        User creator = new User("tech", "h", "Tech", "User", AccountType.TECHNICIAN);
+
+        task.setUserCreated(true);
+        task.setCreatedBy(creator);
+
+        assertTrue(task.isUserCreated());
+        assertEquals(creator, task.getCreatedBy());
+    }
+
+    @Test
+    void task_defaultUserCreated_isFalse() {
+        Task task = new Task();
+        assertFalse(task.isUserCreated());
+    }
+
+    // --- RegistrationRequest ---
+
+    @Test
+    void registrationRequest_settersAndGetters_work() {
+        RegistrationRequest req = new RegistrationRequest();
+        LocalDateTime now = LocalDateTime.now();
+
+        req.setId(1L);
+        req.setFirstName("Jane");
+        req.setLastName("Smith");
+        req.setUsername("jsmith");
+        req.setPassword("hashedpass");
+        req.setAccountType(AccountType.TECHNICIAN);
+        req.setStatus(RegistrationStatus.PENDING);
+        req.setCreatedAt(now);
+
+        assertEquals(1L, req.getId());
+        assertEquals("Jane", req.getFirstName());
+        assertEquals("Smith", req.getLastName());
+        assertEquals("jsmith", req.getUsername());
+        assertEquals("hashedpass", req.getPassword());
+        assertEquals(AccountType.TECHNICIAN, req.getAccountType());
+        assertEquals(RegistrationStatus.PENDING, req.getStatus());
+        assertEquals(now, req.getCreatedAt());
+    }
+
+    @Test
+    void registrationRequest_defaultStatus_isPending() {
+        RegistrationRequest req = new RegistrationRequest();
+        assertEquals(RegistrationStatus.PENDING, req.getStatus());
+    }
+
+    // --- RegistrationStatus enum ---
+
+    @Test
+    void registrationStatus_allValuesExist() {
+        assertEquals(3, RegistrationStatus.values().length);
+        assertNotNull(RegistrationStatus.valueOf("PENDING"));
+        assertNotNull(RegistrationStatus.valueOf("APPROVED"));
+        assertNotNull(RegistrationStatus.valueOf("DENIED"));
+    }
+
     // --- AccountType enum ---
 
     @Test
     void accountType_allValuesExist() {
-        assertEquals(3, AccountType.values().length);
+        assertEquals(4, AccountType.values().length);
         assertNotNull(AccountType.valueOf("TECHNICIAN"));
         assertNotNull(AccountType.valueOf("MANAGER"));
         assertNotNull(AccountType.valueOf("ADMIN"));
+        assertNotNull(AccountType.valueOf("DEVELOPER"));
     }
 
     // --- ChecklistRunStatus enum ---

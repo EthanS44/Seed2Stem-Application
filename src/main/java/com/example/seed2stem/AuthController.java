@@ -66,8 +66,7 @@ public class AuthController {
         try {
             AccountType accountType = AccountType.valueOf(accountTypeStr);
             authService.register(username, password, firstName, lastName, accountType);
-            redirectAttributes.addAttribute("success", "Account created successfully");
-            return "redirect:/auth/login";
+            return "redirect:/auth/registration-pending";
 
         } catch (IllegalArgumentException e) {
             redirectAttributes.addAttribute("error", "Invalid account type selected");
@@ -77,6 +76,12 @@ public class AuthController {
             redirectAttributes.addAttribute("error", e.getMessage());
             return "redirect:/auth/register";
         }
+    }
+
+    /** Registration pending confirmation */
+    @GetMapping("/registration-pending")
+    public String registrationPending() {
+        return "registration-pending";
     }
 
     /** Logout */

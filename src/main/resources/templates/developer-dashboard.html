@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Developer Dashboard')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <h4 class="mb-4">Developer Dashboard</h4>
+
+    <!-- Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-warning h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-clock-history me-1"></i> Pending Approvals</h6>
+                    <h2 class="mb-0" th:text="${pendingCount != null ? pendingCount : 0}">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white h-100" style="background-color: var(--s2s-green);">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-flower1 me-1"></i> Active Batches</h6>
+                    <h2 class="mb-0" th:text="${batchCount != null ? batchCount : 0}">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-list-task me-1"></i> Available Tasks</h6>
+                    <h2 class="mb-0" th:text="${taskCount != null ? taskCount : 0}">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-secondary h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-people me-1"></i> Technicians</h6>
+                    <h2 class="mb-0" th:text="${technicianCount != null ? technicianCount : 0}">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-success h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-clock me-1"></i> Clocked In Now</h6>
+                    <h2 class="mb-0" th:text="${clockedInCount != null ? clockedInCount : 0}">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Access Grid -->
+    <h5 class="mb-3">Quick Access</h5>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <a th:href="@{/dashboard/task-dashboard}" class="text-decoration-none">
+                <div class="card menu-card shadow-sm h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="menu-icon"><i class="bi bi-list-task"></i></div>
+                        <h6 class="card-title mt-2">Tasks &amp; SOPs</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a th:href="@{/batches}" class="text-decoration-none">
+                <div class="card menu-card shadow-sm h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="menu-icon"><i class="bi bi-flower1"></i></div>
+                        <h6 class="card-title mt-2">Batches</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a th:href="@{/batches/create}" class="text-decoration-none">
+                <div class="card menu-card shadow-sm h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="menu-icon"><i class="bi bi-plus-circle"></i></div>
+                        <h6 class="card-title mt-2">New Batch</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a th:href="@{/developer/user-created-tasks}" class="text-decoration-none">
+                <div class="card menu-card shadow-sm h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="menu-icon"><i class="bi bi-pencil-square"></i></div>
+                        <h6 class="card-title mt-2">User Created Tasks</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-4">
+            <a th:href="@{/developer/registration-requests}" class="text-decoration-none">
+                <div class="card menu-card shadow-sm h-100">
+                    <div class="card-body text-center py-4">
+                        <div class="menu-icon"><i class="bi bi-person-check"></i></div>
+                        <h6 class="card-title mt-2">Registration Requests</h6>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

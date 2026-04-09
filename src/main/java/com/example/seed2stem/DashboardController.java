@@ -34,7 +34,9 @@ public class DashboardController {
     public String homeDashboard(HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
-        if (user.getAccountType() == AccountType.MANAGER) {
+        if (user.getAccountType() == AccountType.DEVELOPER) {
+            return "redirect:/dashboard/developer-dashboard";
+        } else if (user.getAccountType() == AccountType.MANAGER) {
             return "redirect:/dashboard/manager-dashboard";
         } else {
             return "redirect:/dashboard/technician-dashboard";
@@ -46,7 +48,7 @@ public class DashboardController {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
-        model.addAttribute("taskCount", taskRepo.count());
+        model.addAttribute("taskCount", taskRepo.countByUserCreatedFalse());
         model.addAttribute("batchCount", batchService.countActive());
         model.addAttribute("clockedIn", timeEntryService.isClockedIn(user));
         return "technician-dashboard";
@@ -59,10 +61,23 @@ public class DashboardController {
 
         model.addAttribute("pendingCount", checklistRunService.getPendingChecklists().size());
         model.addAttribute("batchCount", batchService.countActive());
-        model.addAttribute("taskCount", taskRepo.count());
+        model.addAttribute("taskCount", taskRepo.countByUserCreatedFalse());
         model.addAttribute("technicianCount", userRepo.countByAccountType(AccountType.TECHNICIAN));
         model.addAttribute("clockedInCount", timeEntryService.countClockedIn());
         return "manager-dashboard";
+    }
+
+    @GetMapping("/developer-dashboard")
+    public String developerDashboard(HttpSession session, Model model) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+
+        model.addAttribute("pendingCount", checklistRunService.getPendingChecklists().size());
+        model.addAttribute("batchCount", batchService.countActive());
+        model.addAttribute("taskCount", taskRepo.countByUserCreatedFalse());
+        model.addAttribute("technicianCount", userRepo.countByAccountType(AccountType.TECHNICIAN));
+        model.addAttribute("clockedInCount", timeEntryService.countClockedIn());
+        return "developer-dashboard";
     }
 
     @GetMapping("/task-dashboard")
@@ -70,16 +85,17 @@ public class DashboardController {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
-        // Available Tasks — static list, same for all roles
-        List<Task> availableTasks = taskRepo.findAll();
+        // Available Tasks — standard tasks only (not user-created)
+        List<Task> availableTasks = taskRepo.findByUserCreatedFalse();
         model.addAttribute("availableTasks", availableTasks);
 
         // Active Tasks — user's own IN_PROGRESS checklist runs
         List<ChecklistRun> activeTasks = checklistRunService.getActiveRunsForUser(user);
         model.addAttribute("activeTasks", activeTasks);
 
-        // Pending Approval — manager only
-        boolean isManager = user.getAccountType() == AccountType.MANAGER;
+        // Pending Approval — manager and developer
+        boolean isManager = user.getAccountType() == AccountType.MANAGER
+                || user.getAccountType() == AccountType.DEVELOPER;
         model.addAttribute("isManager", isManager);
         if (isManager) {
             model.addAttribute("pendingRuns", checklistRunService.getPendingChecklists());

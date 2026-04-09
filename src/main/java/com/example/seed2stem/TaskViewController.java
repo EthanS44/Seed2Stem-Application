@@ -19,15 +19,92 @@ public class TaskViewController {
     private final ChecklistItemRepository itemRepo;
     private final ChecklistRunRepository runRepo;
     private final ChecklistRunService runService;
+    private final ChecklistRepository checklistRepo;
+    private final ChecklistResponseRepository responseRepo;
 
     public TaskViewController(TaskRepository taskRepo,
                               ChecklistItemRepository itemRepo,
                               ChecklistRunRepository runRepo,
-                              ChecklistRunService runService) {
+                              ChecklistRunService runService,
+                              ChecklistRepository checklistRepo,
+                              ChecklistResponseRepository responseRepo) {
         this.taskRepo = taskRepo;
         this.itemRepo = itemRepo;
         this.runRepo = runRepo;
         this.runService = runService;
+        this.checklistRepo = checklistRepo;
+        this.responseRepo = responseRepo;
+    }
+
+    /* ---------------- Create Task ---------------- */
+
+    @GetMapping("/create")
+    public String createTaskForm(HttpSession session, Model model) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+        return "create-task";
+    }
+
+    @PostMapping("/create")
+    public String createTask(@RequestParam String title,
+                             @RequestParam String description,
+                             HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+
+        // Build a Checklist with a header and a text question
+        Checklist checklist = new Checklist();
+        checklist.setName(title);
+        checklist.setVersion(1);
+
+        ChecklistItem header = new ChecklistItem();
+        header.setText(title);
+        header.setItemType(ChecklistItemType.HEADER);
+        header.setResponseType(ChecklistResponseType.NONE);
+        header.setDisplayOrder(1);
+        header.setChecklist(checklist);
+        checklist.addItem(header);
+
+        ChecklistItem descriptionItem = new ChecklistItem();
+        descriptionItem.setText("Description of work completed");
+        descriptionItem.setItemType(ChecklistItemType.QUESTION);
+        descriptionItem.setResponseType(ChecklistResponseType.TEXT);
+        descriptionItem.setCategory(ChecklistItemCategory.GENERAL);
+        descriptionItem.setQuestionOrder(1);
+        descriptionItem.setDisplayOrder(2);
+        descriptionItem.setChecklist(checklist);
+        checklist.addItem(descriptionItem);
+
+        checklistRepo.save(checklist);
+
+        // Create the Task linked to the checklist
+        Task task = new Task();
+        task.setTitle(title);
+        task.setDescription(description);
+        task.setChecklist(checklist);
+        task.setUserCreated(true);
+        task.setCreatedBy(user);
+        taskRepo.save(task);
+
+        // Create a ChecklistRun with PENDING status and pre-filled response
+        ChecklistRun run = new ChecklistRun();
+        run.setTask(task);
+        run.setCompletedBy(user);
+        run.setStartTime(LocalDateTime.now());
+        run.setEndTime(LocalDateTime.now());
+        run.setStatus(ChecklistRunStatus.PENDING);
+        run.setChecklistName(title);
+        run.setChecklistVersion(1);
+        runRepo.save(run);
+
+        // Pre-fill the description response
+        ChecklistResponse response = new ChecklistResponse();
+        response.setChecklistRun(run);
+        response.setChecklistItem(descriptionItem);
+        response.setTextAnswer(description);
+        responseRepo.save(response);
+
+        return "redirect:/dashboard/task-dashboard";
     }
 
     /* ---------------- Task View ---------------- */

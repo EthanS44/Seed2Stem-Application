@@ -20,5 +20,7 @@ public interface ChecklistRunRepository
 
     @Query("SELECT r FROM ChecklistRun r JOIN FETCH r.task WHERE r.completedBy = :user AND r.status IN ('APPROVED', 'PENDING') ORDER BY r.startTime DESC")
     List<ChecklistRun> findCompletedByUserOrderByStartTimeDesc(@Param("user") User user);
+
+    Optional<ChecklistRun> findFirstByTask(Task task);
 }
 

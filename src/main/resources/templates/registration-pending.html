@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Registration Pending')}"></head>
+<body class="auth-wrapper">
+
+<div class="auth-card">
+    <div class="card shadow-sm">
+        <div class="card-body p-4 text-center">
+            <img th:src="@{/Seed2Stem_Logo.png}" alt="Seed2Stem" class="img-fluid mb-3">
+            <h4 class="mb-3">Registration Submitted</h4>
+
+            <div class="alert alert-info py-3">
+                <i class="bi bi-hourglass-split me-2"></i>
+                Your account request has been submitted and is awaiting approval.
+                You will be able to log in once a developer approves your account.
+            </div>
+
+            <a th:href="@{/auth/login}" class="btn btn-s2s w-100 mt-2">Back to Login</a>
+            <div class="text-muted small mt-3">&copy; Seed2Stem</div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

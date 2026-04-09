@@ -7,7 +7,12 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <h4 class="mb-4">Task Dashboard</h4>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">Task Dashboard</h4>
+        <a th:href="@{/tasks/create}" class="btn btn-success">
+            <i class="bi bi-plus-circle me-1"></i> Create Task
+        </a>
+    </div>
 
     <div class="row g-4">
         <!-- Active Tasks -->

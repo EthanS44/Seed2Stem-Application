@@ -91,13 +91,19 @@ class AuthControllerTest {
     // --- register POST ---
 
     @Test
-    void register_validInput_redirectsToLoginWithSuccess() {
+    void register_validInput_redirectsToRegistrationPending() {
         doNothing().when(authService).register("newuser", "pass", "Jane", "Smith", AccountType.MANAGER);
         RedirectAttributes redirect = new RedirectAttributesModelMap();
 
         String result = controller.register("newuser", "pass", "Jane", "Smith", "MANAGER", redirect);
 
-        assertEquals("redirect:/auth/login", result);
+        assertEquals("redirect:/auth/registration-pending", result);
+    }
+
+    @Test
+    void registrationPending_returnsCorrectView() {
+        String result = controller.registrationPending();
+        assertEquals("registration-pending", result);
     }
 
     @Test

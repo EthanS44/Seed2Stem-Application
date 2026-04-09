@@ -19,11 +19,30 @@ public class Task {
     @JoinColumn(name = "checklist_id")
     private Checklist checklist;
 
+    @Column(columnDefinition = "boolean default false")
+    private boolean userCreated;
+
+    @ManyToOne
+    @JoinColumn(name = "created_by_user_id")
+    private User createdBy;
+
     public Checklist getChecklist() {
         return checklist;
     }
     public void setChecklist(Checklist checklist) {
         this.checklist = checklist;
+    }
+    public boolean isUserCreated() {
+        return userCreated;
+    }
+    public void setUserCreated(boolean userCreated) {
+        this.userCreated = userCreated;
+    }
+    public User getCreatedBy() {
+        return createdBy;
+    }
+    public void setCreatedBy(User createdBy) {
+        this.createdBy = createdBy;
     }
     public Task() {
     }

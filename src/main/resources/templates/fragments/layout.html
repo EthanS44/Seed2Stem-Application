@@ -51,6 +51,17 @@
                 <i class="bi bi-people me-2"></i> Technicians
             </a>
         </li>
+        <li class="sidebar-heading" th:if="${session.loggedInUser != null and session.loggedInUser.getAccountType().name() == 'DEVELOPER'}">Developer</li>
+        <li class="nav-item" th:if="${session.loggedInUser != null and session.loggedInUser.getAccountType().name() == 'DEVELOPER'}">
+            <a class="nav-link" th:href="@{/developer/user-created-tasks}">
+                <i class="bi bi-pencil-square me-2"></i> User Created Tasks
+            </a>
+        </li>
+        <li class="nav-item" th:if="${session.loggedInUser != null and session.loggedInUser.getAccountType().name() == 'DEVELOPER'}">
+            <a class="nav-link" th:href="@{/developer/registration-requests}">
+                <i class="bi bi-person-check me-2"></i> Registration Requests
+            </a>
+        </li>
         <li class="sidebar-heading">Account</li>
         <li class="nav-item">
             <a class="nav-link" th:href="@{/auth/logout}">

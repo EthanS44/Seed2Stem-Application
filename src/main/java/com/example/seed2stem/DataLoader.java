@@ -47,6 +47,21 @@ public class DataLoader implements CommandLineRunner {
             stmt.execute("ALTER TABLE checklist_item DROP CONSTRAINT IF EXISTS checklist_item_item_type_check");
             stmt.execute("ALTER TABLE checklist_item DROP CONSTRAINT IF EXISTS checklist_item_response_type_check");
 
+            // Set existing tasks to not user-created
+            stmt.execute("ALTER TABLE task ADD COLUMN IF NOT EXISTS user_created boolean DEFAULT false");
+            stmt.execute("UPDATE task SET user_created = false WHERE user_created IS NULL");
+            stmt.execute("ALTER TABLE task ALTER COLUMN user_created SET NOT NULL");
+
+            // Update registration_request status constraint
+            stmt.execute("ALTER TABLE registration_request DROP CONSTRAINT IF EXISTS registration_request_status_check");
+            stmt.execute("ALTER TABLE registration_request ADD CONSTRAINT registration_request_status_check " +
+                    "CHECK (status IN ('PENDING','APPROVED','DENIED'))");
+
+            // Update account_type constraint to include DEVELOPER
+            stmt.execute("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_account_type_check");
+            stmt.execute("ALTER TABLE users ADD CONSTRAINT users_account_type_check " +
+                    "CHECK (account_type IN ('TECHNICIAN','MANAGER','ADMIN','DEVELOPER'))");
+
             // Drop obsolete columns from task table
             stmt.execute("ALTER TABLE task DROP COLUMN IF EXISTS assigned_to_user_id");
             stmt.execute("ALTER TABLE task DROP COLUMN IF EXISTS completed");
