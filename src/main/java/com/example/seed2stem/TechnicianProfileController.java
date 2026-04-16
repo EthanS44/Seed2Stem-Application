@@ -35,7 +35,10 @@ public class TechnicianProfileController {
     public String listTechnicians(HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
-        if (user.getAccountType() != AccountType.MANAGER) return "redirect:/dashboard/home-dashboard";
+        if (user.getAccountType() != AccountType.MANAGER
+                && user.getAccountType() != AccountType.DEVELOPER) {
+            return "redirect:/dashboard/home-dashboard";
+        }
 
         List<User> technicians = userRepository.findByAccountType(AccountType.TECHNICIAN);
         model.addAttribute("technicians", technicians);
@@ -46,7 +49,10 @@ public class TechnicianProfileController {
     public String technicianProfile(@PathVariable Long id, HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
-        if (user.getAccountType() != AccountType.MANAGER) return "redirect:/dashboard/home-dashboard";
+        if (user.getAccountType() != AccountType.MANAGER
+                && user.getAccountType() != AccountType.DEVELOPER) {
+            return "redirect:/dashboard/home-dashboard";
+        }
 
         User technician = userRepository.findById(id).orElse(null);
         if (technician == null) return "redirect:/technicians";
@@ -81,7 +87,10 @@ public class TechnicianProfileController {
                                 RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
-        if (user.getAccountType() != AccountType.MANAGER) return "redirect:/dashboard/home-dashboard";
+        if (user.getAccountType() != AccountType.MANAGER
+                && user.getAccountType() != AccountType.DEVELOPER) {
+            return "redirect:/dashboard/home-dashboard";
+        }
 
         try {
             LocalDateTime parsedIn = LocalDateTime.parse(clockInTime);

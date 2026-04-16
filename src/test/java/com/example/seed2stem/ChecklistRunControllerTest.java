@@ -89,9 +89,8 @@ class ChecklistRunControllerTest {
         item.setResponseType(ChecklistResponseType.BOOLEAN_TEXT);
 
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
-        when(runService.getChecklistById(1L)).thenReturn(run);
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
-        when(runService.submitByTechnician(any())).thenReturn(run);
+        when(runService.submitWithResponses(eq(1L), anyList())).thenReturn(run);
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("taskId", "1");
@@ -102,7 +101,7 @@ class ChecklistRunControllerTest {
 
         String result = controller.submitChecklist(1L, 1L, params, session, redirect);
         assertEquals("redirect:/dashboard/task-dashboard", result);
-        verify(runService).submitByTechnician(any());
+        verify(runService).submitWithResponses(eq(1L), anyList());
     }
 
     @Test
@@ -116,7 +115,6 @@ class ChecklistRunControllerTest {
         item.setText("Is temperature OK?");
 
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
-        when(runService.getChecklistById(1L)).thenReturn(run);
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
@@ -138,7 +136,6 @@ class ChecklistRunControllerTest {
         item.setText("Plant count");
 
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
-        when(runService.getChecklistById(1L)).thenReturn(run);
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
@@ -160,7 +157,6 @@ class ChecklistRunControllerTest {
         item.setText("Temperature");
 
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
-        when(runService.getChecklistById(1L)).thenReturn(run);
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
@@ -181,9 +177,8 @@ class ChecklistRunControllerTest {
         item.setResponseType(ChecklistResponseType.TEXT);
 
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
-        when(runService.getChecklistById(1L)).thenReturn(run);
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
-        when(runService.submitByTechnician(any())).thenReturn(run);
+        when(runService.submitWithResponses(eq(1L), anyList())).thenReturn(run);
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("text_10", "Some notes");
@@ -208,9 +203,8 @@ class ChecklistRunControllerTest {
         question.setResponseType(ChecklistResponseType.TEXT);
 
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
-        when(runService.getChecklistById(1L)).thenReturn(run);
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(header, question));
-        when(runService.submitByTechnician(any())).thenReturn(run);
+        when(runService.submitWithResponses(eq(1L), anyList())).thenReturn(run);
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("text_10", "answer");
@@ -230,9 +224,8 @@ class ChecklistRunControllerTest {
         item.setResponseType(ChecklistResponseType.NONE);
 
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
-        when(runService.getChecklistById(1L)).thenReturn(run);
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
-        when(runService.submitByTechnician(any())).thenReturn(run);
+        when(runService.submitWithResponses(eq(1L), anyList())).thenReturn(run);
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         var redirect = new RedirectAttributesModelMap();
@@ -260,7 +253,6 @@ class ChecklistRunControllerTest {
         item.setResponseType(ChecklistResponseType.BOOLEAN_TEXT);
 
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
-        when(runService.getChecklistById(1L)).thenReturn(run);
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
         when(runService.pauseByUser(eq(1L), anyList())).thenReturn(run);
 
@@ -283,7 +275,6 @@ class ChecklistRunControllerTest {
         item.setResponseType(ChecklistResponseType.BOOLEAN_TEXT);
 
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
-        when(runService.getChecklistById(1L)).thenReturn(run);
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
         when(runService.pauseByUser(eq(1L), anyList())).thenReturn(run);
 
@@ -304,7 +295,6 @@ class ChecklistRunControllerTest {
         item.setResponseType(ChecklistResponseType.INTEGER);
 
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
-        when(runService.getChecklistById(1L)).thenReturn(run);
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
         when(runService.pauseByUser(eq(1L), anyList())).thenReturn(run);
 

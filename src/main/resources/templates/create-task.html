@@ -14,8 +14,9 @@
             <div class="card shadow-sm">
                 <div class="card-body">
                     <p class="text-muted mb-4">
-                        If you completed a task at the facility that doesn't have a matching entry in Seed2Stem,
-                        use this form to log it. Your submission will be sent for manager approval.
+                        Use this form to create and start logging a task that isn't in Seed2Stem.
+                        Once started, you'll be able to describe what you did while you work.
+                        Your submission will be sent for manager approval.
                     </p>
 
                     <form th:action="@{/tasks/create}" method="post">
@@ -26,15 +27,14 @@
                         </div>
 
                         <div class="mb-4">
-                            <label for="description" class="form-label fw-bold">Description of Work Completed</label>
-                            <textarea class="form-control" id="description" name="description" rows="5"
-                                      placeholder="Describe what you did, where, and any notes for the manager..."
-                                      required></textarea>
+                            <label for="description" class="form-label fw-bold">Task Description <span class="text-muted fw-normal">(optional)</span></label>
+                            <textarea class="form-control" id="description" name="description" rows="3"
+                                      placeholder="Brief description of what this task involves..."></textarea>
                         </div>
 
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-success">
-                                <i class="bi bi-check-circle me-1"></i> Submit Task
+                                <i class="bi bi-play-circle me-1"></i> Create and Start Task
                             </button>
                             <a th:href="@{/dashboard/task-dashboard}" class="btn btn-outline-secondary">Cancel</a>
                         </div>

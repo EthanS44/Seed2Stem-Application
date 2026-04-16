@@ -30,8 +30,12 @@ public class DataLoader implements CommandLineRunner {
     @Transactional
     public void run(String... args) throws Exception {
         migrateCheckConstraints();
-        //createAMProductionAreaInspection();
-        //createPMProductionAreaInspection();
+
+        // Only seed tasks if none exist yet
+        if (taskRepo.count() == 0) {
+            createAMProductionAreaInspection();
+            createPMProductionAreaInspection();
+        }
     }
 
     private void migrateCheckConstraints() {
@@ -47,6 +51,7 @@ public class DataLoader implements CommandLineRunner {
             stmt.execute("ALTER TABLE checklist_item DROP CONSTRAINT IF EXISTS checklist_item_item_type_check");
             stmt.execute("ALTER TABLE checklist_item DROP CONSTRAINT IF EXISTS checklist_item_response_type_check");
 
+
             // Set existing tasks to not user-created
             stmt.execute("ALTER TABLE task ADD COLUMN IF NOT EXISTS user_created boolean DEFAULT false");
             stmt.execute("UPDATE task SET user_created = false WHERE user_created IS NULL");
@@ -55,6 +60,11 @@ public class DataLoader implements CommandLineRunner {
             // Update registration_request status constraint
             stmt.execute("ALTER TABLE registration_request DROP CONSTRAINT IF EXISTS registration_request_status_check");
             stmt.execute("ALTER TABLE registration_request ADD CONSTRAINT registration_request_status_check " +
+                    "CHECK (status IN ('PENDING','APPROVED','DENIED'))");
+
+            // Update password_reset_request status constraint
+            stmt.execute("ALTER TABLE password_reset_request DROP CONSTRAINT IF EXISTS password_reset_request_status_check");
+            stmt.execute("ALTER TABLE password_reset_request ADD CONSTRAINT password_reset_request_status_check " +
                     "CHECK (status IN ('PENDING','APPROVED','DENIED'))");
 
             // Update account_type constraint to include DEVELOPER

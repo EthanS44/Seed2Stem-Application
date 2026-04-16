@@ -24,6 +24,9 @@ class AuthServiceTest {
     @Mock
     private RegistrationRequestRepository registrationRequestRepo;
 
+    @Mock
+    private PasswordResetRequestRepository passwordResetRequestRepo;
+
     @InjectMocks
     private AuthService authService;
 
@@ -200,5 +203,214 @@ class AuthServiceTest {
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> authService.denyRegistration(1L));
         assertEquals("This request has already been processed", ex.getMessage());
+    }
+
+    // --- createPasswordResetRequest ---
+
+    @Test
+    void createPasswordResetRequest_matchingUser_createsRequest() {
+        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
+        when(passwordResetRequestRepo.existsByUsernameAndStatus("john", PasswordResetStatus.PENDING))
+                .thenReturn(false);
+        when(passwordResetRequestRepo.save(any(PasswordResetRequest.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        authService.createPasswordResetRequest("john", "John", "Doe");
+
+        verify(passwordResetRequestRepo).save(argThat(req -> {
+            assertEquals("john", req.getUsername());
+            assertEquals("John", req.getFirstName());
+            assertEquals("Doe", req.getLastName());
+            assertEquals(PasswordResetStatus.PENDING, req.getStatus());
+            assertNotNull(req.getCreatedAt());
+            return true;
+        }));
+    }
+
+    @Test
+    void createPasswordResetRequest_caseInsensitiveName_createsRequest() {
+        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
+        when(passwordResetRequestRepo.existsByUsernameAndStatus("john", PasswordResetStatus.PENDING))
+                .thenReturn(false);
+        when(passwordResetRequestRepo.save(any(PasswordResetRequest.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        authService.createPasswordResetRequest("john", "JOHN", "doe");
+
+        verify(passwordResetRequestRepo).save(any(PasswordResetRequest.class));
+    }
+
+    @Test
+    void createPasswordResetRequest_unknownUsername_throwsException() {
+        when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> authService.createPasswordResetRequest("unknown", "John", "Doe"));
+        assertEquals("We couldn't find an account matching that information", ex.getMessage());
+        verify(passwordResetRequestRepo, never()).save(any());
+    }
+
+    @Test
+    void createPasswordResetRequest_nameMismatch_throwsException() {
+        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> authService.createPasswordResetRequest("john", "Jane", "Smith"));
+        assertEquals("We couldn't find an account matching that information", ex.getMessage());
+        verify(passwordResetRequestRepo, never()).save(any());
+    }
+
+    @Test
+    void createPasswordResetRequest_existingPending_throwsException() {
+        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
+        when(passwordResetRequestRepo.existsByUsernameAndStatus("john", PasswordResetStatus.PENDING))
+                .thenReturn(true);
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> authService.createPasswordResetRequest("john", "John", "Doe"));
+        assertEquals("A password reset request for this account is already pending", ex.getMessage());
+        verify(passwordResetRequestRepo, never()).save(any());
+    }
+
+    // --- approvePasswordReset ---
+
+    @Test
+    void approvePasswordReset_pendingRequest_updatesPasswordAndMarksApproved() {
+        User developer = new User("dev", "hash", "Dev", "Eloper", AccountType.DEVELOPER);
+        developer.setId(2L);
+
+        PasswordResetRequest request = new PasswordResetRequest();
+        request.setId(1L);
+        request.setUsername("john");
+        request.setStatus(PasswordResetStatus.PENDING);
+
+        when(passwordResetRequestRepo.findById(1L)).thenReturn(Optional.of(request));
+        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(passwordResetRequestRepo.save(any(PasswordResetRequest.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        authService.approvePasswordReset(1L, "newpassword", developer);
+
+        assertEquals(PasswordResetStatus.APPROVED, request.getStatus());
+        assertEquals(developer, request.getApprovedBy());
+        assertNotNull(request.getApprovedAt());
+        assertTrue(BCrypt.checkpw("newpassword", testUser.getPassword()));
+        verify(userRepository).save(testUser);
+    }
+
+    @Test
+    void approvePasswordReset_notFound_throwsException() {
+        when(passwordResetRequestRepo.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class,
+                () -> authService.approvePasswordReset(999L, "newpass", testUser));
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void approvePasswordReset_alreadyProcessed_throwsException() {
+        PasswordResetRequest request = new PasswordResetRequest();
+        request.setId(1L);
+        request.setStatus(PasswordResetStatus.APPROVED);
+
+        when(passwordResetRequestRepo.findById(1L)).thenReturn(Optional.of(request));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> authService.approvePasswordReset(1L, "newpass", testUser));
+        assertEquals("This request has already been processed", ex.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void approvePasswordReset_blankPassword_throwsException() {
+        PasswordResetRequest request = new PasswordResetRequest();
+        request.setId(1L);
+        request.setStatus(PasswordResetStatus.PENDING);
+
+        when(passwordResetRequestRepo.findById(1L)).thenReturn(Optional.of(request));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> authService.approvePasswordReset(1L, "  ", testUser));
+        assertEquals("New password cannot be blank", ex.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    // --- denyPasswordReset ---
+
+    @Test
+    void denyPasswordReset_pendingRequest_marksDenied() {
+        User developer = new User("dev", "hash", "Dev", "Eloper", AccountType.DEVELOPER);
+        developer.setId(2L);
+
+        PasswordResetRequest request = new PasswordResetRequest();
+        request.setId(1L);
+        request.setStatus(PasswordResetStatus.PENDING);
+
+        when(passwordResetRequestRepo.findById(1L)).thenReturn(Optional.of(request));
+        when(passwordResetRequestRepo.save(any(PasswordResetRequest.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        authService.denyPasswordReset(1L, developer);
+
+        assertEquals(PasswordResetStatus.DENIED, request.getStatus());
+        assertEquals(developer, request.getApprovedBy());
+        assertNotNull(request.getApprovedAt());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void denyPasswordReset_alreadyProcessed_throwsException() {
+        PasswordResetRequest request = new PasswordResetRequest();
+        request.setId(1L);
+        request.setStatus(PasswordResetStatus.DENIED);
+
+        when(passwordResetRequestRepo.findById(1L)).thenReturn(Optional.of(request));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> authService.denyPasswordReset(1L, testUser));
+        assertEquals("This request has already been processed", ex.getMessage());
+    }
+
+    // --- changeOwnPassword ---
+
+    @Test
+    void changeOwnPassword_correctCurrent_updatesPassword() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        authService.changeOwnPassword(1L, "password123", "newpassword");
+
+        assertTrue(BCrypt.checkpw("newpassword", testUser.getPassword()));
+        verify(userRepository).save(testUser);
+    }
+
+    @Test
+    void changeOwnPassword_wrongCurrent_throwsException() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> authService.changeOwnPassword(1L, "wrongpass", "newpassword"));
+        assertEquals("Current password is incorrect", ex.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void changeOwnPassword_blankNew_throwsException() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> authService.changeOwnPassword(1L, "password123", "  "));
+        assertEquals("New password cannot be blank", ex.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void changeOwnPassword_userNotFound_throwsException() {
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(RuntimeException.class,
+                () -> authService.changeOwnPassword(999L, "anything", "newpassword"));
+        verify(userRepository, never()).save(any());
     }
 }

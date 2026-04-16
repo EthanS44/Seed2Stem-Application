@@ -95,9 +95,19 @@ class AuthControllerTest {
         doNothing().when(authService).register("newuser", "pass", "Jane", "Smith", AccountType.MANAGER);
         RedirectAttributes redirect = new RedirectAttributesModelMap();
 
-        String result = controller.register("newuser", "pass", "Jane", "Smith", "MANAGER", redirect);
+        String result = controller.register("newuser", "pass", "pass", "Jane", "Smith", "MANAGER", redirect);
 
         assertEquals("redirect:/auth/registration-pending", result);
+    }
+
+    @Test
+    void register_passwordMismatch_redirectsToRegisterWithError() {
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        String result = controller.register("newuser", "pass1", "pass2", "Jane", "Smith", "TECHNICIAN", redirect);
+
+        assertEquals("redirect:/auth/register", result);
+        verify(authService, never()).register(anyString(), anyString(), anyString(), anyString(), any());
     }
 
     @Test
@@ -110,7 +120,7 @@ class AuthControllerTest {
     void register_invalidAccountType_redirectsToRegisterWithError() {
         RedirectAttributes redirect = new RedirectAttributesModelMap();
 
-        String result = controller.register("newuser", "pass", "Jane", "Smith", "INVALID_TYPE", redirect);
+        String result = controller.register("newuser", "pass", "pass", "Jane", "Smith", "INVALID_TYPE", redirect);
 
         assertEquals("redirect:/auth/register", result);
     }
@@ -121,9 +131,52 @@ class AuthControllerTest {
                 .when(authService).register("john", "pass", "John", "Doe", AccountType.TECHNICIAN);
         RedirectAttributes redirect = new RedirectAttributesModelMap();
 
-        String result = controller.register("john", "pass", "John", "Doe", "TECHNICIAN", redirect);
+        String result = controller.register("john", "pass", "pass", "John", "Doe", "TECHNICIAN", redirect);
 
         assertEquals("redirect:/auth/register", result);
+    }
+
+    // --- forgot password ---
+
+    @Test
+    void forgotPasswordPage_returnsForgotPasswordView() {
+        Model model = new ConcurrentModel();
+        String result = controller.forgotPasswordPage(null, model);
+        assertEquals("forgot-password", result);
+    }
+
+    @Test
+    void forgotPasswordPage_withError_addsErrorToModel() {
+        Model model = new ConcurrentModel();
+        controller.forgotPasswordPage("No match", model);
+        assertEquals("No match", model.getAttribute("error"));
+    }
+
+    @Test
+    void forgotPassword_validRequest_redirectsToSubmitted() {
+        doNothing().when(authService).createPasswordResetRequest("john", "John", "Doe");
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        String result = controller.forgotPassword("john", "John", "Doe", redirect);
+
+        assertEquals("redirect:/auth/forgot-password-submitted", result);
+    }
+
+    @Test
+    void forgotPassword_invalidInput_redirectsToForgotPasswordWithError() {
+        doThrow(new RuntimeException("We couldn't find an account matching that information"))
+                .when(authService).createPasswordResetRequest("unknown", "Jane", "Smith");
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        String result = controller.forgotPassword("unknown", "Jane", "Smith", redirect);
+
+        assertEquals("redirect:/auth/forgot-password", result);
+    }
+
+    @Test
+    void forgotPasswordSubmitted_returnsCorrectView() {
+        String result = controller.forgotPasswordSubmitted();
+        assertEquals("forgot-password-submitted", result);
     }
 
     // --- logout ---

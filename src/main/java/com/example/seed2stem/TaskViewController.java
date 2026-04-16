@@ -47,7 +47,7 @@ public class TaskViewController {
 
     @PostMapping("/create")
     public String createTask(@RequestParam String title,
-                             @RequestParam String description,
+                             @RequestParam(required = false) String description,
                              HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
@@ -65,46 +65,138 @@ public class TaskViewController {
         header.setChecklist(checklist);
         checklist.addItem(header);
 
-        ChecklistItem descriptionItem = new ChecklistItem();
-        descriptionItem.setText("Description of work completed");
-        descriptionItem.setItemType(ChecklistItemType.QUESTION);
-        descriptionItem.setResponseType(ChecklistResponseType.TEXT);
-        descriptionItem.setCategory(ChecklistItemCategory.GENERAL);
-        descriptionItem.setQuestionOrder(1);
-        descriptionItem.setDisplayOrder(2);
-        descriptionItem.setChecklist(checklist);
-        checklist.addItem(descriptionItem);
+        ChecklistItem workLogItem = new ChecklistItem();
+        workLogItem.setText("Describe the work completed");
+        workLogItem.setItemType(ChecklistItemType.QUESTION);
+        workLogItem.setResponseType(ChecklistResponseType.TEXT);
+        workLogItem.setCategory(ChecklistItemCategory.GENERAL);
+        workLogItem.setQuestionOrder(1);
+        workLogItem.setDisplayOrder(2);
+        workLogItem.setChecklist(checklist);
+        checklist.addItem(workLogItem);
 
         checklistRepo.save(checklist);
 
         // Create the Task linked to the checklist
         Task task = new Task();
         task.setTitle(title);
-        task.setDescription(description);
+        task.setDescription(description != null ? description : "");
         task.setChecklist(checklist);
         task.setUserCreated(true);
         task.setCreatedBy(user);
         taskRepo.save(task);
 
-        // Create a ChecklistRun with PENDING status and pre-filled response
+        // Create an IN_PROGRESS run — time tracking starts now
         ChecklistRun run = new ChecklistRun();
         run.setTask(task);
         run.setCompletedBy(user);
         run.setStartTime(LocalDateTime.now());
-        run.setEndTime(LocalDateTime.now());
-        run.setStatus(ChecklistRunStatus.PENDING);
+        run.setStatus(ChecklistRunStatus.IN_PROGRESS);
         run.setChecklistName(title);
         run.setChecklistVersion(1);
         runRepo.save(run);
 
-        // Pre-fill the description response
-        ChecklistResponse response = new ChecklistResponse();
-        response.setChecklistRun(run);
-        response.setChecklistItem(descriptionItem);
-        response.setTextAnswer(description);
-        responseRepo.save(response);
+        return "redirect:/tasks/runs/" + run.getId() + "/in-progress";
+    }
+
+    /* -------------- User Task In-Progress -------------- */
+
+    @GetMapping("/runs/{runId}/in-progress")
+    public String userTaskInProgress(@PathVariable Long runId, Model model, HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+
+        ChecklistRun run = runRepo.findById(runId)
+                .orElseThrow(() -> new RuntimeException("Checklist run not found"));
+
+        if (!run.getCompletedBy().getId().equals(user.getId())) {
+            return "redirect:/dashboard/task-dashboard";
+        }
+
+        // Load saved work log text if any
+        String savedWorkLog = "";
+        if (run.getResponses() != null) {
+            for (ChecklistResponse resp : run.getResponses()) {
+                if (resp.getTextAnswer() != null) {
+                    savedWorkLog = resp.getTextAnswer();
+                    break;
+                }
+            }
+        }
+
+        model.addAttribute("run", run);
+        model.addAttribute("task", run.getTask());
+        model.addAttribute("savedWorkLog", savedWorkLog);
+        return "user-task-in-progress";
+    }
+
+    @PostMapping("/runs/{runId}/save-progress")
+    public String saveProgress(@PathVariable Long runId,
+                               @RequestParam String workLog,
+                               HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+
+        ChecklistRun run = runRepo.findById(runId)
+                .orElseThrow(() -> new RuntimeException("Checklist run not found"));
+
+        if (!run.getCompletedBy().getId().equals(user.getId())) {
+            return "redirect:/dashboard/task-dashboard";
+        }
+
+        saveWorkLogResponse(run, workLog);
+        return "redirect:/tasks/runs/" + runId + "/in-progress";
+    }
+
+    @PostMapping("/runs/{runId}/submit-user-task")
+    public String submitUserTask(@PathVariable Long runId,
+                                 @RequestParam String workLog,
+                                 HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+
+        ChecklistRun run = runRepo.findById(runId)
+                .orElseThrow(() -> new RuntimeException("Checklist run not found"));
+
+        if (!run.getCompletedBy().getId().equals(user.getId())) {
+            return "redirect:/dashboard/task-dashboard";
+        }
+
+        saveWorkLogResponse(run, workLog);
+        run.setEndTime(LocalDateTime.now());
+        run.setStatus(ChecklistRunStatus.PENDING);
+        runRepo.save(run);
 
         return "redirect:/dashboard/task-dashboard";
+    }
+
+    private void saveWorkLogResponse(ChecklistRun run, String workLog) {
+        Task task = run.getTask();
+        List<ChecklistItem> items = itemRepo.findByChecklistIdOrderByDisplayOrder(task.getChecklist().getId());
+
+        ChecklistItem workLogItem = items.stream()
+                .filter(i -> i.getItemType() == ChecklistItemType.QUESTION)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Work log item not found"));
+
+        // Update existing response or create new one
+        if (run.getResponses() != null && !run.getResponses().isEmpty()) {
+            ChecklistResponse existing = run.getResponses().stream()
+                    .filter(r -> r.getChecklistItem().getId().equals(workLogItem.getId()))
+                    .findFirst()
+                    .orElse(null);
+            if (existing != null) {
+                existing.setTextAnswer(workLog);
+                responseRepo.save(existing);
+                return;
+            }
+        }
+
+        ChecklistResponse response = new ChecklistResponse();
+        response.setChecklistRun(run);
+        response.setChecklistItem(workLogItem);
+        response.setTextAnswer(workLog);
+        responseRepo.save(response);
     }
 
     /* ---------------- Task View ---------------- */
@@ -175,6 +267,11 @@ public class TaskViewController {
         // Security check: ensure this run belongs to the current user
         if (!run.getCompletedBy().getId().equals(user.getId())) {
             return "redirect:/dashboard/task-dashboard";
+        }
+
+        // User-created tasks use the in-progress page, not the standard checklist view
+        if (task.isUserCreated()) {
+            return "redirect:/tasks/runs/" + runId + "/in-progress";
         }
 
         Checklist cl = task.getChecklist();

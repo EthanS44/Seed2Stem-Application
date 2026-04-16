@@ -9,6 +9,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.ui.ConcurrentModel;
 import org.springframework.ui.Model;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +30,9 @@ class DeveloperControllerTest {
 
     @Mock
     private RegistrationRequestRepository registrationRequestRepo;
+
+    @Mock
+    private PasswordResetRequestRepository passwordResetRequestRepo;
 
     @Mock
     private AuthService authService;
@@ -195,5 +200,114 @@ class DeveloperControllerTest {
 
         assertEquals("redirect:/developer/registration-requests", result);
         verify(authService).denyRegistration(1L);
+    }
+
+    // --- passwordResetRequests ---
+
+    @Test
+    void passwordResetRequests_noUser_redirectsToLogin() {
+        Model model = new ConcurrentModel();
+        String result = controller.passwordResetRequests(session, model, null, null);
+        assertEquals("redirect:/auth/login", result);
+    }
+
+    @Test
+    void passwordResetRequests_nonDeveloper_redirectsToDashboard() {
+        session.setAttribute("loggedInUser", techUser);
+        Model model = new ConcurrentModel();
+        String result = controller.passwordResetRequests(session, model, null, null);
+        assertEquals("redirect:/dashboard/home-dashboard", result);
+    }
+
+    @Test
+    void passwordResetRequests_developer_returnsViewWithPendingRequests() {
+        session.setAttribute("loggedInUser", developerUser);
+
+        PasswordResetRequest req = new PasswordResetRequest();
+        req.setId(1L);
+        req.setUsername("jsmith");
+        req.setFirstName("Jane");
+        req.setLastName("Smith");
+        req.setStatus(PasswordResetStatus.PENDING);
+        req.setCreatedAt(LocalDateTime.now());
+
+        when(passwordResetRequestRepo.findByStatus(PasswordResetStatus.PENDING))
+                .thenReturn(List.of(req));
+
+        Model model = new ConcurrentModel();
+        String result = controller.passwordResetRequests(session, model, null, null);
+
+        assertEquals("password-reset-requests", result);
+        assertNotNull(model.getAttribute("pendingRequests"));
+    }
+
+    // --- approvePasswordReset ---
+
+    @Test
+    void approvePasswordReset_noUser_redirectsToLogin() {
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+        String result = controller.approvePasswordReset(1L, "newpass", session, redirect);
+        assertEquals("redirect:/auth/login", result);
+    }
+
+    @Test
+    void approvePasswordReset_nonDeveloper_redirectsToDashboard() {
+        session.setAttribute("loggedInUser", techUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+        String result = controller.approvePasswordReset(1L, "newpass", session, redirect);
+        assertEquals("redirect:/dashboard/home-dashboard", result);
+    }
+
+    @Test
+    void approvePasswordReset_developer_approvesAndRedirects() {
+        session.setAttribute("loggedInUser", developerUser);
+        doNothing().when(authService).approvePasswordReset(1L, "newpass", developerUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        String result = controller.approvePasswordReset(1L, "newpass", session, redirect);
+
+        assertEquals("redirect:/developer/password-reset-requests", result);
+        verify(authService).approvePasswordReset(1L, "newpass", developerUser);
+    }
+
+    @Test
+    void approvePasswordReset_serviceThrows_redirectsWithError() {
+        session.setAttribute("loggedInUser", developerUser);
+        doThrow(new RuntimeException("New password cannot be blank"))
+                .when(authService).approvePasswordReset(1L, "", developerUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        String result = controller.approvePasswordReset(1L, "", session, redirect);
+
+        assertEquals("redirect:/developer/password-reset-requests", result);
+    }
+
+    // --- denyPasswordReset ---
+
+    @Test
+    void denyPasswordReset_noUser_redirectsToLogin() {
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+        String result = controller.denyPasswordReset(1L, session, redirect);
+        assertEquals("redirect:/auth/login", result);
+    }
+
+    @Test
+    void denyPasswordReset_nonDeveloper_redirectsToDashboard() {
+        session.setAttribute("loggedInUser", techUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+        String result = controller.denyPasswordReset(1L, session, redirect);
+        assertEquals("redirect:/dashboard/home-dashboard", result);
+    }
+
+    @Test
+    void denyPasswordReset_developer_deniesAndRedirects() {
+        session.setAttribute("loggedInUser", developerUser);
+        doNothing().when(authService).denyPasswordReset(1L, developerUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        String result = controller.denyPasswordReset(1L, session, redirect);
+
+        assertEquals("redirect:/developer/password-reset-requests", result);
+        verify(authService).denyPasswordReset(1L, developerUser);
     }
 }

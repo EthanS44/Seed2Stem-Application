@@ -7,6 +7,9 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -17,6 +20,8 @@ import java.util.stream.Collectors;
 @Controller
 @RequestMapping("/checklist-runs")
 public class ChecklistRunController {
+
+    private static final Logger log = LoggerFactory.getLogger(ChecklistRunController.class);
 
     private final ChecklistRunService runService;
     private final TaskRepository taskRepo;
@@ -40,7 +45,6 @@ public class ChecklistRunController {
         if (user == null) return "redirect:/auth/login";
 
         Task task = taskRepo.findById(taskId).orElseThrow();
-        ChecklistRun run = runService.getChecklistById(runId);
 
         List<ChecklistItem> items = itemRepo.findByChecklistIdOrderByDisplayOrder(
                 task.getChecklist().getId());
@@ -53,7 +57,6 @@ public class ChecklistRunController {
 
             ChecklistResponse resp = new ChecklistResponse();
             resp.setChecklistItem(item);
-            resp.setChecklistRun(run);
 
             switch (item.getResponseType()) {
                 case BOOLEAN_TEXT -> {
@@ -90,9 +93,7 @@ public class ChecklistRunController {
             responses.add(resp);
         }
 
-        run.setEndTime(LocalDateTime.now());
-        run.setResponses(responses);
-        runService.submitByTechnician(run);
+        runService.submitWithResponses(runId, responses);
 
         return "redirect:/dashboard/task-dashboard";
     }
@@ -106,7 +107,6 @@ public class ChecklistRunController {
         if (user == null) return "redirect:/auth/login";
 
         Task task = taskRepo.findById(taskId).orElseThrow();
-        ChecklistRun run = runService.getChecklistById(runId);
 
         List<ChecklistItem> items = itemRepo.findByChecklistIdOrderByDisplayOrder(
                 task.getChecklist().getId());
@@ -119,7 +119,6 @@ public class ChecklistRunController {
 
             ChecklistResponse resp = new ChecklistResponse();
             resp.setChecklistItem(item);
-            resp.setChecklistRun(run);
 
             switch (item.getResponseType()) {
                 case BOOLEAN_TEXT -> {
@@ -159,14 +158,25 @@ public class ChecklistRunController {
 
         ChecklistRun run = runService.getChecklistByIdWithDetails(runId);
         if (run == null) {
+            log.warn("ChecklistRun not found for id: {}", runId);
+            return "redirect:/dashboard/home-dashboard";
+        }
+
+        if (run.getTask() == null || run.getTask().getChecklist() == null) {
+            log.warn("ChecklistRun {} has null task or checklist", runId);
             return "redirect:/dashboard/home-dashboard";
         }
 
         List<ChecklistItem> items = run.getTask().getChecklist().getItems();
-        List<ChecklistResponse> responses = run.getResponses();
+        List<ChecklistResponse> responses = run.getResponses() != null ? run.getResponses() : List.of();
 
+        // Use merge function to handle potential duplicate responses for the same item
         Map<Long, ChecklistResponse> responseMap = responses.stream()
-                .collect(Collectors.toMap(r -> r.getChecklistItem().getId(), r -> r));
+                .filter(r -> r.getChecklistItem() != null)
+                .collect(Collectors.toMap(
+                        r -> r.getChecklistItem().getId(),
+                        r -> r,
+                        (existing, replacement) -> replacement));
 
         Map<Long, List<ChecklistResponse>> responsesByHeader = new LinkedHashMap<>();
         ChecklistItem currentHeader = null;

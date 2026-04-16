@@ -58,12 +58,18 @@ public class AuthController {
     @PostMapping("/register")
     public String register(@RequestParam String username,
                            @RequestParam String password,
+                           @RequestParam String confirmPassword,
                            @RequestParam String firstName,
                            @RequestParam String lastName,
                            @RequestParam("accountType") String accountTypeStr,
                            RedirectAttributes redirectAttributes) {
 
         try {
+            if (!password.equals(confirmPassword)) {
+                redirectAttributes.addAttribute("error", "Passwords do not match");
+                return "redirect:/auth/register";
+            }
+
             AccountType accountType = AccountType.valueOf(accountTypeStr);
             authService.register(username, password, firstName, lastName, accountType);
             return "redirect:/auth/registration-pending";
@@ -76,6 +82,35 @@ public class AuthController {
             redirectAttributes.addAttribute("error", e.getMessage());
             return "redirect:/auth/register";
         }
+    }
+
+    /** Show forgot password page */
+    @GetMapping("/forgot-password")
+    public String forgotPasswordPage(@RequestParam(value = "error", required = false) String error,
+                                     Model model) {
+        model.addAttribute("error", error);
+        return "forgot-password";
+    }
+
+    /** Handle forgot password request */
+    @PostMapping("/forgot-password")
+    public String forgotPassword(@RequestParam String username,
+                                 @RequestParam String firstName,
+                                 @RequestParam String lastName,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            authService.createPasswordResetRequest(username, firstName, lastName);
+            return "redirect:/auth/forgot-password-submitted";
+        } catch (RuntimeException e) {
+            redirectAttributes.addAttribute("error", e.getMessage());
+            return "redirect:/auth/forgot-password";
+        }
+    }
+
+    /** Forgot password confirmation page */
+    @GetMapping("/forgot-password-submitted")
+    public String forgotPasswordSubmitted() {
+        return "forgot-password-submitted";
     }
 
     /** Registration pending confirmation */

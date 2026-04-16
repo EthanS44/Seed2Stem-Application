@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Settings')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <h4 class="mb-2">Settings</h4>
+    <p class="text-muted mb-4">View your account details and change your password.</p>
+
+    <div th:if="${param.error}" class="alert alert-danger py-2" th:text="${param.error}"></div>
+    <div th:if="${param.success}" class="alert alert-success py-2" th:text="${param.success}"></div>
+
+    <div class="row g-4">
+        <!-- Account Info -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-person-circle me-2"></i>Account Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">First Name</dt>
+                        <dd class="col-sm-7" th:text="${user.getFirstName()}">First</dd>
+
+                        <dt class="col-sm-5">Last Name</dt>
+                        <dd class="col-sm-7" th:text="${user.getLastName()}">Last</dd>
+
+                        <dt class="col-sm-5">Username</dt>
+                        <dd class="col-sm-7" th:text="${user.getUsername()}">username</dd>
+
+                        <dt class="col-sm-5">Account Type</dt>
+                        <dd class="col-sm-7">
+                            <span class="badge"
+                                  th:classappend="${user.getAccountType().name() == 'MANAGER' ? 'bg-primary' :
+                                                   (user.getAccountType().name() == 'DEVELOPER' ? 'bg-dark' :
+                                                   (user.getAccountType().name() == 'ADMIN' ? 'bg-danger' : 'bg-secondary'))}"
+                                  th:text="${user.getAccountType().name()}">TECHNICIAN</span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-key me-2"></i>Change Password
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/settings/change-password}" method="post">
+                        <div class="mb-3">
+                            <label class="form-label small">Current Password</label>
+                            <input type="password" class="form-control" name="currentPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">New Password</label>
+                            <input type="password" class="form-control" name="newPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small">Confirm New Password</label>
+                            <input type="password" class="form-control" name="confirmPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-s2s w-100">
+                            <i class="bi bi-check-lg me-1"></i>Update Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

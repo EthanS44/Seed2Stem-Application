@@ -1,5 +1,7 @@
 package com.example.seed2stem;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,6 +11,8 @@ import java.util.Optional;
 
 @Service
 public class ChecklistRunService {
+
+    private static final Logger log = LoggerFactory.getLogger(ChecklistRunService.class);
 
     private final ChecklistRunRepository runRepo;
 
@@ -24,9 +28,22 @@ public class ChecklistRunService {
     public ChecklistRun getChecklistByIdWithDetails(Long runId) {
         ChecklistRun run = runRepo.findById(runId).orElse(null);
         if (run != null) {
-            // Force lazy loading within the transaction
-            run.getTask().getChecklist().getItems().size();
-            run.getResponses().forEach(r -> r.getChecklistItem().getId());
+            try {
+                // Force lazy loading within the transaction
+                if (run.getTask() != null && run.getTask().getChecklist() != null) {
+                    run.getTask().getChecklist().getItems().size();
+                }
+                if (run.getResponses() != null) {
+                    run.getResponses().forEach(r -> {
+                        if (r.getChecklistItem() != null) {
+                            r.getChecklistItem().getId();
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                log.error("Error loading details for ChecklistRun {}: {}", runId, e.getMessage(), e);
+                throw e;
+            }
         }
         return run;
     }
@@ -39,6 +56,38 @@ public class ChecklistRunService {
         }
 
         validateResponses(run.getResponses());
+
+        run.setEndTime(LocalDateTime.now());
+        run.setStatus(ChecklistRunStatus.PENDING);
+        return runRepo.save(run);
+    }
+
+    /**
+     * Submit a checklist run with new responses, properly clearing any old responses
+     * (e.g., from a previous pause) within the same transaction.
+     */
+    @Transactional
+    public ChecklistRun submitWithResponses(Long runId, List<ChecklistResponse> newResponses) {
+        ChecklistRun run = runRepo.findById(runId)
+                .orElseThrow(() -> new RuntimeException("Checklist run not found"));
+
+        if (run.getStatus() != ChecklistRunStatus.IN_PROGRESS
+                && run.getStatus() != ChecklistRunStatus.REJECTED) {
+            throw new RuntimeException("Checklist run is not in a submittable state");
+        }
+
+        validateResponses(newResponses);
+
+        // Clear old responses (from pause) and add new ones within the transaction
+        if (run.getResponses() != null) {
+            run.getResponses().clear();
+        }
+        newResponses.forEach(r -> r.setChecklistRun(run));
+        if (run.getResponses() != null) {
+            run.getResponses().addAll(newResponses);
+        } else {
+            run.setResponses(newResponses);
+        }
 
         run.setEndTime(LocalDateTime.now());
         run.setStatus(ChecklistRunStatus.PENDING);

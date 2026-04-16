@@ -260,6 +260,49 @@ class EntityTest {
         assertNotNull(RegistrationStatus.valueOf("DENIED"));
     }
 
+    // --- PasswordResetRequest ---
+
+    @Test
+    void passwordResetRequest_settersAndGetters_work() {
+        PasswordResetRequest req = new PasswordResetRequest();
+        User developer = new User("dev", "h", "Dev", "User", AccountType.DEVELOPER);
+        LocalDateTime now = LocalDateTime.now();
+
+        req.setId(1L);
+        req.setUsername("jsmith");
+        req.setFirstName("Jane");
+        req.setLastName("Smith");
+        req.setStatus(PasswordResetStatus.APPROVED);
+        req.setCreatedAt(now);
+        req.setApprovedBy(developer);
+        req.setApprovedAt(now.plusMinutes(5));
+
+        assertEquals(1L, req.getId());
+        assertEquals("jsmith", req.getUsername());
+        assertEquals("Jane", req.getFirstName());
+        assertEquals("Smith", req.getLastName());
+        assertEquals(PasswordResetStatus.APPROVED, req.getStatus());
+        assertEquals(now, req.getCreatedAt());
+        assertEquals(developer, req.getApprovedBy());
+        assertEquals(now.plusMinutes(5), req.getApprovedAt());
+    }
+
+    @Test
+    void passwordResetRequest_defaultStatus_isPending() {
+        PasswordResetRequest req = new PasswordResetRequest();
+        assertEquals(PasswordResetStatus.PENDING, req.getStatus());
+    }
+
+    // --- PasswordResetStatus enum ---
+
+    @Test
+    void passwordResetStatus_allValuesExist() {
+        assertEquals(3, PasswordResetStatus.values().length);
+        assertNotNull(PasswordResetStatus.valueOf("PENDING"));
+        assertNotNull(PasswordResetStatus.valueOf("APPROVED"));
+        assertNotNull(PasswordResetStatus.valueOf("DENIED"));
+    }
+
     // --- AccountType enum ---
 
     @Test
