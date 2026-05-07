@@ -34,6 +34,12 @@ class ChecklistRunControllerTest {
     @Mock
     private ChecklistItemRepository itemRepo;
 
+    @Mock
+    private ChecklistRunRepository runRepo;
+
+    @Mock
+    private TaskPauseRepository taskPauseRepo;
+
     @InjectMocks
     private ChecklistRunController controller;
 
@@ -215,23 +221,49 @@ class ChecklistRunControllerTest {
     }
 
     @Test
-    void submitChecklist_noneResponseTypeSkipped() {
+    void submitChecklist_noneTypeUnchecked_redirectsToResume() {
         session.setAttribute("loggedInUser", techUser);
 
         ChecklistItem item = new ChecklistItem();
         item.setId(10L);
         item.setItemType(ChecklistItemType.QUESTION);
         item.setResponseType(ChecklistResponseType.NONE);
+        item.setText("Wash hands");
+
+        when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
+        when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        // No check_10 — must trigger validation redirect
+        var redirect = new RedirectAttributesModelMap();
+
+        String result = controller.submitChecklist(1L, 1L, params, session, redirect);
+        assertEquals("redirect:/tasks/1/resume/1", result);
+    }
+
+    @Test
+    void submitChecklist_noneTypeChecked_succeeds() {
+        session.setAttribute("loggedInUser", techUser);
+
+        ChecklistItem item = new ChecklistItem();
+        item.setId(10L);
+        item.setItemType(ChecklistItemType.QUESTION);
+        item.setResponseType(ChecklistResponseType.NONE);
+        item.setText("Wash hands");
 
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
         when(runService.submitWithResponses(eq(1L), anyList())).thenReturn(run);
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("check_10", "true");
         var redirect = new RedirectAttributesModelMap();
 
         String result = controller.submitChecklist(1L, 1L, params, session, redirect);
         assertEquals("redirect:/dashboard/task-dashboard", result);
+        verify(runService).submitWithResponses(eq(1L), argThat(list ->
+                list.size() == 1
+                        && Boolean.TRUE.equals(list.get(0).getBooleanAnswer())));
     }
 
     // --- pauseChecklist ---
@@ -239,7 +271,7 @@ class ChecklistRunControllerTest {
     @Test
     void pauseChecklist_noUser_redirectsToLogin() {
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-        String result = controller.pauseChecklist(1L, 1L, params, session);
+        String result = controller.pauseChecklist(1L, 1L, null, params, session);
         assertEquals("redirect:/auth/login", result);
     }
 
@@ -255,14 +287,66 @@ class ChecklistRunControllerTest {
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
         when(runService.pauseByUser(eq(1L), anyList())).thenReturn(run);
+        when(runRepo.findById(1L)).thenReturn(Optional.of(run));
+        when(taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run))
+                .thenReturn(Optional.empty());
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("bool_10", "true");
         params.add("text_10", "partial notes");
 
-        String result = controller.pauseChecklist(1L, 1L, params, session);
+        String result = controller.pauseChecklist(1L, 1L, "Lunch break", params, session);
         assertEquals("redirect:/dashboard/task-dashboard", result);
         verify(runService).pauseByUser(eq(1L), anyList());
+        verify(taskPauseRepo).save(argThat(p ->
+                "Lunch break".equals(p.getReason()) && p.getStartTime() != null));
+    }
+
+    @Test
+    void pauseChecklist_blankReason_savesPauseWithNullReason() {
+        session.setAttribute("loggedInUser", techUser);
+
+        ChecklistItem item = new ChecklistItem();
+        item.setId(10L);
+        item.setItemType(ChecklistItemType.QUESTION);
+        item.setResponseType(ChecklistResponseType.TEXT);
+
+        when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
+        when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
+        when(runService.pauseByUser(eq(1L), anyList())).thenReturn(run);
+        when(runRepo.findById(1L)).thenReturn(Optional.of(run));
+        when(taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run))
+                .thenReturn(Optional.empty());
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+
+        String result = controller.pauseChecklist(1L, 1L, "   ", params, session);
+        assertEquals("redirect:/dashboard/task-dashboard", result);
+        verify(taskPauseRepo).save(argThat(p -> p.getReason() == null));
+    }
+
+    @Test
+    void pauseChecklist_openPauseExists_doesNotCreateDuplicate() {
+        session.setAttribute("loggedInUser", techUser);
+
+        ChecklistItem item = new ChecklistItem();
+        item.setId(10L);
+        item.setItemType(ChecklistItemType.QUESTION);
+        item.setResponseType(ChecklistResponseType.TEXT);
+
+        when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
+        when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
+        when(runService.pauseByUser(eq(1L), anyList())).thenReturn(run);
+        when(runRepo.findById(1L)).thenReturn(Optional.of(run));
+        TaskPause existing = new TaskPause();
+        when(taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run))
+                .thenReturn(Optional.of(existing));
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+
+        String result = controller.pauseChecklist(1L, 1L, "Reason", params, session);
+        assertEquals("redirect:/dashboard/task-dashboard", result);
+        verify(taskPauseRepo, never()).save(any(TaskPause.class));
     }
 
     @Test
@@ -277,11 +361,14 @@ class ChecklistRunControllerTest {
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
         when(runService.pauseByUser(eq(1L), anyList())).thenReturn(run);
+        when(runRepo.findById(1L)).thenReturn(Optional.of(run));
+        when(taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run))
+                .thenReturn(Optional.empty());
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         // No bool_10 — should be null, not throw
 
-        String result = controller.pauseChecklist(1L, 1L, params, session);
+        String result = controller.pauseChecklist(1L, 1L, null, params, session);
         assertEquals("redirect:/dashboard/task-dashboard", result);
     }
 
@@ -297,12 +384,67 @@ class ChecklistRunControllerTest {
         when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
         when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
         when(runService.pauseByUser(eq(1L), anyList())).thenReturn(run);
+        when(runRepo.findById(1L)).thenReturn(Optional.of(run));
+        when(taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run))
+                .thenReturn(Optional.empty());
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("num_10", "not-a-number");
 
-        String result = controller.pauseChecklist(1L, 1L, params, session);
+        String result = controller.pauseChecklist(1L, 1L, null, params, session);
         assertEquals("redirect:/dashboard/task-dashboard", result);
+    }
+
+    @Test
+    void pauseChecklist_noneTypeChecked_savesBooleanTrue() {
+        session.setAttribute("loggedInUser", techUser);
+
+        ChecklistItem item = new ChecklistItem();
+        item.setId(10L);
+        item.setItemType(ChecklistItemType.QUESTION);
+        item.setResponseType(ChecklistResponseType.NONE);
+        item.setText("Wash hands");
+
+        when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
+        when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
+        when(runService.pauseByUser(eq(1L), anyList())).thenReturn(run);
+        when(runRepo.findById(1L)).thenReturn(Optional.of(run));
+        when(taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run))
+                .thenReturn(Optional.empty());
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("check_10", "true");
+
+        String result = controller.pauseChecklist(1L, 1L, null, params, session);
+        assertEquals("redirect:/dashboard/task-dashboard", result);
+        verify(runService).pauseByUser(eq(1L), argThat(list ->
+                list.size() == 1
+                        && Boolean.TRUE.equals(list.get(0).getBooleanAnswer())));
+    }
+
+    @Test
+    void pauseChecklist_noneTypeUnchecked_doesNotPersistResponse() {
+        session.setAttribute("loggedInUser", techUser);
+
+        ChecklistItem item = new ChecklistItem();
+        item.setId(10L);
+        item.setItemType(ChecklistItemType.QUESTION);
+        item.setResponseType(ChecklistResponseType.NONE);
+        item.setText("Wash hands");
+
+        when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
+        when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
+        when(runService.pauseByUser(eq(1L), anyList())).thenReturn(run);
+        when(runRepo.findById(1L)).thenReturn(Optional.of(run));
+        when(taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run))
+                .thenReturn(Optional.empty());
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        // No check_10 — pause must not persist a response for this item
+
+        String result = controller.pauseChecklist(1L, 1L, null, params, session);
+        assertEquals("redirect:/dashboard/task-dashboard", result);
+        verify(runService).pauseByUser(eq(1L), argThat(List::isEmpty));
     }
 
     // --- reviewChecklistRun ---

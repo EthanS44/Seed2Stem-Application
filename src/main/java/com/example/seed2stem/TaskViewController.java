@@ -1,7 +1,11 @@
 package com.example.seed2stem;
 
 import jakarta.servlet.http.HttpSession;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,19 +25,22 @@ public class TaskViewController {
     private final ChecklistRunService runService;
     private final ChecklistRepository checklistRepo;
     private final ChecklistResponseRepository responseRepo;
+    private final TaskPauseRepository taskPauseRepo;
 
     public TaskViewController(TaskRepository taskRepo,
                               ChecklistItemRepository itemRepo,
                               ChecklistRunRepository runRepo,
                               ChecklistRunService runService,
                               ChecklistRepository checklistRepo,
-                              ChecklistResponseRepository responseRepo) {
+                              ChecklistResponseRepository responseRepo,
+                              TaskPauseRepository taskPauseRepo) {
         this.taskRepo = taskRepo;
         this.itemRepo = itemRepo;
         this.runRepo = runRepo;
         this.runService = runService;
         this.checklistRepo = checklistRepo;
         this.responseRepo = responseRepo;
+        this.taskPauseRepo = taskPauseRepo;
     }
 
     /* ---------------- Create Task ---------------- */
@@ -113,6 +120,13 @@ public class TaskViewController {
             return "redirect:/dashboard/task-dashboard";
         }
 
+        // If there's an open pause (user is resuming), close it now.
+        taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run)
+                .ifPresent(p -> {
+                    p.setEndTime(LocalDateTime.now());
+                    taskPauseRepo.save(p);
+                });
+
         // Load saved work log text if any
         String savedWorkLog = "";
         if (run.getResponses() != null) {
@@ -133,6 +147,7 @@ public class TaskViewController {
     @PostMapping("/runs/{runId}/save-progress")
     public String saveProgress(@PathVariable Long runId,
                                @RequestParam String workLog,
+                               @RequestParam(required = false) String pauseReason,
                                HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
@@ -145,7 +160,19 @@ public class TaskViewController {
         }
 
         saveWorkLogResponse(run, workLog);
-        return "redirect:/tasks/runs/" + runId + "/in-progress";
+
+        // Record the pause — only if there isn't already one open (guard against double-submit)
+        if (taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run).isEmpty()) {
+            TaskPause pause = new TaskPause();
+            pause.setChecklistRun(run);
+            pause.setStartTime(LocalDateTime.now());
+            if (pauseReason != null && !pauseReason.trim().isEmpty()) {
+                pause.setReason(pauseReason.trim());
+            }
+            taskPauseRepo.save(pause);
+        }
+
+        return "redirect:/dashboard/task-dashboard";
     }
 
     @PostMapping("/runs/{runId}/submit-user-task")
@@ -163,6 +190,14 @@ public class TaskViewController {
         }
 
         saveWorkLogResponse(run, workLog);
+
+        // Close any open pause so timeline calc doesn't see it as still paused
+        taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run)
+                .ifPresent(p -> {
+                    p.setEndTime(LocalDateTime.now());
+                    taskPauseRepo.save(p);
+                });
+
         run.setEndTime(LocalDateTime.now());
         run.setStatus(ChecklistRunStatus.PENDING);
         runRepo.save(run);
@@ -211,6 +246,29 @@ public class TaskViewController {
 
         model.addAttribute("task", task);
         return "task-view";
+    }
+
+    /**
+     * Stream the task's uploaded SOP PDF inline so the browser embeds it (iframe)
+     * rather than triggering a download. Lazy `sopData` is loaded inside this
+     * transactional read.
+     */
+    @GetMapping("/{taskId}/sop")
+    @Transactional(readOnly = true)
+    public ResponseEntity<byte[]> getTaskSop(@PathVariable Long taskId, HttpSession session) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return ResponseEntity.status(401).build();
+
+        Task task = taskRepo.findById(taskId).orElse(null);
+        if (task == null || task.getSopData() == null || task.getSopData().length == 0) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String filename = task.getSopFileName() != null ? task.getSopFileName() : "sop.pdf";
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .body(task.getSopData());
     }
 
     /* -------------- Start Task (Checklist) -------------- */
@@ -273,6 +331,13 @@ public class TaskViewController {
         if (task.isUserCreated()) {
             return "redirect:/tasks/runs/" + runId + "/in-progress";
         }
+
+        // Standard task resume — close any open pause so the paused segment ends here.
+        taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run)
+                .ifPresent(p -> {
+                    p.setEndTime(LocalDateTime.now());
+                    taskPauseRepo.save(p);
+                });
 
         Checklist cl = task.getChecklist();
         List<ChecklistItem> items = itemRepo.findByChecklistIdOrderByDisplayOrder(cl.getId());

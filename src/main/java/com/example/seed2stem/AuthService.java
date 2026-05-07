@@ -32,7 +32,7 @@ public class AuthService {
         return user;
     }
 
-    public void register(String username, String password, String firstName, String lastName, AccountType accountType) {
+    public void register(String username, String password, String firstName, String lastName) {
         if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("Username already exists");
         }
@@ -45,14 +45,13 @@ public class AuthService {
         request.setPassword(BCrypt.hashpw(password, BCrypt.gensalt()));
         request.setFirstName(firstName);
         request.setLastName(lastName);
-        request.setAccountType(accountType);
         request.setStatus(RegistrationStatus.PENDING);
         request.setCreatedAt(LocalDateTime.now());
 
         registrationRequestRepo.save(request);
     }
 
-    public User approveRegistration(Long requestId) {
+    public User approveRegistration(Long requestId, AccountType accountType) {
         RegistrationRequest request = registrationRequestRepo.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Registration request not found"));
 
@@ -60,14 +59,19 @@ public class AuthService {
             throw new RuntimeException("This request has already been processed");
         }
 
+        if (accountType == null) {
+            throw new RuntimeException("Account type must be selected");
+        }
+
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(request.getPassword());
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setAccountType(request.getAccountType());
+        user.setAccountType(accountType);
         userRepository.save(user);
 
+        request.setAccountType(accountType);
         request.setStatus(RegistrationStatus.APPROVED);
         registrationRequestRepo.save(request);
 

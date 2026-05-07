@@ -26,13 +26,19 @@ public class ChecklistRunController {
     private final ChecklistRunService runService;
     private final TaskRepository taskRepo;
     private final ChecklistItemRepository itemRepo;
+    private final ChecklistRunRepository runRepo;
+    private final TaskPauseRepository taskPauseRepo;
 
     public ChecklistRunController(ChecklistRunService runService,
                                   TaskRepository taskRepo,
-                                  ChecklistItemRepository itemRepo) {
+                                  ChecklistItemRepository itemRepo,
+                                  ChecklistRunRepository runRepo,
+                                  TaskPauseRepository taskPauseRepo) {
         this.runService = runService;
         this.taskRepo = taskRepo;
         this.itemRepo = itemRepo;
+        this.runRepo = runRepo;
+        this.taskPauseRepo = taskPauseRepo;
     }
 
     @PostMapping("/submit")
@@ -53,7 +59,6 @@ public class ChecklistRunController {
 
         for (ChecklistItem item : items) {
             if (item.getItemType() != ChecklistItemType.QUESTION) continue;
-            if (item.getResponseType() == ChecklistResponseType.NONE) continue;
 
             ChecklistResponse resp = new ChecklistResponse();
             resp.setChecklistItem(item);
@@ -87,7 +92,15 @@ public class ChecklistRunController {
                         return "redirect:/tasks/" + taskId + "/resume/" + runId;
                     }
                 }
-                default -> { /* NONE items are skipped above */ }
+                case NONE -> {
+                    // Checkbox items: must be checked to submit.
+                    if (!params.containsKey("check_" + item.getId())) {
+                        redirectAttributes.addFlashAttribute("error",
+                                "Please check: " + item.getText());
+                        return "redirect:/tasks/" + taskId + "/resume/" + runId;
+                    }
+                    resp.setBooleanAnswer(true);
+                }
             }
 
             responses.add(resp);
@@ -95,12 +108,21 @@ public class ChecklistRunController {
 
         runService.submitWithResponses(runId, responses);
 
+        // Close any open pause so timeline calc doesn't see it as still paused
+        runRepo.findById(runId).ifPresent(run ->
+                taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run)
+                        .ifPresent(p -> {
+                            p.setEndTime(LocalDateTime.now());
+                            taskPauseRepo.save(p);
+                        }));
+
         return "redirect:/dashboard/task-dashboard";
     }
 
     @PostMapping("/pause")
     public String pauseChecklist(@RequestParam Long taskId,
                                  @RequestParam Long runId,
+                                 @RequestParam(required = false) String pauseReason,
                                  @RequestParam MultiValueMap<String, String> params,
                                  HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
@@ -115,10 +137,12 @@ public class ChecklistRunController {
 
         for (ChecklistItem item : items) {
             if (item.getItemType() != ChecklistItemType.QUESTION) continue;
-            if (item.getResponseType() == ChecklistResponseType.NONE) continue;
 
             ChecklistResponse resp = new ChecklistResponse();
             resp.setChecklistItem(item);
+
+            // Whether this response carries any data worth saving for resume.
+            boolean keep = true;
 
             switch (item.getResponseType()) {
                 case BOOLEAN_TEXT -> {
@@ -141,13 +165,34 @@ public class ChecklistRunController {
                         }
                     }
                 }
-                default -> { /* NONE items skipped above */ }
+                case NONE -> {
+                    // Checkbox items on pause: only persist when checked.
+                    if (params.containsKey("check_" + item.getId())) {
+                        resp.setBooleanAnswer(true);
+                    } else {
+                        keep = false;
+                    }
+                }
             }
 
-            responses.add(resp);
+            if (keep) responses.add(resp);
         }
 
         runService.pauseByUser(runId, responses);
+
+        // Record the pause — only if there isn't already one open (guard against double-submit)
+        runRepo.findById(runId).ifPresent(run -> {
+            if (taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run).isEmpty()) {
+                TaskPause pause = new TaskPause();
+                pause.setChecklistRun(run);
+                pause.setStartTime(LocalDateTime.now());
+                if (pauseReason != null && !pauseReason.trim().isEmpty()) {
+                    pause.setReason(pauseReason.trim());
+                }
+                taskPauseRepo.save(pause);
+            }
+        });
+
         return "redirect:/dashboard/task-dashboard";
     }
 

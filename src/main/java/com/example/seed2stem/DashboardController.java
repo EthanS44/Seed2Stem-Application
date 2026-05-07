@@ -6,7 +6,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/dashboard")
@@ -17,17 +19,20 @@ public class DashboardController {
     private final BatchService batchService;
     private final UserRepository userRepo;
     private final TimeEntryService timeEntryService;
+    private final TaskPauseRepository taskPauseRepository;
 
     public DashboardController(TaskRepository taskRepo,
                                ChecklistRunService checklistRunService,
                                BatchService batchService,
                                UserRepository userRepo,
-                               TimeEntryService timeEntryService) {
+                               TimeEntryService timeEntryService,
+                               TaskPauseRepository taskPauseRepository) {
         this.taskRepo = taskRepo;
         this.checklistRunService = checklistRunService;
         this.batchService = batchService;
         this.userRepo = userRepo;
         this.timeEntryService = timeEntryService;
+        this.taskPauseRepository = taskPauseRepository;
     }
 
     @GetMapping("/home-dashboard")
@@ -89,13 +94,22 @@ public class DashboardController {
         List<Task> availableTasks = taskRepo.findByUserCreatedFalse();
         model.addAttribute("availableTasks", availableTasks);
 
-        // Active Tasks — user's own IN_PROGRESS checklist runs
-        List<ChecklistRun> activeTasks = checklistRunService.getActiveRunsForUser(user);
-        model.addAttribute("activeTasks", activeTasks);
-
-        // Pending Approval — manager and developer
+        // Active Tasks — managers/developers see ALL in-progress runs (with technician);
+        // technicians see only their own.
         boolean isManager = user.getAccountType() == AccountType.MANAGER
                 || user.getAccountType() == AccountType.DEVELOPER;
+        List<ChecklistRun> activeTasks = isManager
+                ? checklistRunService.getAllActiveRuns()
+                : checklistRunService.getActiveRunsForUser(user);
+        model.addAttribute("activeTasks", activeTasks);
+
+        // For the manager/developer view, mark which runs are currently paused
+        // so the row can show a "Paused" badge.
+        Set<Long> pausedRunIds = isManager
+                ? new HashSet<>(taskPauseRepository.findRunIdsWithOpenPause())
+                : Set.of();
+        model.addAttribute("pausedRunIds", pausedRunIds);
+
         model.addAttribute("isManager", isManager);
         if (isManager) {
             model.addAttribute("pendingRuns", checklistRunService.getPendingChecklists());

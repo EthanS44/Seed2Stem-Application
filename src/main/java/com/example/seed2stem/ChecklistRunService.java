@@ -152,6 +152,10 @@ public class ChecklistRunService {
         return runRepo.findByCompletedByAndStatus(user, ChecklistRunStatus.IN_PROGRESS);
     }
 
+    public List<ChecklistRun> getAllActiveRuns() {
+        return runRepo.findAllByStatusWithUserAndTask(ChecklistRunStatus.IN_PROGRESS);
+    }
+
     public Optional<ChecklistRun> findExistingInProgressRun(User user, Task task) {
         return runRepo.findByCompletedByAndTaskAndStatus(user, task, ChecklistRunStatus.IN_PROGRESS);
     }
@@ -188,7 +192,8 @@ public class ChecklistRunService {
                     resp.setTextAnswer(null);
                 }
                 case NONE -> {
-                    resp.setBooleanAnswer(null);
+                    // Checkbox: preserve booleanAnswer (controller validates it on submit);
+                    // clear unrelated fields.
                     resp.setTextAnswer(null);
                     resp.setNumericAnswer(null);
                 }

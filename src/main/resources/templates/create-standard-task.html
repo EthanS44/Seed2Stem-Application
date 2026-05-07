@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - New Standard Task')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <h4 class="mb-4">New Standard Task</h4>
+
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row">
+        <div class="col-md-10">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <p class="text-muted mb-4">
+                        Build a standard task with a checklist for technicians to complete. Use headers to group questions into sections.
+                    </p>
+
+                    <form th:action="@{/developer/standard-tasks}" method="post" enctype="multipart/form-data" id="taskForm">
+                        <div class="mb-3">
+                            <label for="title" class="form-label fw-bold">Task Name</label>
+                            <input type="text" class="form-control" id="title" name="title"
+                                   placeholder="e.g., AM Production Area Inspection" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="description" class="form-label fw-bold">Task Description <span class="text-muted fw-normal">(optional)</span></label>
+                            <textarea class="form-control" id="description" name="description" rows="2"
+                                      placeholder="When and why this task should be performed..."></textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="sopPdfFile" class="form-label fw-bold">SOP Document <span class="text-muted fw-normal">(optional, PDF)</span></label>
+                            <input type="file" class="form-control" id="sopPdfFile" name="sopPdfFile" accept="application/pdf,.pdf">
+                            <small class="form-text text-muted">
+                                Upload a PDF Standard Operating Procedure. Technicians will see it on the task page before they start. Max 10 MB.
+                            </small>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0">Checklist Items</h5>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="addHeaderBtn">
+                                    <i class="bi bi-type-h2 me-1"></i> Add Header
+                                </button>
+                                <button type="button" class="btn btn-outline-success btn-sm" id="addQuestionBtn">
+                                    <i class="bi bi-plus-circle me-1"></i> Add Question
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="items" class="mb-3"></div>
+                        <div id="emptyHint" class="text-muted text-center py-4 border rounded mb-3">
+                            No items yet. Click "Add Header" or "Add Question" to start building your checklist.
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle me-1"></i> Create Standard Task
+                            </button>
+                            <a th:href="@{/developer/standard-tasks}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- Template: HEADER row -->
+<template id="headerTemplate">
+    <div class="item-row card mb-2" data-type="HEADER">
+        <div class="card-body py-3">
+            <div class="d-flex align-items-start gap-2">
+                <span class="badge bg-primary mt-2">Header</span>
+                <input type="hidden" name="itemType" value="HEADER">
+                <input type="hidden" name="responseType" value="NONE">
+                <input type="text" name="itemText" class="form-control"
+                       placeholder="Section header (e.g., Room B1 (Lights Off):)" required>
+                <button type="button" class="btn btn-outline-danger btn-sm remove-btn" title="Remove">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- Template: QUESTION row -->
+<template id="questionTemplate">
+    <div class="item-row card mb-2" data-type="QUESTION">
+        <div class="card-body py-3">
+            <div class="d-flex align-items-start gap-2">
+                <span class="badge bg-success mt-2">Question</span>
+                <input type="hidden" name="itemType" value="QUESTION">
+                <div class="flex-grow-1">
+                    <input type="text" name="itemText" class="form-control mb-2"
+                           placeholder="Question text (e.g., Record humidity level. (%))" required>
+                    <select name="responseType" class="form-select form-select-sm" required>
+                        <option value="" disabled selected>Response Type</option>
+                        <option th:each="rt : ${responseTypes}" th:value="${rt.name()}" th:text="${rt.getDisplayName()}"></option>
+                    </select>
+                </div>
+                <button type="button" class="btn btn-outline-danger btn-sm remove-btn" title="Remove">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+
+<script>
+    (function () {
+        const itemsContainer = document.getElementById('items');
+        const emptyHint = document.getElementById('emptyHint');
+        const headerTpl = document.getElementById('headerTemplate');
+        const questionTpl = document.getElementById('questionTemplate');
+
+        function updateEmptyHint() {
+            emptyHint.style.display = itemsContainer.children.length === 0 ? '' : 'none';
+        }
+
+        function addRow(template) {
+            const clone = template.content.firstElementChild.cloneNode(true);
+            const removeBtn = clone.querySelector('.remove-btn');
+            removeBtn.addEventListener('click', function () {
+                clone.remove();
+                updateEmptyHint();
+            });
+            itemsContainer.appendChild(clone);
+            updateEmptyHint();
+            // Focus the text input of the new row
+            const input = clone.querySelector('input[name="itemText"]');
+            if (input) input.focus();
+        }
+
+        document.getElementById('addHeaderBtn').addEventListener('click', function () {
+            addRow(headerTpl);
+        });
+        document.getElementById('addQuestionBtn').addEventListener('click', function () {
+            addRow(questionTpl);
+        });
+
+        document.getElementById('taskForm').addEventListener('submit', function (e) {
+            if (itemsContainer.children.length === 0) {
+                e.preventDefault();
+                alert('Please add at least one checklist item (header or question).');
+            }
+        });
+
+        updateEmptyHint();
+    })();
+</script>
+
+</body>
+</html>

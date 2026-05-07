@@ -79,13 +79,13 @@ class AuthServiceTest {
         when(registrationRequestRepo.save(any(RegistrationRequest.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        authService.register("newuser", "pass123", "Jane", "Smith", AccountType.MANAGER);
+        authService.register("newuser", "pass123", "Jane", "Smith");
 
         verify(registrationRequestRepo).save(argThat(req -> {
             assertEquals("newuser", req.getUsername());
             assertEquals("Jane", req.getFirstName());
             assertEquals("Smith", req.getLastName());
-            assertEquals(AccountType.MANAGER, req.getAccountType());
+            assertNull(req.getAccountType());
             assertEquals(RegistrationStatus.PENDING, req.getStatus());
             assertNotNull(req.getCreatedAt());
             assertTrue(BCrypt.checkpw("pass123", req.getPassword()));
@@ -99,7 +99,7 @@ class AuthServiceTest {
         when(userRepository.existsByUsername("john")).thenReturn(true);
 
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> authService.register("john", "pass", "John", "Doe", AccountType.TECHNICIAN));
+                () -> authService.register("john", "pass", "John", "Doe"));
         assertEquals("Username already exists", ex.getMessage());
         verify(registrationRequestRepo, never()).save(any());
     }
@@ -110,7 +110,7 @@ class AuthServiceTest {
         when(registrationRequestRepo.existsByUsername("pending")).thenReturn(true);
 
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> authService.register("pending", "pass", "P", "User", AccountType.TECHNICIAN));
+                () -> authService.register("pending", "pass", "P", "User"));
         assertEquals("A registration request for this username is already pending", ex.getMessage());
         verify(registrationRequestRepo, never()).save(any());
     }
@@ -118,14 +118,13 @@ class AuthServiceTest {
     // --- approveRegistration ---
 
     @Test
-    void approveRegistration_pendingRequest_createsUserAndApprovesRequest() {
+    void approveRegistration_pendingRequest_createsUserWithChosenAccountType() {
         RegistrationRequest request = new RegistrationRequest();
         request.setId(1L);
         request.setUsername("newuser");
         request.setPassword("hashedpass");
         request.setFirstName("Jane");
         request.setLastName("Smith");
-        request.setAccountType(AccountType.TECHNICIAN);
         request.setStatus(RegistrationStatus.PENDING);
         request.setCreatedAt(LocalDateTime.now());
 
@@ -134,22 +133,37 @@ class AuthServiceTest {
         when(registrationRequestRepo.save(any(RegistrationRequest.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        User result = authService.approveRegistration(1L);
+        User result = authService.approveRegistration(1L, AccountType.MANAGER);
 
         assertEquals("newuser", result.getUsername());
         assertEquals("Jane", result.getFirstName());
         assertEquals("Smith", result.getLastName());
-        assertEquals(AccountType.TECHNICIAN, result.getAccountType());
+        assertEquals(AccountType.MANAGER, result.getAccountType());
         assertEquals("hashedpass", result.getPassword());
         assertEquals(RegistrationStatus.APPROVED, request.getStatus());
         verify(userRepository).save(any(User.class));
     }
 
     @Test
+    void approveRegistration_nullAccountType_throwsException() {
+        RegistrationRequest request = new RegistrationRequest();
+        request.setId(1L);
+        request.setStatus(RegistrationStatus.PENDING);
+
+        when(registrationRequestRepo.findById(1L)).thenReturn(Optional.of(request));
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> authService.approveRegistration(1L, null));
+        assertEquals("Account type must be selected", ex.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
     void approveRegistration_notFound_throwsException() {
         when(registrationRequestRepo.findById(999L)).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class, () -> authService.approveRegistration(999L));
+        assertThrows(RuntimeException.class,
+                () -> authService.approveRegistration(999L, AccountType.TECHNICIAN));
         verify(userRepository, never()).save(any());
     }
 
@@ -162,7 +176,7 @@ class AuthServiceTest {
         when(registrationRequestRepo.findById(1L)).thenReturn(Optional.of(request));
 
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> authService.approveRegistration(1L));
+                () -> authService.approveRegistration(1L, AccountType.TECHNICIAN));
         assertEquals("This request has already been processed", ex.getMessage());
         verify(userRepository, never()).save(any());
     }

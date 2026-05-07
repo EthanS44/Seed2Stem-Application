@@ -7,8 +7,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.ui.ConcurrentModel;
 import org.springframework.ui.Model;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap;
 
@@ -17,6 +19,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,6 +40,9 @@ class DeveloperControllerTest {
 
     @Mock
     private AuthService authService;
+
+    @Mock
+    private ChecklistRepository checklistRepo;
 
     @InjectMocks
     private DeveloperController controller;
@@ -153,14 +160,16 @@ class DeveloperControllerTest {
 
     @Test
     void approveRegistration_noUser_redirectsToLogin() {
-        String result = controller.approveRegistration(1L, session);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+        String result = controller.approveRegistration(1L, "TECHNICIAN", session, redirect);
         assertEquals("redirect:/auth/login", result);
     }
 
     @Test
     void approveRegistration_nonDeveloper_redirectsToDashboard() {
         session.setAttribute("loggedInUser", techUser);
-        String result = controller.approveRegistration(1L, session);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+        String result = controller.approveRegistration(1L, "TECHNICIAN", session, redirect);
         assertEquals("redirect:/dashboard/home-dashboard", result);
     }
 
@@ -168,12 +177,13 @@ class DeveloperControllerTest {
     void approveRegistration_developer_approvesAndRedirects() {
         session.setAttribute("loggedInUser", developerUser);
         User newUser = new User("jsmith", "hashed", "Jane", "Smith", AccountType.TECHNICIAN);
-        when(authService.approveRegistration(1L)).thenReturn(newUser);
+        when(authService.approveRegistration(1L, AccountType.TECHNICIAN)).thenReturn(newUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
 
-        String result = controller.approveRegistration(1L, session);
+        String result = controller.approveRegistration(1L, "TECHNICIAN", session, redirect);
 
         assertEquals("redirect:/developer/registration-requests", result);
-        verify(authService).approveRegistration(1L);
+        verify(authService).approveRegistration(1L, AccountType.TECHNICIAN);
     }
 
     // --- denyRegistration ---
@@ -309,5 +319,143 @@ class DeveloperControllerTest {
 
         assertEquals("redirect:/developer/password-reset-requests", result);
         verify(authService).denyPasswordReset(1L, developerUser);
+    }
+
+    // --- createStandardTask (with optional SOP PDF upload) ---
+
+    private static byte[] minimalValidPdf() {
+        // Magic header + a few bytes — controller only checks first 4 bytes ("%PDF").
+        return new byte[] {'%', 'P', 'D', 'F', '-', '1', '.', '4', '\n'};
+    }
+
+    @Test
+    void createStandardTask_noSop_savesTaskWithNullSopFields() {
+        session.setAttribute("loggedInUser", developerUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        String result = controller.createStandardTask(
+                "AM Inspection",
+                "Run every morning",
+                List.of("HEADER", "QUESTION"),
+                List.of("Room 1", "Temperature"),
+                List.of("NONE", "NUMBER"),
+                null, // no file uploaded
+                session,
+                redirect);
+
+        assertEquals("redirect:/developer/standard-tasks", result);
+        verify(checklistRepo).save(any(Checklist.class));
+        verify(taskRepo).save(argThat(t ->
+                t.getSopFileName() == null && t.getSopData() == null));
+    }
+
+    @Test
+    void createStandardTask_validPdf_savesSopBytesOnTask() {
+        session.setAttribute("loggedInUser", developerUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        MultipartFile pdf = new MockMultipartFile(
+                "sopPdfFile", "sop.pdf", "application/pdf", minimalValidPdf());
+
+        String result = controller.createStandardTask(
+                "AM Inspection",
+                "desc",
+                List.of("QUESTION"),
+                List.of("Temp"),
+                List.of("NUMBER"),
+                pdf,
+                session,
+                redirect);
+
+        assertEquals("redirect:/developer/standard-tasks", result);
+        verify(taskRepo).save(argThat(t ->
+                "sop.pdf".equals(t.getSopFileName())
+                        && t.getSopData() != null
+                        && t.getSopData().length == minimalValidPdf().length));
+    }
+
+    @Test
+    void createStandardTask_nonPdfExtension_redirectsWithError() {
+        session.setAttribute("loggedInUser", developerUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        MultipartFile bogus = new MockMultipartFile(
+                "sopPdfFile", "evil.exe", "application/pdf", minimalValidPdf());
+
+        String result = controller.createStandardTask(
+                "Task", "desc",
+                List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
+                bogus, session, redirect);
+
+        assertEquals("redirect:/developer/standard-tasks/new", result);
+        verify(taskRepo, never()).save(any(Task.class));
+    }
+
+    @Test
+    void createStandardTask_wrongContentType_redirectsWithError() {
+        session.setAttribute("loggedInUser", developerUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        MultipartFile notPdf = new MockMultipartFile(
+                "sopPdfFile", "sop.pdf", "image/png", minimalValidPdf());
+
+        String result = controller.createStandardTask(
+                "Task", "desc",
+                List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
+                notPdf, session, redirect);
+
+        assertEquals("redirect:/developer/standard-tasks/new", result);
+        verify(taskRepo, never()).save(any(Task.class));
+    }
+
+    @Test
+    void createStandardTask_pdfMissingMagicBytes_redirectsWithError() {
+        session.setAttribute("loggedInUser", developerUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        // Right name + content type, but the bytes aren't actually a PDF.
+        MultipartFile fake = new MockMultipartFile(
+                "sopPdfFile", "sop.pdf", "application/pdf",
+                new byte[] {'X', 'X', 'X', 'X', '!'});
+
+        String result = controller.createStandardTask(
+                "Task", "desc",
+                List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
+                fake, session, redirect);
+
+        assertEquals("redirect:/developer/standard-tasks/new", result);
+        verify(taskRepo, never()).save(any(Task.class));
+    }
+
+    @Test
+    void createStandardTask_emptyUpload_treatedAsNoSop() {
+        session.setAttribute("loggedInUser", developerUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        MultipartFile empty = new MockMultipartFile(
+                "sopPdfFile", "", "application/pdf", new byte[0]);
+
+        String result = controller.createStandardTask(
+                "Task", "desc",
+                List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
+                empty, session, redirect);
+
+        assertEquals("redirect:/developer/standard-tasks", result);
+        verify(taskRepo).save(argThat(t ->
+                t.getSopFileName() == null && t.getSopData() == null));
+    }
+
+    @Test
+    void createStandardTask_nonDeveloper_redirectsToDashboard() {
+        session.setAttribute("loggedInUser", techUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        String result = controller.createStandardTask(
+                "Task", "desc",
+                List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
+                null, session, redirect);
+
+        assertEquals("redirect:/dashboard/home-dashboard", result);
+        verify(taskRepo, never()).save(any(Task.class));
     }
 }

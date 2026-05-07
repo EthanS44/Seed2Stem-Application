@@ -71,7 +71,11 @@
             </thead>
             <tbody>
                 <tr th:each="entry : ${timeEntries}">
-                    <td th:text="${#temporals.format(entry.date, 'EEE, MMM d')}">Mon, Mar 25</td>
+                    <td>
+                        <a th:href="@{/technicians/{techId}/time-entries/{entryId}(techId=${technician.id}, entryId=${entry.id})}"
+                           class="text-decoration-none"
+                           th:text="${#temporals.format(entry.date, 'EEE, MMM d')}">Mon, Mar 25</a>
+                    </td>
                     <td th:text="${#temporals.format(entry.clockInTime, 'h:mm a')}">9:00 AM</td>
                     <td>
                         <span th:if="${entry.clockOutTime != null}" th:text="${#temporals.format(entry.clockOutTime, 'h:mm a')}">5:00 PM</span>

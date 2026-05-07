@@ -29,6 +29,12 @@ class TechnicianProfileControllerTest {
     @Mock
     private TimeEntryService timeEntryService;
 
+    @Mock
+    private TimeEntryRepository timeEntryRepository;
+
+    @Mock
+    private TaskPauseRepository taskPauseRepository;
+
     @InjectMocks
     private TechnicianProfileController controller;
 

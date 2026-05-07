@@ -19,7 +19,6 @@
                             <tr>
                                 <th>Name</th>
                                 <th>Username</th>
-                                <th>Account Type</th>
                                 <th>Requested</th>
                                 <th class="text-end">Actions</th>
                             </tr>
@@ -28,23 +27,22 @@
                             <tr th:each="request : ${pendingRequests}">
                                 <td th:text="${request.getFirstName() + ' ' + request.getLastName()}">John Doe</td>
                                 <td th:text="${request.getUsername()}">johndoe</td>
-                                <td>
-                                    <span class="badge"
-                                          th:classappend="${request.getAccountType().name() == 'MANAGER' ? 'bg-primary' :
-                                                           (request.getAccountType().name() == 'DEVELOPER' ? 'bg-dark' :
-                                                           (request.getAccountType().name() == 'ADMIN' ? 'bg-danger' : 'bg-secondary'))}"
-                                          th:text="${request.getAccountType().name()}">TECHNICIAN</span>
-                                </td>
                                 <td th:text="${#temporals.format(request.getCreatedAt(), 'MMM d, yyyy h:mm a')}">Jan 1, 2026 12:00 PM</td>
                                 <td class="text-end">
                                     <form th:action="@{/developer/registration-requests/{id}/approve(id=${request.getId()})}"
-                                          method="post" class="d-inline">
-                                        <button type="submit" class="btn btn-sm btn-success">
+                                          method="post" class="d-inline-flex align-items-center gap-2">
+                                        <select name="accountType" class="form-select form-select-sm" style="width:auto;" required>
+                                            <option value="" disabled selected>Role</option>
+                                            <option value="TECHNICIAN">Technician</option>
+                                            <option value="MANAGER">Manager</option>
+                                            <option value="DEVELOPER">Developer</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-success text-nowrap">
                                             <i class="bi bi-check-lg me-1"></i>Approve
                                         </button>
                                     </form>
                                     <form th:action="@{/developer/registration-requests/{id}/deny(id=${request.getId()})}"
-                                          method="post" class="d-inline ms-1">
+                                          method="post" class="d-inline ms-2">
                                         <button type="submit" class="btn btn-sm btn-danger">
                                             <i class="bi bi-x-lg me-1"></i>Deny
                                         </button>

@@ -73,6 +73,9 @@ public class ChecklistRun {
     public Long getId() {
         return id;
     }
+    public void setId(Long id) {
+        this.id = id;
+    }
     public User getCompletedBy() {
         return completedBy;
     }

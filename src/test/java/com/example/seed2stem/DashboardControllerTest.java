@@ -33,6 +33,9 @@ class DashboardControllerTest {
     @Mock
     private TimeEntryService timeEntryService;
 
+    @Mock
+    private TaskPauseRepository taskPauseRepository;
+
     @InjectMocks
     private DashboardController controller;
 
@@ -193,7 +196,25 @@ class DashboardControllerTest {
         session.setAttribute("loggedInUser", managerUser);
         Model model = new ConcurrentModel();
         when(taskRepo.findByUserCreatedFalse()).thenReturn(List.of());
-        when(checklistRunService.getActiveRunsForUser(managerUser)).thenReturn(List.of());
+        when(checklistRunService.getAllActiveRuns()).thenReturn(List.of());
+        when(taskPauseRepository.findRunIdsWithOpenPause()).thenReturn(List.of());
+        when(checklistRunService.getPendingChecklists()).thenReturn(List.of(new ChecklistRun()));
+
+        String result = controller.taskDashboard(session, model);
+
+        assertEquals("task-dashboard", result);
+        assertEquals(true, model.getAttribute("isManager"));
+        assertNotNull(model.getAttribute("pendingRuns"));
+        assertNotNull(model.getAttribute("pausedRunIds"));
+    }
+
+    @Test
+    void taskDashboard_developer_addsPendingRuns() {
+        session.setAttribute("loggedInUser", developerUser);
+        Model model = new ConcurrentModel();
+        when(taskRepo.findByUserCreatedFalse()).thenReturn(List.of());
+        when(checklistRunService.getAllActiveRuns()).thenReturn(List.of());
+        when(taskPauseRepository.findRunIdsWithOpenPause()).thenReturn(List.of());
         when(checklistRunService.getPendingChecklists()).thenReturn(List.of(new ChecklistRun()));
 
         String result = controller.taskDashboard(session, model);
@@ -204,17 +225,35 @@ class DashboardControllerTest {
     }
 
     @Test
-    void taskDashboard_developer_addsPendingRuns() {
-        session.setAttribute("loggedInUser", developerUser);
+    void taskDashboard_manager_seesAllActiveRunsFromAllUsers() {
+        session.setAttribute("loggedInUser", managerUser);
         Model model = new ConcurrentModel();
+
+        ChecklistRun techRun = new ChecklistRun();
+        techRun.setId(100L);
+        techRun.setCompletedBy(techUser);
+        ChecklistRun otherRun = new ChecklistRun();
+        otherRun.setId(101L);
+        otherRun.setCompletedBy(developerUser);
+
         when(taskRepo.findByUserCreatedFalse()).thenReturn(List.of());
-        when(checklistRunService.getActiveRunsForUser(developerUser)).thenReturn(List.of());
-        when(checklistRunService.getPendingChecklists()).thenReturn(List.of(new ChecklistRun()));
+        when(checklistRunService.getAllActiveRuns()).thenReturn(List.of(techRun, otherRun));
+        when(taskPauseRepository.findRunIdsWithOpenPause()).thenReturn(List.of(101L));
+        when(checklistRunService.getPendingChecklists()).thenReturn(List.of());
 
         String result = controller.taskDashboard(session, model);
 
         assertEquals("task-dashboard", result);
-        assertEquals(true, model.getAttribute("isManager"));
-        assertNotNull(model.getAttribute("pendingRuns"));
+        @SuppressWarnings("unchecked")
+        List<ChecklistRun> activeTasks = (List<ChecklistRun>) model.getAttribute("activeTasks");
+        assertNotNull(activeTasks);
+        assertEquals(2, activeTasks.size());
+        @SuppressWarnings("unchecked")
+        java.util.Set<Long> pausedRunIds = (java.util.Set<Long>) model.getAttribute("pausedRunIds");
+        assertNotNull(pausedRunIds);
+        assertTrue(pausedRunIds.contains(101L));
+        assertFalse(pausedRunIds.contains(100L));
+        verify(checklistRunService).getAllActiveRuns();
+        verify(checklistRunService, never()).getActiveRunsForUser(any());
     }
 }

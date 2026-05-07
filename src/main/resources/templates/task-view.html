@@ -8,7 +8,7 @@
 
 <main class="s2s-content">
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-lg-10">
             <div class="d-flex align-items-center mb-4">
                 <a th:href="@{/dashboard/task-dashboard}" class="btn btn-outline-secondary me-3">
                     <i class="bi bi-arrow-left"></i>
@@ -21,6 +21,24 @@
                     <p class="text-muted fs-5" th:text="${task.getDescription()}">
                         Task description goes here.
                     </p>
+
+                    <!-- Embedded SOP PDF (only when one was uploaded) -->
+                    <div th:if="${task.getSopFileName() != null}" class="mt-4 mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0">
+                                <i class="bi bi-file-earmark-pdf me-1"></i>
+                                Standard Operating Procedure
+                            </h6>
+                            <a th:href="@{/tasks/{id}/sop(id=${task.getId()})}"
+                               target="_blank"
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>Open in new tab
+                            </a>
+                        </div>
+                        <iframe th:src="@{/tasks/{id}/sop(id=${task.getId()})}"
+                                title="Standard Operating Procedure"
+                                style="width:100%; height:700px; border:1px solid #dee2e6; border-radius:0.375rem;"></iframe>
+                    </div>
 
                     <!-- Show Start button only if there's a linked checklist -->
                     <a th:if="${task.getChecklist() != null}"

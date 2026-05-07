@@ -92,10 +92,10 @@ class AuthControllerTest {
 
     @Test
     void register_validInput_redirectsToRegistrationPending() {
-        doNothing().when(authService).register("newuser", "pass", "Jane", "Smith", AccountType.MANAGER);
+        doNothing().when(authService).register("newuser", "pass", "Jane", "Smith");
         RedirectAttributes redirect = new RedirectAttributesModelMap();
 
-        String result = controller.register("newuser", "pass", "pass", "Jane", "Smith", "MANAGER", redirect);
+        String result = controller.register("newuser", "pass", "pass", "Jane", "Smith", redirect);
 
         assertEquals("redirect:/auth/registration-pending", result);
     }
@@ -104,10 +104,10 @@ class AuthControllerTest {
     void register_passwordMismatch_redirectsToRegisterWithError() {
         RedirectAttributes redirect = new RedirectAttributesModelMap();
 
-        String result = controller.register("newuser", "pass1", "pass2", "Jane", "Smith", "TECHNICIAN", redirect);
+        String result = controller.register("newuser", "pass1", "pass2", "Jane", "Smith", redirect);
 
         assertEquals("redirect:/auth/register", result);
-        verify(authService, never()).register(anyString(), anyString(), anyString(), anyString(), any());
+        verify(authService, never()).register(anyString(), anyString(), anyString(), anyString());
     }
 
     @Test
@@ -117,21 +117,12 @@ class AuthControllerTest {
     }
 
     @Test
-    void register_invalidAccountType_redirectsToRegisterWithError() {
-        RedirectAttributes redirect = new RedirectAttributesModelMap();
-
-        String result = controller.register("newuser", "pass", "pass", "Jane", "Smith", "INVALID_TYPE", redirect);
-
-        assertEquals("redirect:/auth/register", result);
-    }
-
-    @Test
     void register_duplicateUsername_redirectsToRegisterWithError() {
         doThrow(new RuntimeException("Username already exists"))
-                .when(authService).register("john", "pass", "John", "Doe", AccountType.TECHNICIAN);
+                .when(authService).register("john", "pass", "John", "Doe");
         RedirectAttributes redirect = new RedirectAttributesModelMap();
 
-        String result = controller.register("john", "pass", "pass", "John", "Doe", "TECHNICIAN", redirect);
+        String result = controller.register("john", "pass", "pass", "John", "Doe", redirect);
 
         assertEquals("redirect:/auth/register", result);
     }

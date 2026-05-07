@@ -26,6 +26,21 @@ public class Task {
     @JoinColumn(name = "created_by_user_id")
     private User createdBy;
 
+    /** Original filename of the uploaded SOP PDF; null when no SOP is attached. */
+    @Column(name = "sop_file_name")
+    private String sopFileName;
+
+    /**
+     * The raw PDF bytes for the SOP, stored as a PostgreSQL `bytea` column
+     * (NOT a Large Object — `oid`/LO requires explicit transactions and breaks
+     * read-only/auto-commit queries). Marked @Basic(fetch = LAZY) as a hint;
+     * note that real lazy loading of basic byte[] fields requires bytecode
+     * enhancement, so without it Hibernate may load this eagerly.
+     */
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "sop_data", columnDefinition = "bytea")
+    private byte[] sopData;
+
     public Checklist getChecklist() {
         return checklist;
     }
@@ -68,5 +83,17 @@ public class Task {
     }
     public void setDescription(String description) {
         this.description = description;
+    }
+    public String getSopFileName() {
+        return sopFileName;
+    }
+    public void setSopFileName(String sopFileName) {
+        this.sopFileName = sopFileName;
+    }
+    public byte[] getSopData() {
+        return sopData;
+    }
+    public void setSopData(byte[] sopData) {
+        this.sopData = sopData;
     }
 }

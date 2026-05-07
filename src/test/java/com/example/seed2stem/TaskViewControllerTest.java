@@ -38,6 +38,9 @@ class TaskViewControllerTest {
     @Mock
     private ChecklistResponseRepository responseRepo;
 
+    @Mock
+    private TaskPauseRepository taskPauseRepo;
+
     @InjectMocks
     private TaskViewController controller;
 
@@ -103,12 +106,16 @@ class TaskViewControllerTest {
             t.setId(5L);
             return t;
         });
-        when(runRepo.save(any(ChecklistRun.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(responseRepo.save(any(ChecklistResponse.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(runRepo.save(any(ChecklistRun.class))).thenAnswer(inv -> {
+            ChecklistRun r = inv.getArgument(0);
+            r.setId(99L);
+            return r;
+        });
 
         String result = controller.createTask("Clean Reservoirs", "Cleaned all reservoirs in B2", session);
 
-        assertEquals("redirect:/dashboard/task-dashboard", result);
+        // User-created tasks now redirect to the in-progress page; the run stays IN_PROGRESS
+        assertEquals("redirect:/tasks/runs/99/in-progress", result);
 
         verify(checklistRepo).save(argThat(cl -> {
             assertEquals("Clean Reservoirs", cl.getName());
@@ -128,17 +135,16 @@ class TaskViewControllerTest {
         }));
 
         verify(runRepo).save(argThat(run -> {
-            assertEquals(ChecklistRunStatus.PENDING, run.getStatus());
+            assertEquals(ChecklistRunStatus.IN_PROGRESS, run.getStatus());
             assertEquals(techUser, run.getCompletedBy());
             assertNotNull(run.getStartTime());
-            assertNotNull(run.getEndTime());
+            assertNull(run.getEndTime());
             return true;
         }));
 
-        verify(responseRepo).save(argThat(resp -> {
-            assertEquals("Cleaned all reservoirs in B2", resp.getTextAnswer());
-            return true;
-        }));
+        // createTask no longer saves a work-log response at creation time —
+        // that happens on save-progress or submit-user-task
+        verify(responseRepo, never()).save(any(ChecklistResponse.class));
     }
 
     // --- viewTask ---
@@ -169,6 +175,52 @@ class TaskViewControllerTest {
         Model model = new ConcurrentModel();
 
         assertThrows(RuntimeException.class, () -> controller.viewTask(999L, model, session));
+    }
+
+    // --- getTaskSop ---
+
+    @Test
+    void getTaskSop_noUser_returns401() {
+        var resp = controller.getTaskSop(1L, session);
+        assertEquals(401, resp.getStatusCode().value());
+    }
+
+    @Test
+    void getTaskSop_taskNotFound_returns404() {
+        session.setAttribute("loggedInUser", techUser);
+        when(taskRepo.findById(999L)).thenReturn(Optional.empty());
+
+        var resp = controller.getTaskSop(999L, session);
+        assertEquals(404, resp.getStatusCode().value());
+    }
+
+    @Test
+    void getTaskSop_taskHasNoSop_returns404() {
+        session.setAttribute("loggedInUser", techUser);
+        when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
+
+        var resp = controller.getTaskSop(1L, session);
+        assertEquals(404, resp.getStatusCode().value());
+    }
+
+    @Test
+    void getTaskSop_taskHasSop_returnsPdfBytesInline() {
+        session.setAttribute("loggedInUser", techUser);
+        byte[] pdfBytes = new byte[] {'%', 'P', 'D', 'F', '-', '1', '.', '4'};
+        task.setSopFileName("how-to.pdf");
+        task.setSopData(pdfBytes);
+        when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
+
+        var resp = controller.getTaskSop(1L, session);
+
+        assertEquals(200, resp.getStatusCode().value());
+        assertArrayEquals(pdfBytes, resp.getBody());
+        assertEquals("application/pdf",
+                resp.getHeaders().getContentType().toString());
+        String disposition = resp.getHeaders().getFirst("Content-Disposition");
+        assertNotNull(disposition);
+        assertTrue(disposition.startsWith("inline"));
+        assertTrue(disposition.contains("how-to.pdf"));
     }
 
     // --- startTask ---

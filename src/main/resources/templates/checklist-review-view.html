@@ -77,6 +77,14 @@
                                             <span th:text="${resp.numericAnswer}"></span>
                                         </div>
 
+                                        <!-- NONE (checkbox) items -->
+                                        <div th:if="${resp.checklistItem.responseType.name() == 'NONE'}"
+                                             class="d-flex justify-content-between align-items-center mb-1">
+                                            <strong class="small" th:text="${resp.checklistItem.text}">Label</strong>
+                                            <i class="bi bi-check-square-fill text-success"
+                                               th:if="${resp.booleanAnswer != null and resp.booleanAnswer}"></i>
+                                        </div>
+
                                     </div>
                                 </div>
                             </div>

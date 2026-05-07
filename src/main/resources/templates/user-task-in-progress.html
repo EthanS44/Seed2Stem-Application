@@ -34,17 +34,47 @@
                             <button type="submit" class="btn btn-success">
                                 <i class="bi bi-check-circle me-1"></i> Submit for Approval
                             </button>
-                            <button type="submit"
-                                    form="saveForm"
-                                    class="btn btn-outline-secondary">
-                                <i class="bi bi-floppy me-1"></i> Save Progress
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#pauseModal">
+                                <i class="bi bi-pause-circle me-1"></i> Pause
                             </button>
                         </div>
                     </form>
 
                     <form th:action="@{/tasks/runs/{runId}/save-progress(runId=${run.getId()})}" method="post" id="saveForm">
                         <input type="hidden" name="workLog" id="saveWorkLog">
+                        <input type="hidden" name="pauseReason" id="savePauseReason">
                     </form>
+
+                    <!-- Pause Reason Modal -->
+                    <div class="modal fade" id="pauseModal" tabindex="-1" aria-labelledby="pauseModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="pauseModalLabel">
+                                        <i class="bi bi-pause-circle me-1"></i> Pause Task
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="text-muted small mb-2">
+                                        If you'll be gone longer than 5 minutes, please provide a reason for the pause.
+                                    </p>
+                                    <label for="pauseReasonInput" class="form-label fw-bold">Reason <span class="text-muted fw-normal">(optional for short breaks)</span></label>
+                                    <textarea class="form-control" id="pauseReasonInput" rows="3"
+                                              placeholder="e.g., Lunch break, pulled away for another job, bathroom break..."></textarea>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-warning" id="confirmPauseBtn">
+                                        <i class="bi bi-pause-circle me-1"></i> Pause Task
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -76,6 +106,13 @@
     document.getElementById('saveForm').addEventListener('submit', function() {
         document.getElementById('saveWorkLog').value =
             document.querySelector('#submitForm textarea[name="workLog"]').value;
+    });
+
+    // When the user confirms the pause, copy the reason into the hidden form and submit
+    document.getElementById('confirmPauseBtn').addEventListener('click', function() {
+        document.getElementById('savePauseReason').value =
+            document.getElementById('pauseReasonInput').value;
+        document.getElementById('saveForm').submit();
     });
 </script>
 </body>

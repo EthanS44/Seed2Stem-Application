@@ -18,9 +18,15 @@ public interface ChecklistRunRepository
     @Query("SELECT r FROM ChecklistRun r JOIN FETCH r.completedBy WHERE r.startTime BETWEEN :start AND :end")
     List<ChecklistRun> findByStartTimeBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    @Query("SELECT r FROM ChecklistRun r JOIN FETCH r.task WHERE r.completedBy = :user AND r.startTime >= :from AND r.startTime <= :to ORDER BY r.startTime ASC")
+    List<ChecklistRun> findByUserAndStartTimeBetween(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
     @Query("SELECT r FROM ChecklistRun r JOIN FETCH r.task WHERE r.completedBy = :user AND r.status IN ('APPROVED', 'PENDING') ORDER BY r.startTime DESC")
     List<ChecklistRun> findCompletedByUserOrderByStartTimeDesc(@Param("user") User user);
 
     Optional<ChecklistRun> findFirstByTask(Task task);
+
+    @Query("SELECT r FROM ChecklistRun r JOIN FETCH r.completedBy JOIN FETCH r.task WHERE r.status = :status ORDER BY r.startTime ASC")
+    List<ChecklistRun> findAllByStatusWithUserAndTask(@Param("status") ChecklistRunStatus status);
 }
 

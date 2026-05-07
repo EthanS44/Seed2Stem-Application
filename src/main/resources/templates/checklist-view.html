@@ -17,9 +17,10 @@
                     <!-- Show validation error if any -->
                     <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
 
-                    <form th:action="@{/checklist-runs/submit}" method="post">
+                    <form th:action="@{/checklist-runs/submit}" method="post" id="checklistForm">
                         <input type="hidden" name="taskId" th:value="${task.getId()}"/>
                         <input type="hidden" name="runId" th:value="${runId}">
+                        <input type="hidden" name="pauseReason" id="pauseReasonHidden">
 
                         <div th:each="item : ${items}">
 
@@ -80,9 +81,16 @@
                                            placeholder="Enter value">
                                 </div>
 
-                                <!-- NONE -->
-                                <div th:if="${item.getResponseType().name() == 'NONE'}">
-                                    <span class="text-muted small">No input required</span>
+                                <!-- NONE (checkbox) -->
+                                <div th:if="${item.getResponseType().name() == 'NONE'}" class="form-check">
+                                    <input type="checkbox" class="form-check-input"
+                                           th:id="'check_' + ${item.getId()}"
+                                           th:name="'check_' + ${item.getId()}"
+                                           value="true"
+                                           th:checked="${responses.containsKey(item.getId()) and responses.get(item.getId()).getBooleanAnswer() != null and responses.get(item.getId()).getBooleanAnswer()}">
+                                    <label class="form-check-label" th:for="'check_' + ${item.getId()}">
+                                        Mark complete
+                                    </label>
                                 </div>
                             </div>
 
@@ -92,11 +100,43 @@
                             <button type="submit" class="btn btn-s2s btn-lg">
                                 <i class="bi bi-check-lg me-1"></i> Submit Checklist
                             </button>
-                            <button type="submit" formaction="/checklist-runs/pause" formnovalidate class="btn btn-outline-secondary btn-lg">
+                            <button type="button"
+                                    class="btn btn-outline-secondary btn-lg"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#pauseModal">
                                 <i class="bi bi-pause-fill me-1"></i> Pause
                             </button>
                         </div>
                     </form>
+
+                    <!-- Pause Reason Modal -->
+                    <div class="modal fade" id="pauseModal" tabindex="-1" aria-labelledby="pauseModalLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="pauseModalLabel">
+                                        <i class="bi bi-pause-circle me-1"></i> Pause Task
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="text-muted small mb-2">
+                                        If you'll be gone longer than 5 minutes, please provide a reason for the pause.
+                                        This will appear on your shift timeline.
+                                    </p>
+                                    <label for="pauseReasonInput" class="form-label fw-bold">Reason <span class="text-muted fw-normal">(optional for short breaks)</span></label>
+                                    <textarea class="form-control" id="pauseReasonInput" rows="3"
+                                              placeholder="e.g., Lunch break, pulled away for another job, bathroom break..."></textarea>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="button" class="btn btn-warning" id="confirmPauseBtn">
+                                        <i class="bi bi-pause-circle me-1"></i> Pause Task
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -104,5 +144,18 @@
 </main>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // When the user confirms the pause, copy the reason into the hidden input,
+    // redirect the form to the pause endpoint, disable HTML5 validation
+    // (since partial answers are OK on pause), and submit.
+    document.getElementById('confirmPauseBtn').addEventListener('click', function() {
+        var form = document.getElementById('checklistForm');
+        document.getElementById('pauseReasonHidden').value =
+            document.getElementById('pauseReasonInput').value;
+        form.action = /*[[@{/checklist-runs/pause}]]*/ '/checklist-runs/pause';
+        form.noValidate = true;
+        form.submit();
+    });
+</script>
 </body>
 </html>

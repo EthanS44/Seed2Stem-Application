@@ -7,5 +7,6 @@ import java.util.List;
 public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByUserCreatedTrue();
     List<Task> findByUserCreatedFalse();
+    List<Task> findByUserCreatedFalseOrderByTitleAsc();
     long countByUserCreatedFalse();
 }

@@ -61,7 +61,6 @@ public class AuthController {
                            @RequestParam String confirmPassword,
                            @RequestParam String firstName,
                            @RequestParam String lastName,
-                           @RequestParam("accountType") String accountTypeStr,
                            RedirectAttributes redirectAttributes) {
 
         try {
@@ -70,13 +69,8 @@ public class AuthController {
                 return "redirect:/auth/register";
             }
 
-            AccountType accountType = AccountType.valueOf(accountTypeStr);
-            authService.register(username, password, firstName, lastName, accountType);
+            authService.register(username, password, firstName, lastName);
             return "redirect:/auth/registration-pending";
-
-        } catch (IllegalArgumentException e) {
-            redirectAttributes.addAttribute("error", "Invalid account type selected");
-            return "redirect:/auth/register";
 
         } catch (RuntimeException e) {
             redirectAttributes.addAttribute("error", e.getMessage());
