@@ -77,7 +77,7 @@ class TechnicianProfileControllerTest {
         assertEquals("technician-list", result);
         List<User> techs = (List<User>) model.getAttribute("technicians");
         assertEquals(1, techs.size());
-        assertEquals("tech", techs.get(0).getUsername());
+        assertEquals("tech", techs.get(0).getEmail());
     }
 
     // --- technicianProfile ---

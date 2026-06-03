@@ -4,10 +4,19 @@ import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.regex.Pattern;
 
 
 @Service
 public class AuthService {
+
+    /**
+     * Pragmatic email regex — rejects obvious garbage (no '@', no domain, no
+     * TLD) without trying to fully implement RFC 5322. Good enough for form
+     * input; the source of truth is whether you can actually deliver mail.
+     */
+    private static final Pattern EMAIL_PATTERN = Pattern.compile(
+            "^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$");
 
     private final UserRepository userRepository;
     private final RegistrationRequestRepository registrationRequestRepo;
@@ -21,27 +30,30 @@ public class AuthService {
         this.passwordResetRequestRepo = passwordResetRequestRepo;
     }
 
-    public User login(String username, String password) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Invalid username or password"));
+    public User login(String email, String password) {
+        User user = userRepository.findByEmail(normalizeEmail(email))
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
 
         if (!BCrypt.checkpw(password, user.getPassword())) {
-            throw new RuntimeException("Invalid username or password");
+            throw new RuntimeException("Invalid email or password");
         }
 
         return user;
     }
 
-    public void register(String username, String password, String firstName, String lastName) {
-        if (userRepository.existsByUsername(username)) {
-            throw new RuntimeException("Username already exists");
+    public void register(String email, String password, String firstName, String lastName) {
+        String normalized = normalizeEmail(email);
+        validateEmail(normalized);
+
+        if (userRepository.existsByEmail(normalized)) {
+            throw new RuntimeException("An account with this email already exists");
         }
-        if (registrationRequestRepo.existsByUsername(username)) {
-            throw new RuntimeException("A registration request for this username is already pending");
+        if (registrationRequestRepo.existsByEmail(normalized)) {
+            throw new RuntimeException("A registration request for this email is already pending");
         }
 
         RegistrationRequest request = new RegistrationRequest();
-        request.setUsername(username);
+        request.setEmail(normalized);
         request.setPassword(BCrypt.hashpw(password, BCrypt.gensalt()));
         request.setFirstName(firstName);
         request.setLastName(lastName);
@@ -64,7 +76,7 @@ public class AuthService {
         }
 
         User user = new User();
-        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
         user.setPassword(request.getPassword());
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
@@ -92,15 +104,14 @@ public class AuthService {
 
     /**
      * Create a password reset request. Verifies a user exists with the given
-     * username AND matching first and last name (identity check) before creating
-     * the request. Silently creates the request even if no match, so we don't
-     * leak which usernames exist — but actually we DO leak by username unique
-     * constraint checks elsewhere. For this internal app, we raise a clear
-     * error if the user can't be found so users know the request didn't go
-     * through.
+     * email AND matching first and last name (identity check) before creating
+     * the request. Raises a clear error if the user can't be found so the
+     * requester knows the request didn't go through.
      */
-    public void createPasswordResetRequest(String username, String firstName, String lastName) {
-        User user = userRepository.findByUsername(username)
+    public void createPasswordResetRequest(String email, String firstName, String lastName) {
+        String normalized = normalizeEmail(email);
+
+        User user = userRepository.findByEmail(normalized)
                 .orElseThrow(() -> new RuntimeException(
                         "We couldn't find an account matching that information"));
 
@@ -109,12 +120,12 @@ public class AuthService {
             throw new RuntimeException("We couldn't find an account matching that information");
         }
 
-        if (passwordResetRequestRepo.existsByUsernameAndStatus(username, PasswordResetStatus.PENDING)) {
+        if (passwordResetRequestRepo.existsByEmailAndStatus(normalized, PasswordResetStatus.PENDING)) {
             throw new RuntimeException("A password reset request for this account is already pending");
         }
 
         PasswordResetRequest request = new PasswordResetRequest();
-        request.setUsername(username);
+        request.setEmail(normalized);
         request.setFirstName(user.getFirstName());
         request.setLastName(user.getLastName());
         request.setStatus(PasswordResetStatus.PENDING);
@@ -135,7 +146,7 @@ public class AuthService {
             throw new RuntimeException("New password cannot be blank");
         }
 
-        User user = userRepository.findByUsername(request.getUsername())
+        User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User no longer exists"));
 
         user.setPassword(BCrypt.hashpw(newPassword, BCrypt.gensalt()));
@@ -175,5 +186,17 @@ public class AuthService {
 
         user.setPassword(BCrypt.hashpw(newPassword, BCrypt.gensalt()));
         userRepository.save(user);
+    }
+
+    /** Lowercase + trim so 'Foo@bar.com  ' and 'foo@bar.com' compare equal. */
+    private static String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
+    }
+
+    /** Rejects obviously-malformed emails before we hit the DB unique check. */
+    private static void validateEmail(String email) {
+        if (email == null || email.isBlank() || !EMAIL_PATTERN.matcher(email).matches()) {
+            throw new RuntimeException("Please enter a valid email address");
+        }
     }
 }

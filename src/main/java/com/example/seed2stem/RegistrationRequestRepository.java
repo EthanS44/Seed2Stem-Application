@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface RegistrationRequestRepository extends JpaRepository<RegistrationRequest, Long> {
     List<RegistrationRequest> findByStatus(RegistrationStatus status);
-    boolean existsByUsername(String username);
+    boolean existsByEmail(String email);
 }

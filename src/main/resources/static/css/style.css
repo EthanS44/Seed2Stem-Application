@@ -33,10 +33,15 @@ body {
     height: 40px;
 }
 
-/* ===== Sidebar ===== */
+/* ===== Sidebar =====
+   `!important` on background-color: Bootstrap's `.offcanvas-md` class (used
+   on the sidebar nav so it converts to a drawer on phones) applies
+   `background-color: transparent !important;` at the md+ breakpoint, which
+   would otherwise blank out our green. Our !important wins because the
+   selector specificity is equal and our rule is declared last. */
 .s2s-sidebar {
     width: var(--sidebar-width);
-    background-color: var(--s2s-green);
+    background-color: var(--s2s-green) !important;
     position: fixed;
     top: var(--topbar-height);
     bottom: 0;
@@ -265,4 +270,74 @@ body {
     height: 12px;
     border-radius: 50%;
     display: inline-block;
+}
+
+/* ============================================================================
+ * Phone layout (< md, i.e. < 768px)
+ *
+ * Above 768px nothing here applies — desktop/tablet styles remain untouched.
+ * Below 768px we drop the fixed sidebar margin, tighten padding, and shrink
+ * a few elements that have hard-coded pixel widths/heights (Pass/Fail buttons,
+ * card padding, table density).
+ *
+ * The sidebar itself converts to a Bootstrap offcanvas drawer via the
+ * .offcanvas-md class on the <nav> in fragments/layout.html.
+ * ============================================================================ */
+@media (max-width: 767.98px) {
+
+    /* Main content reclaims the full viewport — no static sidebar to dodge */
+    .s2s-content {
+        margin-left: 0;
+        padding: calc(56px + 0.75rem) 0.75rem 1rem;
+    }
+
+    /* Shrink the brand text on phones so hamburger + brand + logo all fit
+       on one row. Without this, Bootstrap's default 1.25rem brand combined
+       with the 40px logo and 48px hamburger overflows a 375px viewport. */
+    .s2s-topbar .navbar-brand {
+        font-size: 1rem;
+    }
+
+    /* Align the drawer to the top of the viewport (desktop rule sets
+       top: 56px to dodge the topbar — irrelevant when it's a sliding
+       drawer). z-index 1046 puts the drawer ABOVE Bootstrap's
+       offcanvas-backdrop (1040), so tapping nav links inside the drawer
+       actually hits the links instead of the backdrop. */
+    .s2s-sidebar {
+        width: 260px;
+        top: 0;
+        z-index: 1046;
+    }
+
+    /* Cap drawer width on small screens — 280px leaves a touch target outside
+       to dismiss on backdrop tap, even on the narrowest devices */
+    .offcanvas-md.offcanvas-start {
+        max-width: 280px;
+    }
+
+    /* Pass/Fail boolean buttons: 100px hard-coded width breaks 2-up at 375px.
+       Switch to flex so they share whatever row width is available. */
+    .boolean-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .boolean-buttons label {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+    }
+
+    /* Tighter padding inside cards so dashboard tiles don't waste space */
+    .card-body {
+        padding: 1rem;
+    }
+
+    /* Slightly denser tables — .table-responsive's horizontal scroll is still
+       there for very wide content, but most tables fit on phones with this */
+    .table {
+        font-size: 0.85rem;
+    }
+    .table > :not(caption) > * > * {
+        padding: 0.5rem;
+    }
 }

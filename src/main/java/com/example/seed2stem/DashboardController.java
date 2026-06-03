@@ -53,8 +53,10 @@ public class DashboardController {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
-        model.addAttribute("taskCount", taskRepo.countByUserCreatedFalse());
-        model.addAttribute("batchCount", batchService.countActive());
+        // The tech's own count of tasks they're currently working on
+        // (in-progress checklist runs). Used for the "Active Tasks" tile.
+        int activeTaskCount = checklistRunService.getActiveRunsForUser(user).size();
+        model.addAttribute("activeTaskCount", activeTaskCount);
         model.addAttribute("clockedIn", timeEntryService.isClockedIn(user));
         return "technician-dashboard";
     }
@@ -64,10 +66,11 @@ public class DashboardController {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
+        // "All Active Tasks" = every in-progress checklist run across all techs
+        int allActiveTaskCount = checklistRunService.getAllActiveRuns().size();
+
         model.addAttribute("pendingCount", checklistRunService.getPendingChecklists().size());
-        model.addAttribute("batchCount", batchService.countActive());
-        model.addAttribute("taskCount", taskRepo.countByUserCreatedFalse());
-        model.addAttribute("technicianCount", userRepo.countByAccountType(AccountType.TECHNICIAN));
+        model.addAttribute("allActiveTaskCount", allActiveTaskCount);
         model.addAttribute("clockedInCount", timeEntryService.countClockedIn());
         return "manager-dashboard";
     }
@@ -77,10 +80,11 @@ public class DashboardController {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
+        // "All Active Tasks" = every in-progress checklist run across all techs
+        int allActiveTaskCount = checklistRunService.getAllActiveRuns().size();
+
         model.addAttribute("pendingCount", checklistRunService.getPendingChecklists().size());
-        model.addAttribute("batchCount", batchService.countActive());
-        model.addAttribute("taskCount", taskRepo.countByUserCreatedFalse());
-        model.addAttribute("technicianCount", userRepo.countByAccountType(AccountType.TECHNICIAN));
+        model.addAttribute("allActiveTaskCount", allActiveTaskCount);
         model.addAttribute("clockedInCount", timeEntryService.countClockedIn());
         return "developer-dashboard";
     }

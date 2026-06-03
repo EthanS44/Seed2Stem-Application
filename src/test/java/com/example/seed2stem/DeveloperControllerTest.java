@@ -141,7 +141,7 @@ class DeveloperControllerTest {
         req.setId(1L);
         req.setFirstName("Jane");
         req.setLastName("Smith");
-        req.setUsername("jsmith");
+        req.setEmail("jsmith");
         req.setAccountType(AccountType.TECHNICIAN);
         req.setStatus(RegistrationStatus.PENDING);
         req.setCreatedAt(LocalDateTime.now());
@@ -235,7 +235,7 @@ class DeveloperControllerTest {
 
         PasswordResetRequest req = new PasswordResetRequest();
         req.setId(1L);
-        req.setUsername("jsmith");
+        req.setEmail("jsmith");
         req.setFirstName("Jane");
         req.setLastName("Smith");
         req.setStatus(PasswordResetStatus.PENDING);

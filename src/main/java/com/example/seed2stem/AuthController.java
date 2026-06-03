@@ -32,12 +32,12 @@ public class AuthController {
 
     /** Login POST */
     @PostMapping("/login")
-    public String login(@RequestParam String username,
+    public String login(@RequestParam String email,
                         @RequestParam String password,
                         HttpSession session,
                         RedirectAttributes redirectAttributes) {
         try {
-            User user = authService.login(username, password);
+            User user = authService.login(email, password);
             session.setAttribute("loggedInUser", user);
             return "redirect:/dashboard/home-dashboard";
         } catch (RuntimeException e) {
@@ -56,7 +56,7 @@ public class AuthController {
 
     // HANDLE REGISTER
     @PostMapping("/register")
-    public String register(@RequestParam String username,
+    public String register(@RequestParam String email,
                            @RequestParam String password,
                            @RequestParam String confirmPassword,
                            @RequestParam String firstName,
@@ -69,7 +69,7 @@ public class AuthController {
                 return "redirect:/auth/register";
             }
 
-            authService.register(username, password, firstName, lastName);
+            authService.register(email, password, firstName, lastName);
             return "redirect:/auth/registration-pending";
 
         } catch (RuntimeException e) {
@@ -88,12 +88,12 @@ public class AuthController {
 
     /** Handle forgot password request */
     @PostMapping("/forgot-password")
-    public String forgotPassword(@RequestParam String username,
+    public String forgotPassword(@RequestParam String email,
                                  @RequestParam String firstName,
                                  @RequestParam String lastName,
                                  RedirectAttributes redirectAttributes) {
         try {
-            authService.createPasswordResetRequest(username, firstName, lastName);
+            authService.createPasswordResetRequest(email, firstName, lastName);
             return "redirect:/auth/forgot-password-submitted";
         } catch (RuntimeException e) {
             redirectAttributes.addAttribute("error", e.getMessage());

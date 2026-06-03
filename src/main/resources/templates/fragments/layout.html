@@ -11,15 +11,40 @@
     <link th:href="@{/css/style.css}" rel="stylesheet">
 </head>
 
-<!-- ===== TOPBAR FRAGMENT ===== -->
-<nav th:fragment="topbar" class="navbar navbar-light bg-white fixed-top s2s-topbar px-3">
+<!-- ===== TOPBAR FRAGMENT =====
+     `flex-nowrap` is critical on phones: Bootstrap's .navbar defaults to
+     flex-wrap: wrap, which would push the brand/logo to a second row on
+     narrow screens. That extra row makes the fixed topbar ~2x taller and
+     hides the top of the page content below it. -->
+<nav th:fragment="topbar" class="navbar navbar-light bg-white fixed-top s2s-topbar flex-nowrap px-3">
+    <!-- Hamburger: visible only on phones (<md). Toggles the sidebar offcanvas. -->
+    <button class="navbar-toggler border-0 d-md-none me-2" type="button"
+            data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas"
+            aria-controls="sidebarOffcanvas" aria-label="Open menu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <!-- Brand shows on all sizes. On phones it shrinks to 1rem (see style.css
+         mobile media query) so hamburger + brand + logo all fit on one row. -->
     <span class="navbar-brand mb-0">Triton Cannabis Group</span>
     <img th:src="@{/Seed2Stem_Logo.png}" alt="Seed2Stem" class="topbar-logo">
 </nav>
 
-<!-- ===== SIDEBAR FRAGMENT ===== -->
-<nav th:fragment="sidebar" class="s2s-sidebar">
-    <ul class="nav flex-column">
+<!-- ===== SIDEBAR FRAGMENT =====
+     `.offcanvas-md` makes this an offcanvas drawer below the md breakpoint
+     (i.e. on phones) and flattens it back to a static element at md+,
+     giving us the existing desktop layout untouched. Bootstrap handles
+     the show/hide via bootstrap.bundle.min.js (already loaded). -->
+<nav th:fragment="sidebar" class="s2s-sidebar offcanvas-md offcanvas-start"
+     id="sidebarOffcanvas" tabindex="-1" aria-labelledby="sidebarOffcanvasLabel">
+    <div class="offcanvas-header d-md-none">
+        <h6 class="offcanvas-title mb-0" id="sidebarOffcanvasLabel">Menu</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <!-- flex-nowrap is critical: without it, Bootstrap's default
+         flex-wrap on .nav makes overflowing items spill into a SECOND
+         column (horizontal scroll). With nowrap, items stack vertically
+         and the .offcanvas-body's overflow-y: auto handles scrolling. -->
+    <ul class="nav flex-column flex-nowrap offcanvas-body p-0">
         <li class="nav-item">
             <a class="nav-link" th:href="@{/dashboard/home-dashboard}">
                 <i class="bi bi-house-door me-2"></i> Home

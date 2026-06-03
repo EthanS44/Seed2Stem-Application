@@ -11,7 +11,7 @@ public class User {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String username;
+    private String email;
 
     @Column(nullable = false)
     private String password; // store HASHED password only
@@ -29,21 +29,21 @@ public class User {
     // Constructors
     public User() {}
 
-    public User(String username, String password,
+    public User(String email, String password,
                 String firstName, String lastName,
                 AccountType accountType) {
-        this.username = username;
+        this.email = email;
         this.password = password;
         this.firstName = firstName;
         this.lastName = lastName;
         this.accountType = accountType;
     }
 
-    public String getUsername() {
-        return username;
+    public String getEmail() {
+        return email;
     }
-    public void setUsername(String username) {
-        this.username = username;
+    public void setEmail(String email) {
+        this.email = email;
     }
     public String getPassword() {
         return password;

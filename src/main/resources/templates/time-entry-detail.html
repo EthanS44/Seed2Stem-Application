@@ -34,20 +34,26 @@
             <small class="text-muted" th:text="${totalMinutes + ' min total'}">480 min total</small>
         </div>
         <div class="card-body pb-2">
-            <!-- Bar -->
-            <div class="d-flex w-100 rounded overflow-hidden mb-3" style="height: 48px;">
-                <div th:each="seg : ${segments}"
-                     th:style="'flex-basis:' + ${seg.percentage} + '%;min-width:2px;'"
-                     th:classappend="${seg.type == 'task'} ? 'bg-success' : (${seg.type == 'pause'} ? 'bg-warning' : 'bg-light border-end')"
-                     data-bs-toggle="tooltip"
-                     data-bs-placement="top"
-                     th:attr="title=${seg.label + ' · ' + seg.durationMinutes + ' min (' + seg.startFormatted + ' – ' + seg.endFormatted + ')'}"
-                     class="d-flex align-items-center justify-content-center overflow-hidden">
-                    <span th:if="${seg.percentage >= 8}"
-                          th:text="${seg.label}"
-                          th:classappend="${seg.type == 'task'} ? 'text-white' : (${seg.type == 'pause'} ? 'text-dark' : 'text-muted')"
-                          class="small fw-semibold text-truncate px-1"
-                          style="font-size:0.7rem;"></span>
+            <!-- Bar — wrapped in a horizontal scroller so short segments stay
+                 legible on phones. Desktop is unaffected because the inner div
+                 still uses w-100 and the parent's overflow is invisible when
+                 there's nothing to scroll. -->
+            <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <div class="d-flex w-100 rounded overflow-hidden mb-3"
+                     style="height: 48px; min-width: 600px;">
+                    <div th:each="seg : ${segments}"
+                         th:style="'flex-basis:' + ${seg.percentage} + '%;min-width:2px;'"
+                         th:classappend="${seg.type == 'task'} ? 'bg-success' : (${seg.type == 'pause'} ? 'bg-warning' : 'bg-light border-end')"
+                         data-bs-toggle="tooltip"
+                         data-bs-placement="top"
+                         th:attr="title=${seg.label + ' · ' + seg.durationMinutes + ' min (' + seg.startFormatted + ' – ' + seg.endFormatted + ')'}"
+                         class="d-flex align-items-center justify-content-center overflow-hidden">
+                        <span th:if="${seg.percentage >= 8}"
+                              th:text="${seg.label}"
+                              th:classappend="${seg.type == 'task'} ? 'text-white' : (${seg.type == 'pause'} ? 'text-dark' : 'text-muted')"
+                              class="small fw-semibold text-truncate px-1"
+                              style="font-size:0.7rem;"></span>
+                    </div>
                 </div>
             </div>
 

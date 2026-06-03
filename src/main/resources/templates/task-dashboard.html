@@ -71,9 +71,10 @@
                             </div>
                         </a>
 
-                        <!-- Someone else's run — info only -->
-                        <div th:unless="${run.getCompletedBy().getId() == session.loggedInUser.getId()}"
-                             class="list-group-item">
+                        <!-- Someone else's run — clickable to view progress + pause reason -->
+                        <a th:unless="${run.getCompletedBy().getId() == session.loggedInUser.getId()}"
+                           th:href="@{/checklist-runs/runs/{id}(id=${run.getId()})}"
+                           class="list-group-item list-group-item-action task-item">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <div class="fw-semibold" th:text="${run.getTask().getTitle()}">Task Name</div>
@@ -97,7 +98,7 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </a>
                     </th:block>
 
                     <div th:if="${#lists.isEmpty(activeTasks)}" class="list-group-item text-muted">

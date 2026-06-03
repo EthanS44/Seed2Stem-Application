@@ -43,46 +43,46 @@ class AuthServiceTest {
 
     @Test
     void login_withValidCredentials_returnsUser() {
-        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmail("john")).thenReturn(Optional.of(testUser));
 
         User result = authService.login("john", "password123");
 
         assertNotNull(result);
-        assertEquals("john", result.getUsername());
+        assertEquals("john", result.getEmail());
         assertEquals("John", result.getFirstName());
     }
 
     @Test
     void login_withInvalidUsername_throwsException() {
-        when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("unknown")).thenReturn(Optional.empty());
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> authService.login("unknown", "password123"));
-        assertEquals("Invalid username or password", ex.getMessage());
+        assertEquals("Invalid email or password", ex.getMessage());
     }
 
     @Test
     void login_withWrongPassword_throwsException() {
-        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmail("john")).thenReturn(Optional.of(testUser));
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> authService.login("john", "wrongpassword"));
-        assertEquals("Invalid username or password", ex.getMessage());
+        assertEquals("Invalid email or password", ex.getMessage());
     }
 
     // --- register (now creates RegistrationRequest) ---
 
     @Test
-    void register_withNewUsername_createsRegistrationRequest() {
-        when(userRepository.existsByUsername("newuser")).thenReturn(false);
-        when(registrationRequestRepo.existsByUsername("newuser")).thenReturn(false);
+    void register_withNewEmail_createsRegistrationRequest() {
+        when(userRepository.existsByEmail("newuser@s2s.com")).thenReturn(false);
+        when(registrationRequestRepo.existsByEmail("newuser@s2s.com")).thenReturn(false);
         when(registrationRequestRepo.save(any(RegistrationRequest.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        authService.register("newuser", "pass123", "Jane", "Smith");
+        authService.register("newuser@s2s.com", "pass123", "Jane", "Smith");
 
         verify(registrationRequestRepo).save(argThat(req -> {
-            assertEquals("newuser", req.getUsername());
+            assertEquals("newuser@s2s.com", req.getEmail());
             assertEquals("Jane", req.getFirstName());
             assertEquals("Smith", req.getLastName());
             assertNull(req.getAccountType());
@@ -95,23 +95,44 @@ class AuthServiceTest {
     }
 
     @Test
-    void register_withExistingUsername_throwsException() {
-        when(userRepository.existsByUsername("john")).thenReturn(true);
+    void register_normalizesEmail_lowercaseAndTrim() {
+        when(userRepository.existsByEmail("jane@s2s.com")).thenReturn(false);
+        when(registrationRequestRepo.existsByEmail("jane@s2s.com")).thenReturn(false);
+        when(registrationRequestRepo.save(any(RegistrationRequest.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        authService.register("  Jane@S2S.com  ", "pass", "Jane", "Smith");
+
+        verify(registrationRequestRepo).save(argThat(req ->
+                "jane@s2s.com".equals(req.getEmail())));
+    }
+
+    @Test
+    void register_withInvalidEmail_throwsException() {
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> authService.register("not-an-email", "pass", "Jane", "Smith"));
+        assertEquals("Please enter a valid email address", ex.getMessage());
+        verify(registrationRequestRepo, never()).save(any());
+    }
+
+    @Test
+    void register_withExistingEmail_throwsException() {
+        when(userRepository.existsByEmail("john@s2s.com")).thenReturn(true);
 
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> authService.register("john", "pass", "John", "Doe"));
-        assertEquals("Username already exists", ex.getMessage());
+                () -> authService.register("john@s2s.com", "pass", "John", "Doe"));
+        assertEquals("An account with this email already exists", ex.getMessage());
         verify(registrationRequestRepo, never()).save(any());
     }
 
     @Test
     void register_withPendingRequest_throwsException() {
-        when(userRepository.existsByUsername("pending")).thenReturn(false);
-        when(registrationRequestRepo.existsByUsername("pending")).thenReturn(true);
+        when(userRepository.existsByEmail("pending@s2s.com")).thenReturn(false);
+        when(registrationRequestRepo.existsByEmail("pending@s2s.com")).thenReturn(true);
 
         RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> authService.register("pending", "pass", "P", "User"));
-        assertEquals("A registration request for this username is already pending", ex.getMessage());
+                () -> authService.register("pending@s2s.com", "pass", "P", "User"));
+        assertEquals("A registration request for this email is already pending", ex.getMessage());
         verify(registrationRequestRepo, never()).save(any());
     }
 
@@ -121,7 +142,7 @@ class AuthServiceTest {
     void approveRegistration_pendingRequest_createsUserWithChosenAccountType() {
         RegistrationRequest request = new RegistrationRequest();
         request.setId(1L);
-        request.setUsername("newuser");
+        request.setEmail("newuser");
         request.setPassword("hashedpass");
         request.setFirstName("Jane");
         request.setLastName("Smith");
@@ -135,7 +156,7 @@ class AuthServiceTest {
 
         User result = authService.approveRegistration(1L, AccountType.MANAGER);
 
-        assertEquals("newuser", result.getUsername());
+        assertEquals("newuser", result.getEmail());
         assertEquals("Jane", result.getFirstName());
         assertEquals("Smith", result.getLastName());
         assertEquals(AccountType.MANAGER, result.getAccountType());
@@ -223,8 +244,8 @@ class AuthServiceTest {
 
     @Test
     void createPasswordResetRequest_matchingUser_createsRequest() {
-        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
-        when(passwordResetRequestRepo.existsByUsernameAndStatus("john", PasswordResetStatus.PENDING))
+        when(userRepository.findByEmail("john")).thenReturn(Optional.of(testUser));
+        when(passwordResetRequestRepo.existsByEmailAndStatus("john", PasswordResetStatus.PENDING))
                 .thenReturn(false);
         when(passwordResetRequestRepo.save(any(PasswordResetRequest.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
@@ -232,7 +253,7 @@ class AuthServiceTest {
         authService.createPasswordResetRequest("john", "John", "Doe");
 
         verify(passwordResetRequestRepo).save(argThat(req -> {
-            assertEquals("john", req.getUsername());
+            assertEquals("john", req.getEmail());
             assertEquals("John", req.getFirstName());
             assertEquals("Doe", req.getLastName());
             assertEquals(PasswordResetStatus.PENDING, req.getStatus());
@@ -243,8 +264,8 @@ class AuthServiceTest {
 
     @Test
     void createPasswordResetRequest_caseInsensitiveName_createsRequest() {
-        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
-        when(passwordResetRequestRepo.existsByUsernameAndStatus("john", PasswordResetStatus.PENDING))
+        when(userRepository.findByEmail("john")).thenReturn(Optional.of(testUser));
+        when(passwordResetRequestRepo.existsByEmailAndStatus("john", PasswordResetStatus.PENDING))
                 .thenReturn(false);
         when(passwordResetRequestRepo.save(any(PasswordResetRequest.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
@@ -256,7 +277,7 @@ class AuthServiceTest {
 
     @Test
     void createPasswordResetRequest_unknownUsername_throwsException() {
-        when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("unknown")).thenReturn(Optional.empty());
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> authService.createPasswordResetRequest("unknown", "John", "Doe"));
@@ -266,7 +287,7 @@ class AuthServiceTest {
 
     @Test
     void createPasswordResetRequest_nameMismatch_throwsException() {
-        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmail("john")).thenReturn(Optional.of(testUser));
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> authService.createPasswordResetRequest("john", "Jane", "Smith"));
@@ -276,8 +297,8 @@ class AuthServiceTest {
 
     @Test
     void createPasswordResetRequest_existingPending_throwsException() {
-        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
-        when(passwordResetRequestRepo.existsByUsernameAndStatus("john", PasswordResetStatus.PENDING))
+        when(userRepository.findByEmail("john")).thenReturn(Optional.of(testUser));
+        when(passwordResetRequestRepo.existsByEmailAndStatus("john", PasswordResetStatus.PENDING))
                 .thenReturn(true);
 
         RuntimeException ex = assertThrows(RuntimeException.class,
@@ -295,11 +316,11 @@ class AuthServiceTest {
 
         PasswordResetRequest request = new PasswordResetRequest();
         request.setId(1L);
-        request.setUsername("john");
+        request.setEmail("john");
         request.setStatus(PasswordResetStatus.PENDING);
 
         when(passwordResetRequestRepo.findById(1L)).thenReturn(Optional.of(request));
-        when(userRepository.findByUsername("john")).thenReturn(Optional.of(testUser));
+        when(userRepository.findByEmail("john")).thenReturn(Optional.of(testUser));
         when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
         when(passwordResetRequestRepo.save(any(PasswordResetRequest.class)))
                 .thenAnswer(inv -> inv.getArgument(0));

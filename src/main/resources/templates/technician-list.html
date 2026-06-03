@@ -16,7 +16,7 @@
                     <div class="card-body text-center py-4">
                         <div class="menu-icon"><i class="bi bi-person-circle"></i></div>
                         <h6 class="card-title mt-2" th:text="${tech.getName()}">Name</h6>
-                        <small class="text-muted" th:text="'@' + ${tech.username}">@username</small>
+                        <small class="text-muted" th:text="${tech.email}">user@example.com</small>
                     </div>
                 </div>
             </a>

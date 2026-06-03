@@ -212,6 +212,17 @@ public class ChecklistRunController {
             return "redirect:/dashboard/home-dashboard";
         }
 
+        // Access control: managers and developers can view any run; technicians
+        // can only view their own. Without this, any logged-in tech could read
+        // another tech's in-progress data.
+        boolean isManagerOrDev = user.getAccountType() == AccountType.MANAGER
+                || user.getAccountType() == AccountType.DEVELOPER;
+        boolean isOwnRun = run.getCompletedBy() != null
+                && run.getCompletedBy().getId().equals(user.getId());
+        if (!isManagerOrDev && !isOwnRun) {
+            return "redirect:/dashboard/task-dashboard";
+        }
+
         List<ChecklistItem> items = run.getTask().getChecklist().getItems();
         List<ChecklistResponse> responses = run.getResponses() != null ? run.getResponses() : List.of();
 
@@ -238,6 +249,12 @@ public class ChecklistRunController {
             }
         }
 
+        // For IN_PROGRESS runs, expose the currently-open pause (if any) so the
+        // review template can show the reason a tech is paused right now.
+        TaskPause openPause = taskPauseRepo
+                .findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run)
+                .orElse(null);
+
         model.addAttribute("run", run);
         model.addAttribute("task", run.getTask());
         model.addAttribute("responsesByHeader", responsesByHeader);
@@ -245,6 +262,9 @@ public class ChecklistRunController {
                 .filter(i -> i.getItemType() == ChecklistItemType.HEADER)
                 .toList()
         );
+        model.addAttribute("openPause", openPause);
+        model.addAttribute("isInProgress", run.getStatus() == ChecklistRunStatus.IN_PROGRESS);
+        model.addAttribute("hasAnyResponse", !responseMap.isEmpty());
 
         return "checklist-review-view";
     }

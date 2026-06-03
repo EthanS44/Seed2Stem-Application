@@ -1,0 +1,23 @@
+pdf.js — Mozilla PDF rendering library
+======================================
+
+Version: 3.11.174
+Source:  https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/
+License: Apache-2.0  (https://github.com/mozilla/pdf.js/blob/master/LICENSE)
+
+Used by:
+  src/main/resources/templates/task-view.html
+    — inline SOP PDF rendering + scroll-to-bottom gate on Start Task button.
+
+To upgrade:
+  1. Pick a new version from https://github.com/mozilla/pdf.js/releases
+     (any 3.x release is API-compatible; 4.x+ requires ES module loading)
+  2. Replace these two files:
+        pdf.min.js
+        pdf.worker.min.js
+     from https://cdnjs.cloudflare.com/ajax/libs/pdf.js/<version>/
+  3. Update the version recorded above.
+
+Files are served by Spring Boot's default static handler at:
+  /vendor/pdfjs/pdf.min.js
+  /vendor/pdfjs/pdf.worker.min.js

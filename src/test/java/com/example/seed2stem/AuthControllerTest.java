@@ -70,7 +70,7 @@ class AuthControllerTest {
 
     @Test
     void login_invalidCredentials_redirectsToLoginWithError() {
-        when(authService.login("john", "wrong")).thenThrow(new RuntimeException("Invalid username or password"));
+        when(authService.login("john", "wrong")).thenThrow(new RuntimeException("Invalid email or password"));
         RedirectAttributes redirect = new RedirectAttributesModelMap();
 
         String result = controller.login("john", "wrong", session, redirect);
@@ -118,7 +118,7 @@ class AuthControllerTest {
 
     @Test
     void register_duplicateUsername_redirectsToRegisterWithError() {
-        doThrow(new RuntimeException("Username already exists"))
+        doThrow(new RuntimeException("An account with this email already exists"))
                 .when(authService).register("john", "pass", "John", "Doe");
         RedirectAttributes redirect = new RedirectAttributesModelMap();
 

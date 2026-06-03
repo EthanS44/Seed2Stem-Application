@@ -17,14 +17,14 @@ class EntityTest {
     @Test
     void user_defaultConstructor_createsEmptyUser() {
         User user = new User();
-        assertNull(user.getUsername());
+        assertNull(user.getEmail());
         assertNull(user.getId());
     }
 
     @Test
     void user_parameterizedConstructor_setsAllFields() {
         User user = new User("john", "hashed", "John", "Doe", AccountType.TECHNICIAN);
-        assertEquals("john", user.getUsername());
+        assertEquals("john", user.getEmail());
         assertEquals("hashed", user.getPassword());
         assertEquals("John", user.getFirstName());
         assertEquals("Doe", user.getLastName());
@@ -41,14 +41,14 @@ class EntityTest {
     void user_setters_updateFields() {
         User user = new User();
         user.setId(1L);
-        user.setUsername("jane");
+        user.setEmail("jane");
         user.setPassword("secret");
         user.setFirstName("Jane");
         user.setLastName("Smith");
         user.setAccountType(AccountType.MANAGER);
 
         assertEquals(1L, user.getId());
-        assertEquals("jane", user.getUsername());
+        assertEquals("jane", user.getEmail());
         assertEquals("secret", user.getPassword());
         assertEquals("Jane", user.getFirstName());
         assertEquals("Smith", user.getLastName());
@@ -228,7 +228,7 @@ class EntityTest {
         req.setId(1L);
         req.setFirstName("Jane");
         req.setLastName("Smith");
-        req.setUsername("jsmith");
+        req.setEmail("jsmith");
         req.setPassword("hashedpass");
         req.setAccountType(AccountType.TECHNICIAN);
         req.setStatus(RegistrationStatus.PENDING);
@@ -237,7 +237,7 @@ class EntityTest {
         assertEquals(1L, req.getId());
         assertEquals("Jane", req.getFirstName());
         assertEquals("Smith", req.getLastName());
-        assertEquals("jsmith", req.getUsername());
+        assertEquals("jsmith", req.getEmail());
         assertEquals("hashedpass", req.getPassword());
         assertEquals(AccountType.TECHNICIAN, req.getAccountType());
         assertEquals(RegistrationStatus.PENDING, req.getStatus());
@@ -269,7 +269,7 @@ class EntityTest {
         LocalDateTime now = LocalDateTime.now();
 
         req.setId(1L);
-        req.setUsername("jsmith");
+        req.setEmail("jsmith");
         req.setFirstName("Jane");
         req.setLastName("Smith");
         req.setStatus(PasswordResetStatus.APPROVED);
@@ -278,7 +278,7 @@ class EntityTest {
         req.setApprovedAt(now.plusMinutes(5));
 
         assertEquals(1L, req.getId());
-        assertEquals("jsmith", req.getUsername());
+        assertEquals("jsmith", req.getEmail());
         assertEquals("Jane", req.getFirstName());
         assertEquals("Smith", req.getLastName());
         assertEquals(PasswordResetStatus.APPROVED, req.getStatus());

@@ -6,6 +6,6 @@ import java.util.List;
 
 public interface PasswordResetRequestRepository extends JpaRepository<PasswordResetRequest, Long> {
     List<PasswordResetRequest> findByStatus(PasswordResetStatus status);
-    boolean existsByUsernameAndStatus(String username, PasswordResetStatus status);
+    boolean existsByEmailAndStatus(String email, PasswordResetStatus status);
     long countByStatus(PasswordResetStatus status);
 }

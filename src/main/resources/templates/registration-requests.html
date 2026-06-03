@@ -18,7 +18,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Name</th>
-                                <th>Username</th>
+                                <th>Email</th>
                                 <th>Requested</th>
                                 <th class="text-end">Actions</th>
                             </tr>
@@ -26,11 +26,11 @@
                         <tbody>
                             <tr th:each="request : ${pendingRequests}">
                                 <td th:text="${request.getFirstName() + ' ' + request.getLastName()}">John Doe</td>
-                                <td th:text="${request.getUsername()}">johndoe</td>
+                                <td th:text="${request.getEmail()}">john@example.com</td>
                                 <td th:text="${#temporals.format(request.getCreatedAt(), 'MMM d, yyyy h:mm a')}">Jan 1, 2026 12:00 PM</td>
                                 <td class="text-end">
                                     <form th:action="@{/developer/registration-requests/{id}/approve(id=${request.getId()})}"
-                                          method="post" class="d-inline-flex align-items-center gap-2">
+                                          method="post" class="d-flex flex-column flex-md-row align-items-md-center gap-2">
                                         <select name="accountType" class="form-select form-select-sm" style="width:auto;" required>
                                             <option value="" disabled selected>Role</option>
                                             <option value="TECHNICIAN">Technician</option>

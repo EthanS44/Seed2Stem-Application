@@ -22,7 +22,9 @@
                         Task description goes here.
                     </p>
 
-                    <!-- Embedded SOP PDF (only when one was uploaded) -->
+                    <!-- Inline SOP PDF, rendered via pdf.js so we can detect
+                         scroll-to-bottom and gate the Start Task button. Only
+                         shown when an SOP has been uploaded. -->
                     <div th:if="${task.getSopFileName() != null}" class="mt-4 mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h6 class="mb-0">
@@ -35,14 +37,28 @@
                                 <i class="bi bi-box-arrow-up-right me-1"></i>Open in new tab
                             </a>
                         </div>
-                        <iframe th:src="@{/tasks/{id}/sop(id=${task.getId()})}"
-                                title="Standard Operating Procedure"
-                                style="width:100%; height:700px; border:1px solid #dee2e6; border-radius:0.375rem;"></iframe>
+
+                        <div id="sopContainer"
+                             th:data-sop-url="@{/tasks/{id}/sop(id=${task.getId()})}"
+                             style="height: clamp(360px, 60vh, 700px); overflow-y:auto; border:1px solid #dee2e6; border-radius:0.375rem; background:#f8f9fa; padding:1rem;">
+                            <div id="sopLoading" class="text-center text-muted py-5">
+                                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                Loading SOP&hellip;
+                            </div>
+                        </div>
+
+                        <div id="sopScrollHint" class="small text-muted mt-2" style="display:none;">
+                            <i class="bi bi-arrow-down-circle me-1"></i>
+                            Scroll to the bottom of the SOP to enable Start Task.
+                        </div>
                     </div>
 
-                    <!-- Show Start button only if there's a linked checklist -->
+                    <!-- Start button. The disabled state is enforced by JS when
+                         an SOP is present and not yet scrolled through. -->
                     <a th:if="${task.getChecklist() != null}"
                        th:href="@{/tasks/{id}/start(id=${task.getId()})}"
+                       th:attr="data-sop-required=${task.getSopFileName() != null ? 'true' : 'false'}"
+                       id="startTaskBtn"
                        class="btn btn-s2s btn-lg mt-2">
                         <i class="bi bi-play-fill me-1"></i> Start Task
                     </a>
@@ -58,5 +74,129 @@
 </main>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
+
+<!-- pdf.js (bundled locally — see src/main/resources/static/vendor/pdfjs/VERSION.txt) -->
+<script th:src="@{/vendor/pdfjs/pdf.min.js}"></script>
+<script>
+    (function () {
+        const startBtn  = document.getElementById('startTaskBtn');
+        const container = document.getElementById('sopContainer');
+        if (!startBtn) return;                  // no checklist → no button at all
+        if (!container) return;                 // no SOP attached → button works normally
+
+        const sopRequired = startBtn.dataset.sopRequired === 'true';
+        const sopUrl      = container.dataset.sopUrl;
+        const loading     = document.getElementById('sopLoading');
+        const hint        = document.getElementById('sopScrollHint');
+
+        if (!sopRequired) return;
+
+        // --- Disable the button up-front -----------------------------------
+        function setDisabled(disabled) {
+            if (disabled) {
+                startBtn.classList.add('disabled');
+                startBtn.setAttribute('aria-disabled', 'true');
+                startBtn.style.pointerEvents = 'none';
+                startBtn.style.opacity = '0.55';
+                hint.style.display = '';
+            } else {
+                startBtn.classList.remove('disabled');
+                startBtn.removeAttribute('aria-disabled');
+                startBtn.style.pointerEvents = '';
+                startBtn.style.opacity = '';
+                hint.style.display = 'none';
+            }
+        }
+        setDisabled(true);
+
+        // Click-guard: even if styles are bypassed, refuse the navigation
+        // until the SOP has been scrolled through.
+        let unlocked = false;
+        startBtn.addEventListener('click', function (e) {
+            if (!unlocked) {
+                e.preventDefault();
+                hint.style.display = '';
+                container.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+
+        function unlock() {
+            if (unlocked) return;
+            unlocked = true;
+            setDisabled(false);
+        }
+
+        function checkScrolledToBottom() {
+            // 5 px tolerance: PDF.js sometimes ends a couple of pixels short
+            // because of canvas rounding.
+            if (container.scrollTop + container.clientHeight
+                    >= container.scrollHeight - 5) {
+                unlock();
+            }
+        }
+        container.addEventListener('scroll', checkScrolledToBottom);
+
+        // --- Load + render the PDF inline ----------------------------------
+        if (typeof pdfjsLib === 'undefined') {
+            // pdf.js failed to load (corrupt static file, browser security
+            // policy blocking the script, etc.). Fall back to enabling the
+            // button so a tech isn't permanently locked out of working.
+            loading.innerHTML =
+                '<span class="text-warning">Could not load PDF viewer. ' +
+                '<a class="alert-link" target="_blank" href="' + sopUrl + '">Open SOP in a new tab</a> to review.</span>';
+            unlock();
+            return;
+        }
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
+
+        pdfjsLib.getDocument(sopUrl).promise.then(function (pdf) {
+            loading.remove();
+            const renderJobs = [];
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                renderJobs.push(pdf.getPage(pageNum).then(function (page) {
+                    // Scale to the container width for a readable, responsive layout
+                    const unscaled = page.getViewport({ scale: 1 });
+                    const targetWidth = container.clientWidth - 32; // minus padding
+                    const scale = Math.max(0.5, targetWidth / unscaled.width);
+                    const viewport = page.getViewport({ scale: scale });
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width  = viewport.width;
+                    canvas.height = viewport.height;
+                    canvas.style.display = 'block';
+                    canvas.style.margin = '0 auto 12px';
+                    canvas.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                    canvas.style.background = 'white';
+                    container.appendChild(canvas);
+
+                    return page.render({
+                        canvasContext: canvas.getContext('2d'),
+                        viewport: viewport
+                    }).promise;
+                }));
+            }
+            return Promise.all(renderJobs);
+        }).then(function () {
+            // If the entire PDF fits without needing to scroll (short docs),
+            // the user has already "seen the whole thing" — unlock immediately.
+            if (container.scrollHeight <= container.clientHeight + 5) {
+                unlock();
+            } else {
+                checkScrolledToBottom();
+            }
+        }).catch(function (err) {
+            // PDF couldn't be loaded — unlock + show fallback link rather
+            // than silently blocking the tech from starting their task.
+            console.error('SOP render failed:', err);
+            container.innerHTML =
+                '<div class="alert alert-warning mb-0">' +
+                'Could not display SOP inline. ' +
+                '<a class="alert-link" target="_blank" href="' + sopUrl + '">Open SOP in a new tab</a> to review.' +
+                '</div>';
+            unlock();
+        });
+    })();
+</script>
 </body>
 </html>

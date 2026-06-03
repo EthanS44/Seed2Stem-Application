@@ -24,7 +24,7 @@
                         <div class="col-md-6">
                             <p class="mb-1"><strong>Start Time:</strong>
                                 <span th:text="${#temporals.format(run.getStartTime(), 'h:mm a')}">Start</span></p>
-                            <p class="mb-1"><strong>End Time:</strong>
+                            <p class="mb-1" th:if="${run.getEndTime() != null}"><strong>End Time:</strong>
                                 <span th:text="${#temporals.format(run.getEndTime(), 'h:mm a')}">End</span></p>
                             <p class="mb-1" th:if="${run.getChecklistVersion() != null}">
                                 <strong>Checklist Version:</strong>
@@ -34,11 +34,45 @@
                     </div>
 
                     <!-- Status badge -->
+                    <div class="mb-3" th:if="${run.getStatus().name() == 'IN_PROGRESS'}">
+                        <span class="badge bg-info fs-6">
+                            <i class="bi bi-play-circle me-1"></i>IN PROGRESS
+                        </span>
+                    </div>
+                    <div class="mb-3" th:if="${run.getStatus().name() == 'PENDING'}">
+                        <span class="badge bg-warning text-dark fs-6">PENDING REVIEW</span>
+                    </div>
                     <div class="mb-3" th:if="${run.getStatus().name() == 'REJECTED'}">
                         <span class="badge bg-danger fs-6">REJECTED</span>
                     </div>
                     <div class="mb-3" th:if="${run.getStatus().name() == 'APPROVED'}">
                         <span class="badge bg-success fs-6">APPROVED</span>
+                    </div>
+
+                    <!-- Currently-paused banner (only when a TaskPause is open) -->
+                    <div th:if="${openPause != null}" class="alert alert-warning d-flex align-items-start mb-3">
+                        <i class="bi bi-pause-circle-fill fs-4 me-2"></i>
+                        <div>
+                            <div class="fw-semibold">Currently paused</div>
+                            <div class="small">
+                                Paused at
+                                <span th:text="${#temporals.format(openPause.getStartTime(), 'h:mm a')}">12:00 PM</span>
+                                <span th:if="${openPause.getReason() != null and !openPause.getReason().isBlank()}">
+                                    &nbsp;&bull;&nbsp; Reason:
+                                    <span th:text="${openPause.getReason()}">break</span>
+                                </span>
+                                <span th:if="${openPause.getReason() == null or openPause.getReason().isBlank()}">
+                                    &nbsp;&bull;&nbsp; <em>No reason given</em>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress hint for in-progress runs with no saved responses yet -->
+                    <div th:if="${isInProgress and !hasAnyResponse}"
+                         class="alert alert-light border small mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Technician hasn't saved any progress yet. Responses are persisted when they pause or submit.
                     </div>
 
                     <hr>
