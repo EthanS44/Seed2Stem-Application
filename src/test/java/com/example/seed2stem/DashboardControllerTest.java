@@ -101,14 +101,17 @@ class DashboardControllerTest {
     void technicianDashboard_loggedIn_populatesModel() {
         session.setAttribute("loggedInUser", techUser);
         Model model = new ConcurrentModel();
-        when(taskRepo.countByUserCreatedFalse()).thenReturn(5L);
-        when(batchService.countActive()).thenReturn(3L);
+        ChecklistRun run1 = new ChecklistRun();
+        ChecklistRun run2 = new ChecklistRun();
+        when(checklistRunService.getActiveRunsForUser(techUser))
+                .thenReturn(List.of(run1, run2));
+        when(timeEntryService.isClockedIn(techUser)).thenReturn(true);
 
         String result = controller.technicianDashboard(session, model);
 
         assertEquals("technician-dashboard", result);
-        assertEquals(5L, model.getAttribute("taskCount"));
-        assertEquals(3L, model.getAttribute("batchCount"));
+        assertEquals(2, model.getAttribute("activeTaskCount"));
+        assertEquals(true, model.getAttribute("clockedIn"));
     }
 
     // --- managerDashboard ---
@@ -125,18 +128,18 @@ class DashboardControllerTest {
     void managerDashboard_loggedIn_populatesModel() {
         session.setAttribute("loggedInUser", managerUser);
         Model model = new ConcurrentModel();
-        when(checklistRunService.getPendingChecklists()).thenReturn(List.of(new ChecklistRun(), new ChecklistRun()));
-        when(batchService.countActive()).thenReturn(10L);
-        when(taskRepo.countByUserCreatedFalse()).thenReturn(7L);
-        when(userRepo.countByAccountType(AccountType.TECHNICIAN)).thenReturn(4L);
+        when(checklistRunService.getPendingChecklists())
+                .thenReturn(List.of(new ChecklistRun(), new ChecklistRun()));
+        when(checklistRunService.getAllActiveRuns())
+                .thenReturn(List.of(new ChecklistRun(), new ChecklistRun(), new ChecklistRun()));
+        when(timeEntryService.countClockedIn()).thenReturn(4L);
 
         String result = controller.managerDashboard(session, model);
 
         assertEquals("manager-dashboard", result);
         assertEquals(2, model.getAttribute("pendingCount"));
-        assertEquals(10L, model.getAttribute("batchCount"));
-        assertEquals(7L, model.getAttribute("taskCount"));
-        assertEquals(4L, model.getAttribute("technicianCount"));
+        assertEquals(3, model.getAttribute("allActiveTaskCount"));
+        assertEquals(4L, model.getAttribute("clockedInCount"));
     }
 
     // --- developerDashboard ---
@@ -154,17 +157,15 @@ class DashboardControllerTest {
         session.setAttribute("loggedInUser", developerUser);
         Model model = new ConcurrentModel();
         when(checklistRunService.getPendingChecklists()).thenReturn(List.of());
-        when(batchService.countActive()).thenReturn(2L);
-        when(taskRepo.countByUserCreatedFalse()).thenReturn(3L);
-        when(userRepo.countByAccountType(AccountType.TECHNICIAN)).thenReturn(1L);
+        when(checklistRunService.getAllActiveRuns()).thenReturn(List.of(new ChecklistRun()));
+        when(timeEntryService.countClockedIn()).thenReturn(1L);
 
         String result = controller.developerDashboard(session, model);
 
         assertEquals("developer-dashboard", result);
         assertEquals(0, model.getAttribute("pendingCount"));
-        assertEquals(2L, model.getAttribute("batchCount"));
-        assertEquals(3L, model.getAttribute("taskCount"));
-        assertEquals(1L, model.getAttribute("technicianCount"));
+        assertEquals(1, model.getAttribute("allActiveTaskCount"));
+        assertEquals(1L, model.getAttribute("clockedInCount"));
     }
 
     // --- taskDashboard ---

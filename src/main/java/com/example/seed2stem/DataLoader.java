@@ -4,6 +4,9 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.Statement;
 
+import org.mindrot.jbcrypt.BCrypt;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,18 +14,23 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class DataLoader implements CommandLineRunner {
 
+    private static final Logger log = LoggerFactory.getLogger(DataLoader.class);
+
     private final ChecklistRepository checklistRepo;
     private final ChecklistItemRepository itemRepo;
     private final TaskRepository taskRepo;
+    private final UserRepository userRepo;
     private final DataSource dataSource;
 
     public DataLoader(ChecklistRepository checklistRepo,
                       ChecklistItemRepository itemRepo,
                       TaskRepository taskRepo,
+                      UserRepository userRepo,
                       DataSource dataSource) {
         this.checklistRepo = checklistRepo;
         this.itemRepo = itemRepo;
         this.taskRepo = taskRepo;
+        this.userRepo = userRepo;
         this.dataSource = dataSource;
     }
 
@@ -30,12 +38,47 @@ public class DataLoader implements CommandLineRunner {
     @Transactional
     public void run(String... args) throws Exception {
         migrateCheckConstraints();
+        seedAdminIfMissing();
 
         // Only seed tasks if none exist yet
         if (taskRepo.count() == 0) {
             createAMProductionAreaInspection();
             createPMProductionAreaInspection();
         }
+    }
+
+    /**
+     * Creates a developer account from ADMIN_EMAIL + ADMIN_PASSWORD env vars
+     * on first boot, so a brand-new instance has a way to log in.
+     *
+     * Idempotent: silently skips if any developer already exists OR if the
+     * env vars aren't set. Safe to leave on every boot — won't duplicate
+     * the admin and won't lock anyone out.
+     *
+     * Optional ADMIN_FIRST_NAME / ADMIN_LAST_NAME default to "Admin" / "User".
+     */
+    private void seedAdminIfMissing() {
+        String email = System.getenv("ADMIN_EMAIL");
+        String password = System.getenv("ADMIN_PASSWORD");
+        if (email == null || email.isBlank() || password == null || password.isBlank()) {
+            return;
+        }
+        if (userRepo.countByAccountType(AccountType.DEVELOPER) > 0) {
+            return;
+        }
+
+        String normalized = email.trim().toLowerCase();
+        String firstName = System.getenv().getOrDefault("ADMIN_FIRST_NAME", "Admin");
+        String lastName = System.getenv().getOrDefault("ADMIN_LAST_NAME", "User");
+
+        User admin = new User(
+                normalized,
+                BCrypt.hashpw(password, BCrypt.gensalt()),
+                firstName,
+                lastName,
+                AccountType.DEVELOPER);
+        userRepo.save(admin);
+        log.info("Seeded initial developer account: {}", normalized);
     }
 
     private void migrateCheckConstraints() {
