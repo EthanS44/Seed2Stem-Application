@@ -243,9 +243,13 @@ public class ExcelExportService {
         for (int i = 0; i < columnCount; i++) {
             try {
                 sheet.autoSizeColumn(i);
-            } catch (Exception ignored) {
-                // autoSizeColumn fails without a Java font system in some
-                // headless environments; we can live with default widths.
+            } catch (Throwable ignored) {
+                // autoSizeColumn calls into AWT's font system to measure text.
+                // On stripped-down containers (Railway, many Docker base
+                // images) there's no fontconfig / X11, so the font manager
+                // fails to even load -> NoClassDefFoundError. That's an
+                // Error not an Exception, so catch Throwable here. We can
+                // live with default column widths in this case.
             }
         }
     }
