@@ -26,6 +26,19 @@ public class Task {
     @JoinColumn(name = "created_by_user_id")
     private User createdBy;
 
+    /**
+     * Soft-delete flag. When true, the task is hidden from listings (the
+     * technician's Available Tasks list, the developer's Standard Tasks
+     * and User Created Tasks pages by default) but its rows survive — so
+     * historical ChecklistRuns, ChecklistResponses, TaskPauses for this
+     * task remain intact for audit/compliance reporting.
+     *
+     * Existing IN_PROGRESS runs aren't disrupted; only the "start a new
+     * run" entry point is removed.
+     */
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean deleted = false;
+
     /** Original filename of the uploaded SOP PDF; null when no SOP is attached. */
     @Column(name = "sop_file_name")
     private String sopFileName;
@@ -95,5 +108,11 @@ public class Task {
     }
     public void setSopData(byte[] sopData) {
         this.sopData = sopData;
+    }
+    public boolean isDeleted() {
+        return deleted;
+    }
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
     }
 }
