@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Tickets')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4 class="mb-0" th:text="${showResolved} ? 'Resolved Tickets' : 'Open Tickets'">Open Tickets</h4>
+        <div class="d-flex gap-2">
+            <a th:if="${!showResolved}"
+               th:href="@{/developer/tickets(showResolved=true)}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-check2-all me-1"></i>
+                Show Resolved <span class="badge bg-secondary ms-1" th:text="${resolvedCount}">0</span>
+            </a>
+            <a th:if="${showResolved}"
+               th:href="@{/developer/tickets}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>
+                Back to Open <span class="badge bg-warning text-dark ms-1" th:text="${openCount}">0</span>
+            </a>
+        </div>
+    </div>
+    <p class="text-muted mb-4"
+       th:text="${showResolved}
+         ? 'Tickets you have already resolved. You can reopen one if it needs more work.'
+         : 'Bug reports and suggestions submitted by users. Resolve a ticket once you have addressed (or chosen to dismiss) it.'">
+        Bug reports and suggestions submitted by users.
+    </p>
+
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div th:if="${#lists.isEmpty(tickets)}" class="card shadow-sm">
+                <div class="card-body text-muted text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                    <div class="mt-2">
+                        <span th:if="${showResolved}">No resolved tickets yet.</span>
+                        <span th:unless="${showResolved}">No open tickets. All caught up.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div th:each="ticket : ${tickets}" class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1" th:text="${ticket.getTitle()}">Ticket title</h6>
+                            <small class="text-muted">
+                                <i class="bi bi-person me-1"></i>
+                                <span th:if="${ticket.getSubmittedBy() != null}"
+                                      th:text="${ticket.getSubmittedBy().getFirstName() + ' ' + ticket.getSubmittedBy().getLastName()}">Name</span>
+                                &nbsp;&bull;&nbsp;
+                                <span th:text="${#temporals.format(ticket.getSubmittedAt(), 'MMM d, yyyy h:mm a')}">Date</span>
+                                <span th:if="${ticket.getResolvedAt() != null}">
+                                    &nbsp;&bull;&nbsp;
+                                    <i class="bi bi-check2 me-1"></i>Resolved
+                                    <span th:text="${#temporals.format(ticket.getResolvedAt(), 'MMM d, yyyy h:mm a')}">Resolved date</span>
+                                </span>
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <span th:if="${ticket.getStatus().name() == 'OPEN'}"
+                                  class="badge bg-warning text-dark">Open</span>
+                            <span th:if="${ticket.getStatus().name() == 'RESOLVED'}"
+                                  class="badge bg-success">Resolved</span>
+                        </div>
+                    </div>
+                    <p class="mb-3" style="white-space: pre-wrap;" th:text="${ticket.getDescription()}">Description</p>
+                    <div class="d-flex gap-2">
+                        <form th:if="${ticket.getStatus().name() == 'OPEN'}"
+                              th:action="@{/developer/tickets/{id}/resolve(id=${ticket.getId()})}"
+                              method="post">
+                            <button type="submit" class="btn btn-sm btn-success">
+                                <i class="bi bi-check2 me-1"></i> Mark Resolved
+                            </button>
+                        </form>
+                        <form th:if="${ticket.getStatus().name() == 'RESOLVED'}"
+                              th:action="@{/developer/tickets/{id}/reopen(id=${ticket.getId()})}"
+                              method="post">
+                            <button type="submit" class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reopen
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>
