@@ -94,8 +94,9 @@ public class DashboardController {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
-        // Available Tasks — standard tasks only (not user-created)
-        List<Task> availableTasks = taskRepo.findByUserCreatedFalse();
+        // Available Tasks — standard tasks only (not user-created), and
+        // never archived ones (archived tasks can't be started again).
+        List<Task> availableTasks = taskRepo.findByUserCreatedFalseAndDeletedFalseOrderByTitleAsc();
         model.addAttribute("availableTasks", availableTasks);
 
         // Active Tasks — managers/developers see ALL in-progress runs (with technician);

@@ -8,12 +8,29 @@
 
 <main class="s2s-content">
     <div class="d-flex justify-content-between align-items-center mb-2">
-        <h4 class="mb-0">Standard Tasks</h4>
-        <a th:href="@{/developer/standard-tasks/new}" class="btn btn-success">
-            <i class="bi bi-plus-circle me-1"></i> New Standard Task
-        </a>
+        <h4 class="mb-0" th:text="${showArchived} ? 'Archived Standard Tasks' : 'Standard Tasks'">Standard Tasks</h4>
+        <div class="d-flex gap-2">
+            <a th:if="${!showArchived}"
+               th:href="@{/developer/standard-tasks(showArchived=true)}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-archive me-1"></i> Show Archived
+            </a>
+            <a th:if="${showArchived}"
+               th:href="@{/developer/standard-tasks}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Active
+            </a>
+            <a th:href="@{/developer/standard-tasks/new}" class="btn btn-success" th:unless="${showArchived}">
+                <i class="bi bi-plus-circle me-1"></i> New Standard Task
+            </a>
+        </div>
     </div>
-    <p class="text-muted mb-4">Predefined tasks with checklists that technicians can select and complete.</p>
+    <p class="text-muted mb-4"
+       th:text="${showArchived}
+         ? 'Tasks that have been archived. Historical runs and responses are preserved. Restore to make a task selectable again.'
+         : 'Predefined tasks with checklists that technicians can select and complete.'">
+        Predefined tasks with checklists that technicians can select and complete.
+    </p>
 
     <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
         <span th:text="${success}"></span>
@@ -28,13 +45,14 @@
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
+                    <table class="table table-hover mb-0 align-middle">
                         <thead class="table-light">
                             <tr>
                                 <th>Title</th>
                                 <th>Description</th>
                                 <th>Checklist</th>
                                 <th class="text-end">Items</th>
+                                <th class="text-end" style="width: 130px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -43,12 +61,34 @@
                                 <td th:text="${task.getDescription()}" class="text-muted">Description</td>
                                 <td th:text="${task.getChecklist() != null ? task.getChecklist().getName() : '—'}">Checklist Name</td>
                                 <td class="text-end" th:text="${task.getChecklist() != null ? task.getChecklist().getItems().size() : 0}">0</td>
+                                <td class="text-end">
+                                    <!-- Active task: show Archive (with confirm) -->
+                                    <form th:unless="${showArchived}"
+                                          th:action="@{/developer/tasks/{id}/archive(id=${task.getId()})}"
+                                          method="post" class="d-inline"
+                                          onsubmit="return confirm('Archive this task? It will be hidden from the Available Tasks list. In-progress runs and historical data are preserved. You can restore it later.');">
+                                        <input type="hidden" name="redirect" value="standard-tasks">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-archive me-1"></i>Archive
+                                        </button>
+                                    </form>
+                                    <!-- Archived task: show Restore -->
+                                    <form th:if="${showArchived}"
+                                          th:action="@{/developer/tasks/{id}/restore(id=${task.getId()})}"
+                                          method="post" class="d-inline">
+                                        <input type="hidden" name="redirect" value="standard-tasks">
+                                        <button type="submit" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
                 <div th:if="${#lists.isEmpty(standardTasks)}" class="card-body text-muted text-center py-4">
-                    No standard tasks yet. Click "New Standard Task" to create one.
+                    <span th:if="${showArchived}">No archived standard tasks.</span>
+                    <span th:unless="${showArchived}">No standard tasks yet. Click "New Standard Task" to create one.</span>
                 </div>
             </div>
         </div>

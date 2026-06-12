@@ -98,10 +98,20 @@
                 <i class="bi bi-clipboard-check me-2"></i> Standard Tasks
             </a>
         </li>
+        <li class="nav-item" th:if="${session.loggedInUser != null and session.loggedInUser.getAccountType().name() == 'DEVELOPER'}">
+            <a class="nav-link" th:href="@{/developer/tickets}">
+                <i class="bi bi-ticket-perforated me-2"></i> Tickets
+            </a>
+        </li>
         <li class="sidebar-heading">Account</li>
         <li class="nav-item" th:if="${session.loggedInUser != null}">
             <a class="nav-link" th:href="@{/settings}">
                 <i class="bi bi-gear me-2"></i> Settings
+            </a>
+        </li>
+        <li class="nav-item" th:if="${session.loggedInUser != null}">
+            <a class="nav-link" th:href="@{/tickets/new}">
+                <i class="bi bi-bug me-2"></i> Report Issue
             </a>
         </li>
         <li class="nav-item">

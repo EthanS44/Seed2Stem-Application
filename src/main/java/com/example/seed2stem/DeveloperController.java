@@ -39,14 +39,20 @@ public class DeveloperController {
     }
 
     @GetMapping("/user-created-tasks")
-    public String userCreatedTasks(HttpSession session, Model model) {
+    public String userCreatedTasks(HttpSession session, Model model,
+                                   @RequestParam(value = "showArchived", required = false,
+                                                 defaultValue = "false") boolean showArchived,
+                                   @RequestParam(value = "success", required = false) String success,
+                                   @RequestParam(value = "error", required = false) String error) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
         if (user.getAccountType() != AccountType.DEVELOPER) {
             return "redirect:/dashboard/home-dashboard";
         }
 
-        List<Task> tasks = taskRepo.findByUserCreatedTrue();
+        List<Task> tasks = showArchived
+                ? taskRepo.findByUserCreatedTrueAndDeletedTrue()
+                : taskRepo.findByUserCreatedTrueAndDeletedFalse();
         Map<Long, Long> taskRunMap = new HashMap<>();
         for (Task task : tasks) {
             runRepo.findFirstByTask(task).ifPresent(run ->
@@ -55,6 +61,9 @@ public class DeveloperController {
 
         model.addAttribute("userCreatedTasks", tasks);
         model.addAttribute("taskRunMap", taskRunMap);
+        model.addAttribute("showArchived", showArchived);
+        model.addAttribute("success", success);
+        model.addAttribute("error", error);
         return "user-created-tasks";
     }
 
@@ -161,17 +170,99 @@ public class DeveloperController {
         return "redirect:/developer/password-reset-requests";
     }
 
-    @GetMapping("/standard-tasks")
-    public String standardTasks(HttpSession session, Model model,
-                                @RequestParam(value = "success", required = false) String success,
-                                @RequestParam(value = "error", required = false) String error) {
+    /**
+     * Soft-delete a task. Flips the `deleted` flag so the task is hidden
+     * from the technician's Available Tasks list and from this page's
+     * default view. All historical runs/responses/pauses remain intact.
+     * IN_PROGRESS runs for the task are NOT disrupted — they stay in
+     * Active Tasks and can be submitted/approved normally.
+     *
+     * Accepts a `redirect` param so we know which list to send the
+     * developer back to (standard-tasks vs user-created-tasks).
+     */
+    @PostMapping("/tasks/{id}/archive")
+    public String archiveTask(@PathVariable Long id,
+                              @RequestParam(value = "redirect", required = false) String redirect,
+                              HttpSession session,
+                              RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
         if (user.getAccountType() != AccountType.DEVELOPER) {
             return "redirect:/dashboard/home-dashboard";
         }
 
-        model.addAttribute("standardTasks", taskRepo.findByUserCreatedFalseOrderByTitleAsc());
+        Task task = taskRepo.findById(id).orElse(null);
+        if (task == null) {
+            redirectAttributes.addAttribute("error", "Task not found");
+        } else if (task.isDeleted()) {
+            redirectAttributes.addAttribute("error", "Task is already archived");
+        } else {
+            task.setDeleted(true);
+            taskRepo.save(task);
+            redirectAttributes.addAttribute("success",
+                    "Archived task \"" + task.getTitle() + "\"");
+        }
+        return "redirect:" + safeRedirectTarget(redirect, task);
+    }
+
+    /** Undo an archive — flips `deleted` back to false. */
+    @PostMapping("/tasks/{id}/restore")
+    public String restoreTask(@PathVariable Long id,
+                              @RequestParam(value = "redirect", required = false) String redirect,
+                              HttpSession session,
+                              RedirectAttributes redirectAttributes) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+        if (user.getAccountType() != AccountType.DEVELOPER) {
+            return "redirect:/dashboard/home-dashboard";
+        }
+
+        Task task = taskRepo.findById(id).orElse(null);
+        if (task == null) {
+            redirectAttributes.addAttribute("error", "Task not found");
+        } else if (!task.isDeleted()) {
+            redirectAttributes.addAttribute("error", "Task is not archived");
+        } else {
+            task.setDeleted(false);
+            taskRepo.save(task);
+            redirectAttributes.addAttribute("success",
+                    "Restored task \"" + task.getTitle() + "\"");
+        }
+        return "redirect:" + safeRedirectTarget(redirect, task);
+    }
+
+    /** Whitelist redirect targets to avoid open-redirect on a user-supplied param. */
+    private String safeRedirectTarget(String redirect, Task task) {
+        if ("user-created-tasks".equals(redirect)) {
+            return "/developer/user-created-tasks";
+        }
+        if ("standard-tasks".equals(redirect)) {
+            return "/developer/standard-tasks";
+        }
+        // Default: pick based on task type, fall back to standard-tasks
+        if (task != null && task.isUserCreated()) {
+            return "/developer/user-created-tasks";
+        }
+        return "/developer/standard-tasks";
+    }
+
+    @GetMapping("/standard-tasks")
+    public String standardTasks(HttpSession session, Model model,
+                                @RequestParam(value = "success", required = false) String success,
+                                @RequestParam(value = "error", required = false) String error,
+                                @RequestParam(value = "showArchived", required = false,
+                                              defaultValue = "false") boolean showArchived) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+        if (user.getAccountType() != AccountType.DEVELOPER) {
+            return "redirect:/dashboard/home-dashboard";
+        }
+
+        List<Task> tasks = showArchived
+                ? taskRepo.findByUserCreatedFalseAndDeletedTrueOrderByTitleAsc()
+                : taskRepo.findByUserCreatedFalseAndDeletedFalseOrderByTitleAsc();
+        model.addAttribute("standardTasks", tasks);
+        model.addAttribute("showArchived", showArchived);
         model.addAttribute("success", success);
         model.addAttribute("error", error);
         return "standard-tasks";

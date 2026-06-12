@@ -65,7 +65,7 @@ class DeveloperControllerTest {
     @Test
     void userCreatedTasks_noUser_redirectsToLogin() {
         Model model = new ConcurrentModel();
-        String result = controller.userCreatedTasks(session, model);
+        String result = controller.userCreatedTasks(session, model, false, null, null);
         assertEquals("redirect:/auth/login", result);
     }
 
@@ -73,7 +73,7 @@ class DeveloperControllerTest {
     void userCreatedTasks_nonDeveloper_redirectsToDashboard() {
         session.setAttribute("loggedInUser", techUser);
         Model model = new ConcurrentModel();
-        String result = controller.userCreatedTasks(session, model);
+        String result = controller.userCreatedTasks(session, model, false, null, null);
         assertEquals("redirect:/dashboard/home-dashboard", result);
     }
 
@@ -90,11 +90,11 @@ class DeveloperControllerTest {
         ChecklistRun run = new ChecklistRun();
         run.setTask(userTask);
         // Use reflection-free approach
-        when(taskRepo.findByUserCreatedTrue()).thenReturn(List.of(userTask));
+        when(taskRepo.findByUserCreatedTrueAndDeletedFalse()).thenReturn(List.of(userTask));
         when(runRepo.findFirstByTask(userTask)).thenReturn(Optional.of(run));
 
         Model model = new ConcurrentModel();
-        String result = controller.userCreatedTasks(session, model);
+        String result = controller.userCreatedTasks(session, model, false, null, null);
 
         assertEquals("user-created-tasks", result);
         assertNotNull(model.getAttribute("userCreatedTasks"));
@@ -104,10 +104,10 @@ class DeveloperControllerTest {
     @Test
     void userCreatedTasks_noTasks_returnsEmptyList() {
         session.setAttribute("loggedInUser", developerUser);
-        when(taskRepo.findByUserCreatedTrue()).thenReturn(List.of());
+        when(taskRepo.findByUserCreatedTrueAndDeletedFalse()).thenReturn(List.of());
 
         Model model = new ConcurrentModel();
-        String result = controller.userCreatedTasks(session, model);
+        String result = controller.userCreatedTasks(session, model, false, null, null);
 
         assertEquals("user-created-tasks", result);
         @SuppressWarnings("unchecked")

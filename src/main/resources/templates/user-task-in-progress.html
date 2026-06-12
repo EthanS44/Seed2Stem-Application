@@ -102,14 +102,17 @@
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
 <script>
-    // Sync textarea value to the hidden save form input before save submit
-    document.getElementById('saveForm').addEventListener('submit', function() {
+    // When the user confirms the pause: copy BOTH the work log AND the pause
+    // reason into the hidden save-progress form, then submit. Note that
+    // calling form.submit() programmatically does NOT fire 'submit' event
+    // listeners (intentional in the HTML spec — prevents infinite loops),
+    // so anything that needs to run before submission has to happen inline
+    // here. Previously the workLog copy lived in a separate submit listener
+    // that was never fired by the confirm button, so the server received an
+    // empty workLog and resumes started blank.
+    document.getElementById('confirmPauseBtn').addEventListener('click', function() {
         document.getElementById('saveWorkLog').value =
             document.querySelector('#submitForm textarea[name="workLog"]').value;
-    });
-
-    // When the user confirms the pause, copy the reason into the hidden form and submit
-    document.getElementById('confirmPauseBtn').addEventListener('click', function() {
         document.getElementById('savePauseReason').value =
             document.getElementById('pauseReasonInput').value;
         document.getElementById('saveForm').submit();

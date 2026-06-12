@@ -182,7 +182,7 @@ class DashboardControllerTest {
     void taskDashboard_technician_doesNotAddPendingRuns() {
         session.setAttribute("loggedInUser", techUser);
         Model model = new ConcurrentModel();
-        when(taskRepo.findByUserCreatedFalse()).thenReturn(List.of());
+        when(taskRepo.findByUserCreatedFalseAndDeletedFalseOrderByTitleAsc()).thenReturn(List.of());
         when(checklistRunService.getActiveRunsForUser(techUser)).thenReturn(List.of());
 
         String result = controller.taskDashboard(session, model);
@@ -196,7 +196,7 @@ class DashboardControllerTest {
     void taskDashboard_manager_addsPendingRuns() {
         session.setAttribute("loggedInUser", managerUser);
         Model model = new ConcurrentModel();
-        when(taskRepo.findByUserCreatedFalse()).thenReturn(List.of());
+        when(taskRepo.findByUserCreatedFalseAndDeletedFalseOrderByTitleAsc()).thenReturn(List.of());
         when(checklistRunService.getAllActiveRuns()).thenReturn(List.of());
         when(taskPauseRepository.findRunIdsWithOpenPause()).thenReturn(List.of());
         when(checklistRunService.getPendingChecklists()).thenReturn(List.of(new ChecklistRun()));
@@ -213,7 +213,7 @@ class DashboardControllerTest {
     void taskDashboard_developer_addsPendingRuns() {
         session.setAttribute("loggedInUser", developerUser);
         Model model = new ConcurrentModel();
-        when(taskRepo.findByUserCreatedFalse()).thenReturn(List.of());
+        when(taskRepo.findByUserCreatedFalseAndDeletedFalseOrderByTitleAsc()).thenReturn(List.of());
         when(checklistRunService.getAllActiveRuns()).thenReturn(List.of());
         when(taskPauseRepository.findRunIdsWithOpenPause()).thenReturn(List.of());
         when(checklistRunService.getPendingChecklists()).thenReturn(List.of(new ChecklistRun()));
@@ -237,7 +237,7 @@ class DashboardControllerTest {
         otherRun.setId(101L);
         otherRun.setCompletedBy(developerUser);
 
-        when(taskRepo.findByUserCreatedFalse()).thenReturn(List.of());
+        when(taskRepo.findByUserCreatedFalseAndDeletedFalseOrderByTitleAsc()).thenReturn(List.of());
         when(checklistRunService.getAllActiveRuns()).thenReturn(List.of(techRun, otherRun));
         when(taskPauseRepository.findRunIdsWithOpenPause()).thenReturn(List.of(101L));
         when(checklistRunService.getPendingChecklists()).thenReturn(List.of());

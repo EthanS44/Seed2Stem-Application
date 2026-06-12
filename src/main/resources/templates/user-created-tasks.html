@@ -7,29 +7,79 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <h4 class="mb-2">User Created Tasks</h4>
-    <p class="text-muted mb-4">Tasks created by technicians in the field. Review these to create standardized tasks with proper checklists.</p>
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h4 class="mb-0" th:text="${showArchived} ? 'Archived User Created Tasks' : 'User Created Tasks'">User Created Tasks</h4>
+        <div class="d-flex gap-2">
+            <a th:if="${!showArchived}"
+               th:href="@{/developer/user-created-tasks(showArchived=true)}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-archive me-1"></i> Show Archived
+            </a>
+            <a th:if="${showArchived}"
+               th:href="@{/developer/user-created-tasks}"
+               class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Active
+            </a>
+        </div>
+    </div>
+    <p class="text-muted mb-4"
+       th:text="${showArchived}
+         ? 'User-created tasks that have been archived. Historical runs and responses are preserved. Restore to make a task visible again.'
+         : 'Tasks created by technicians in the field. Review these to create standardized tasks with proper checklists.'">
+        Tasks created by technicians in the field. Review these to create standardized tasks with proper checklists.
+    </p>
+
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
 
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="list-group list-group-flush">
-                    <a th:each="task : ${userCreatedTasks}"
-                       th:href="${taskRunMap.containsKey(task.getId())} ? @{/checklist-runs/runs/{id}(id=${taskRunMap.get(task.getId())})} : @{/tasks/{id}(id=${task.getId()})}"
-                       class="list-group-item list-group-item-action py-3 text-decoration-none">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
+                    <div th:each="task : ${userCreatedTasks}"
+                         class="list-group-item py-3">
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <a th:href="${taskRunMap.containsKey(task.getId())} ? @{/checklist-runs/runs/{id}(id=${taskRunMap.get(task.getId())})} : @{/tasks/{id}(id=${task.getId()})}"
+                               class="text-decoration-none text-reset flex-grow-1">
                                 <h6 class="mb-1" th:text="${task.getTitle()}">Task Name</h6>
                                 <p class="mb-1 text-muted" th:text="${task.getDescription()}">Description</p>
                                 <small class="text-muted"
                                        th:if="${task.getCreatedBy() != null}"
                                        th:text="'Created by ' + ${task.getCreatedBy().getFirstName()} + ' ' + ${task.getCreatedBy().getLastName()}"></small>
+                            </a>
+                            <div class="text-end d-flex flex-column align-items-end gap-2">
+                                <span class="badge bg-info">User Created</span>
+                                <!-- Active task: Archive -->
+                                <form th:unless="${showArchived}"
+                                      th:action="@{/developer/tasks/{id}/archive(id=${task.getId()})}"
+                                      method="post"
+                                      onsubmit="return confirm('Archive this task? It will be hidden from the Available Tasks list. In-progress runs and historical data are preserved. You can restore it later.');">
+                                    <input type="hidden" name="redirect" value="user-created-tasks">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-archive me-1"></i>Archive
+                                    </button>
+                                </form>
+                                <!-- Archived task: Restore -->
+                                <form th:if="${showArchived}"
+                                      th:action="@{/developer/tasks/{id}/restore(id=${task.getId()})}"
+                                      method="post">
+                                    <input type="hidden" name="redirect" value="user-created-tasks">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
+                                    </button>
+                                </form>
                             </div>
-                            <span class="badge bg-info">User Created</span>
                         </div>
-                    </a>
+                    </div>
                     <div th:if="${#lists.isEmpty(userCreatedTasks)}" class="list-group-item text-muted py-4 text-center">
-                        No user-created tasks yet.
+                        <span th:if="${showArchived}">No archived user-created tasks.</span>
+                        <span th:unless="${showArchived}">No user-created tasks yet.</span>
                     </div>
                 </div>
             </div>
