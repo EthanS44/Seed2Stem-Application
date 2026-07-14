@@ -16,20 +16,17 @@ public class DashboardController {
 
     private final TaskRepository taskRepo;
     private final ChecklistRunService checklistRunService;
-    private final BatchService batchService;
     private final UserRepository userRepo;
     private final TimeEntryService timeEntryService;
     private final TaskPauseRepository taskPauseRepository;
 
     public DashboardController(TaskRepository taskRepo,
                                ChecklistRunService checklistRunService,
-                               BatchService batchService,
                                UserRepository userRepo,
                                TimeEntryService timeEntryService,
                                TaskPauseRepository taskPauseRepository) {
         this.taskRepo = taskRepo;
         this.checklistRunService = checklistRunService;
-        this.batchService = batchService;
         this.userRepo = userRepo;
         this.timeEntryService = timeEntryService;
         this.taskPauseRepository = taskPauseRepository;

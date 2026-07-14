@@ -68,11 +68,6 @@
         </li>
         <li class="sidebar-heading" th:if="${session.loggedInUser != null and session.loggedInUser.getAccountType().name() != 'TECHNICIAN'}">Management</li>
         <li class="nav-item" th:if="${session.loggedInUser != null and session.loggedInUser.getAccountType().name() != 'TECHNICIAN'}">
-            <a class="nav-link" th:href="@{/batches}">
-                <i class="bi bi-flower1 me-2"></i> Batches
-            </a>
-        </li>
-        <li class="nav-item" th:if="${session.loggedInUser != null and session.loggedInUser.getAccountType().name() != 'TECHNICIAN'}">
             <a class="nav-link" th:href="@{/technicians}">
                 <i class="bi bi-people me-2"></i> Technicians
             </a>

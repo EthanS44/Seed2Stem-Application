@@ -25,9 +25,6 @@ class DashboardControllerTest {
     private ChecklistRunService checklistRunService;
 
     @Mock
-    private BatchService batchService;
-
-    @Mock
     private UserRepository userRepo;
 
     @Mock
