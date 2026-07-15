@@ -5,9 +5,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -24,8 +23,8 @@ import java.util.Map;
 import java.util.Set;
 
 @Controller
-@RequestMapping("/technicians")
-public class TechnicianProfileController {
+@RequestMapping("/managers")
+public class ManagerProfileController {
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");
 
@@ -35,11 +34,11 @@ public class TechnicianProfileController {
     private final TimeEntryRepository timeEntryRepository;
     private final TaskPauseRepository taskPauseRepository;
 
-    public TechnicianProfileController(UserRepository userRepository,
-                                       ChecklistRunRepository checklistRunRepository,
-                                       TimeEntryService timeEntryService,
-                                       TimeEntryRepository timeEntryRepository,
-                                       TaskPauseRepository taskPauseRepository) {
+    public ManagerProfileController(UserRepository userRepository,
+                                    ChecklistRunRepository checklistRunRepository,
+                                    TimeEntryService timeEntryService,
+                                    TimeEntryRepository timeEntryRepository,
+                                    TaskPauseRepository taskPauseRepository) {
         this.userRepository = userRepository;
         this.checklistRunRepository = checklistRunRepository;
         this.timeEntryService = timeEntryService;
@@ -48,18 +47,15 @@ public class TechnicianProfileController {
     }
 
     @GetMapping
-    public String listTechnicians(HttpSession session, Model model) {
+    public String listManagers(HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
-        if (user.getAccountType() != AccountType.MANAGER
-                && user.getAccountType() != AccountType.DEVELOPER) {
+        if (user.getAccountType() != AccountType.DEVELOPER) {
             return "redirect:/dashboard/home-dashboard";
         }
 
-        List<User> technicians = userRepository.findByAccountType(AccountType.TECHNICIAN);
+        List<User> managers = userRepository.findByAccountType(AccountType.MANAGER);
 
-        // Bulk-fetch: one query each for active clock-ins, in-progress runs, and open pauses.
-        // Then join in memory so we don't do N*3 queries per technician.
         Map<Long, TimeEntry> activeEntryByUserId = new HashMap<>();
         for (TimeEntry entry : timeEntryService.getAllActiveEntries()) {
             if (entry.getUser() != null) {
@@ -72,7 +68,6 @@ public class TechnicianProfileController {
         for (ChecklistRun run : allActiveRuns) {
             if (run.getCompletedBy() == null) continue;
             Long uid = run.getCompletedBy().getId();
-            // Keep the earliest-started run per user for the dashboard "current task" display.
             ChecklistRun existing = activeRunByUserId.get(uid);
             if (existing == null
                     || (run.getStartTime() != null && existing.getStartTime() != null
@@ -82,10 +77,10 @@ public class TechnicianProfileController {
         }
         Set<Long> runsWithOpenPause = new HashSet<>(taskPauseRepository.findRunIdsWithOpenPause());
 
-        List<TechnicianSummary> summaries = new ArrayList<>();
-        for (User tech : technicians) {
-            TimeEntry activeEntry = activeEntryByUserId.get(tech.getId());
-            ChecklistRun activeRun = activeRunByUserId.get(tech.getId());
+        List<ManagerSummary> summaries = new ArrayList<>();
+        for (User mgr : managers) {
+            TimeEntry activeEntry = activeEntryByUserId.get(mgr.getId());
+            ChecklistRun activeRun = activeRunByUserId.get(mgr.getId());
             boolean paused = activeRun != null && runsWithOpenPause.contains(activeRun.getId());
             String taskLabel = null;
             Long runId = null;
@@ -97,8 +92,8 @@ public class TechnicianProfileController {
                 runId = activeRun.getId();
                 taskStartedAt = activeRun.getStartTime();
             }
-            summaries.add(new TechnicianSummary(
-                    tech,
+            summaries.add(new ManagerSummary(
+                    mgr,
                     activeEntry != null,
                     activeEntry != null ? activeEntry.getClockInTime() : null,
                     paused,
@@ -107,53 +102,50 @@ public class TechnicianProfileController {
                     taskStartedAt));
         }
 
-        // Sort: clocked in first, then paused, then off; ties broken by name.
         summaries.sort(Comparator
-                .comparingInt((TechnicianSummary s) -> s.clockedIn ? 0 : 1)
+                .comparingInt((ManagerSummary s) -> s.clockedIn ? 0 : 1)
                 .thenComparingInt(s -> s.currentTaskLabel != null ? 0 : 1)
-                .thenComparing(s -> s.technician.getName(), Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
+                .thenComparing(s -> s.manager.getName(), Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
 
         model.addAttribute("summaries", summaries);
         model.addAttribute("clockedInCount", summaries.stream().filter(s -> s.clockedIn).count());
         model.addAttribute("workingCount", summaries.stream().filter(s -> s.currentTaskLabel != null && !s.paused).count());
         model.addAttribute("pausedCount", summaries.stream().filter(s -> s.paused).count());
-        return "technician-list";
+        return "manager-list";
     }
 
     @GetMapping("/{id}")
-    public String technicianProfile(@PathVariable Long id, HttpSession session, Model model) {
+    public String managerProfile(@PathVariable Long id, HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
-        if (user.getAccountType() != AccountType.MANAGER
-                && user.getAccountType() != AccountType.DEVELOPER) {
+        if (user.getAccountType() != AccountType.DEVELOPER) {
             return "redirect:/dashboard/home-dashboard";
         }
 
-        User technician = userRepository.findById(id).orElse(null);
-        if (technician == null) return "redirect:/technicians";
+        User manager = userRepository.findById(id).orElse(null);
+        if (manager == null) return "redirect:/managers";
 
-        List<ChecklistRun> completedRuns = checklistRunRepository.findCompletedByUserOrderByStartTimeDesc(technician);
+        List<ChecklistRun> completedRuns = checklistRunRepository.findCompletedByUserOrderByStartTimeDesc(manager);
 
-        // Time entries — last 30 days
         LocalDate end = LocalDate.now();
         LocalDate start = end.minusDays(30);
-        List<TimeEntry> timeEntries = timeEntryService.getEntriesForDateRange(technician, start, end);
-        boolean isClockedIn = timeEntryService.isClockedIn(technician);
+        List<TimeEntry> timeEntries = timeEntryService.getEntriesForDateRange(manager, start, end);
+        boolean isClockedIn = timeEntryService.isClockedIn(manager);
         double totalHoursMonth = timeEntries.stream()
                 .filter(e -> e.getTotalHours() != null)
                 .mapToDouble(TimeEntry::getTotalHours)
                 .sum();
 
-        model.addAttribute("technician", technician);
+        model.addAttribute("manager", manager);
         model.addAttribute("completedRuns", completedRuns);
         model.addAttribute("timeEntries", timeEntries);
-        model.addAttribute("techClockedIn", isClockedIn);
+        model.addAttribute("mgrClockedIn", isClockedIn);
         model.addAttribute("totalHoursMonth", Math.round(totalHoursMonth * 100.0) / 100.0);
-        return "technician-profile";
+        return "manager-profile";
     }
 
-    @PostMapping("/{techId}/time-entries/{entryId}/edit")
-    public String editTimeEntry(@PathVariable Long techId,
+    @PostMapping("/{mgrId}/time-entries/{entryId}/edit")
+    public String editTimeEntry(@PathVariable Long mgrId,
                                 @PathVariable Long entryId,
                                 @RequestParam String clockInTime,
                                 @RequestParam(required = false) String clockOutTime,
@@ -162,8 +154,7 @@ public class TechnicianProfileController {
                                 RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
-        if (user.getAccountType() != AccountType.MANAGER
-                && user.getAccountType() != AccountType.DEVELOPER) {
+        if (user.getAccountType() != AccountType.DEVELOPER) {
             return "redirect:/dashboard/home-dashboard";
         }
 
@@ -176,25 +167,24 @@ public class TechnicianProfileController {
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
-        return "redirect:/technicians/" + techId;
+        return "redirect:/managers/" + mgrId;
     }
 
-    @GetMapping("/{techId}/time-entries/{entryId}")
-    public String timeEntryDetail(@PathVariable Long techId,
+    @GetMapping("/{mgrId}/time-entries/{entryId}")
+    public String timeEntryDetail(@PathVariable Long mgrId,
                                   @PathVariable Long entryId,
                                   HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
-        if (user.getAccountType() != AccountType.MANAGER
-                && user.getAccountType() != AccountType.DEVELOPER) {
+        if (user.getAccountType() != AccountType.DEVELOPER) {
             return "redirect:/dashboard/home-dashboard";
         }
 
-        User technician = userRepository.findById(techId).orElse(null);
-        if (technician == null) return "redirect:/technicians";
+        User manager = userRepository.findById(mgrId).orElse(null);
+        if (manager == null) return "redirect:/managers";
 
         TimeEntry entry = timeEntryRepository.findById(entryId).orElse(null);
-        if (entry == null) return "redirect:/technicians/" + techId;
+        if (entry == null) return "redirect:/managers/" + mgrId;
 
         LocalDateTime shiftStart = entry.getClockInTime();
         boolean isActive = entry.getClockOutTime() == null;
@@ -203,23 +193,22 @@ public class TechnicianProfileController {
         if (totalMinutes <= 0) totalMinutes = 1;
 
         List<ChecklistRun> runs = checklistRunRepository
-                .findByUserAndStartTimeBetween(technician, shiftStart, shiftEnd);
+                .findByUserAndStartTimeBetween(manager, shiftStart, shiftEnd);
 
-        List<TimelineSegment> segments = new ArrayList<>();
+        List<TechnicianProfileController.TimelineSegment> segments = new ArrayList<>();
         LocalDateTime cursor = shiftStart;
 
         for (ChecklistRun run : runs) {
             if (run.getStartTime() == null) continue;
             long gap = ChronoUnit.MINUTES.between(cursor, run.getStartTime());
             if (gap > 0) {
-                segments.add(new TimelineSegment(
+                segments.add(new TechnicianProfileController.TimelineSegment(
                         "downtime", "Downtime", gap, totalMinutes,
                         cursor.format(TIME_FMT), run.getStartTime().format(TIME_FMT), null));
             }
             LocalDateTime runEnd = run.getEndTime() != null ? run.getEndTime() : run.getStartTime();
             String taskLabel = run.getTask() != null ? run.getTask().getTitle() : run.getChecklistName();
 
-            // Pauses within this run carve the task block into [task][pause][task]... slices.
             List<TaskPause> pauses = taskPauseRepository.findByChecklistRunOrderByStartTimeAsc(run);
             LocalDateTime inner = run.getStartTime();
             for (TaskPause p : pauses) {
@@ -232,7 +221,7 @@ public class TechnicianProfileController {
 
                 long taskMinutes = ChronoUnit.MINUTES.between(inner, pStart);
                 if (taskMinutes >= 1) {
-                    segments.add(new TimelineSegment(
+                    segments.add(new TechnicianProfileController.TimelineSegment(
                             "task", taskLabel, taskMinutes, totalMinutes,
                             inner.format(TIME_FMT), pStart.format(TIME_FMT), run.getId()));
                 }
@@ -240,20 +229,18 @@ public class TechnicianProfileController {
                 if (pauseMinutes < 1) pauseMinutes = 1;
                 String pauseLabel = p.getReason() != null && !p.getReason().isBlank()
                         ? "Pause: " + p.getReason() : "Pause";
-                segments.add(new TimelineSegment(
+                segments.add(new TechnicianProfileController.TimelineSegment(
                         "pause", pauseLabel, pauseMinutes, totalMinutes,
                         pStart.format(TIME_FMT), pEnd.format(TIME_FMT), run.getId()));
                 inner = pEnd;
             }
-            // Trailing task slice after the last pause (or whole run if no pauses)
             long trailing = ChronoUnit.MINUTES.between(inner, runEnd);
             if (trailing < 1 && segments.stream().noneMatch(s ->
                     s.runId != null && s.runId.equals(run.getId()))) {
-                // Tiny run with no pauses — still show at least 1 min
                 trailing = 1;
             }
             if (trailing >= 1) {
-                segments.add(new TimelineSegment(
+                segments.add(new TechnicianProfileController.TimelineSegment(
                         "task", taskLabel, trailing, totalMinutes,
                         inner.format(TIME_FMT), runEnd.format(TIME_FMT), run.getId()));
             }
@@ -263,7 +250,7 @@ public class TechnicianProfileController {
 
         long remainingGap = ChronoUnit.MINUTES.between(cursor, shiftEnd);
         if (remainingGap > 0) {
-            segments.add(new TimelineSegment(
+            segments.add(new TechnicianProfileController.TimelineSegment(
                     "downtime", "Downtime", remainingGap, totalMinutes,
                     cursor.format(TIME_FMT), shiftEnd.format(TIME_FMT), null));
         }
@@ -275,7 +262,8 @@ public class TechnicianProfileController {
         long downtimeMinutesTotal = totalMinutes - taskMinutesTotal - pauseMinutesTotal;
         if (downtimeMinutesTotal < 0) downtimeMinutesTotal = 0;
 
-        model.addAttribute("technician", technician);
+        // time-entry-detail.html reads ${technician} for the name header; we reuse it.
+        model.addAttribute("technician", manager);
         model.addAttribute("entry", entry);
         model.addAttribute("segments", segments);
         model.addAttribute("totalMinutes", totalMinutes);
@@ -283,12 +271,12 @@ public class TechnicianProfileController {
         model.addAttribute("pauseMinutesTotal", pauseMinutesTotal);
         model.addAttribute("downtimeMinutesTotal", downtimeMinutesTotal);
         model.addAttribute("isActive", isActive);
-        model.addAttribute("backUrl", "/technicians/" + techId);
+        model.addAttribute("backUrl", "/managers/" + mgrId);
         return "time-entry-detail";
     }
 
-    public static class TechnicianSummary {
-        public final User technician;
+    public static class ManagerSummary {
+        public final User manager;
         public final boolean clockedIn;
         public final LocalDateTime clockInTime;
         public final boolean paused;
@@ -296,10 +284,10 @@ public class TechnicianProfileController {
         public final Long currentRunId;
         public final LocalDateTime taskStartedAt;
 
-        TechnicianSummary(User technician, boolean clockedIn, LocalDateTime clockInTime,
-                          boolean paused, String currentTaskLabel, Long currentRunId,
-                          LocalDateTime taskStartedAt) {
-            this.technician = technician;
+        ManagerSummary(User manager, boolean clockedIn, LocalDateTime clockInTime,
+                       boolean paused, String currentTaskLabel, Long currentRunId,
+                       LocalDateTime taskStartedAt) {
+            this.manager = manager;
             this.clockedIn = clockedIn;
             this.clockInTime = clockInTime;
             this.paused = paused;
@@ -308,33 +296,12 @@ public class TechnicianProfileController {
             this.taskStartedAt = taskStartedAt;
         }
 
-        public User getTechnician() { return technician; }
+        public User getManager() { return manager; }
         public boolean isClockedIn() { return clockedIn; }
         public LocalDateTime getClockInTime() { return clockInTime; }
         public boolean isPaused() { return paused; }
         public String getCurrentTaskLabel() { return currentTaskLabel; }
         public Long getCurrentRunId() { return currentRunId; }
         public LocalDateTime getTaskStartedAt() { return taskStartedAt; }
-    }
-
-    public static class TimelineSegment {
-        public final String type;
-        public final String label;
-        public final double percentage;
-        public final String startFormatted;
-        public final String endFormatted;
-        public final long durationMinutes;
-        public final Long runId;
-
-        TimelineSegment(String type, String label, long durationMinutes, long totalMinutes,
-                        String startFormatted, String endFormatted, Long runId) {
-            this.type = type;
-            this.label = label;
-            this.durationMinutes = durationMinutes;
-            this.percentage = (durationMinutes / (double) totalMinutes) * 100.0;
-            this.startFormatted = startFormatted;
-            this.endFormatted = endFormatted;
-            this.runId = runId;
-        }
     }
 }
