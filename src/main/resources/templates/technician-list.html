@@ -7,26 +7,94 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <h4 class="mb-4">Technicians</h4>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="mb-0">Technicians</h4>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4">
+            <div class="card text-white bg-success h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-clock me-1"></i> Clocked In</h6>
+                    <h2 class="mb-0" th:text="${clockedInCount}">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card text-white bg-info h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-play-circle me-1"></i> Working</h6>
+                    <h2 class="mb-0" th:text="${workingCount}">0</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card text-white bg-warning h-100">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-pause-circle me-1"></i> Paused</h6>
+                    <h2 class="mb-0" th:text="${pausedCount}">0</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${#lists.isEmpty(summaries)}" class="card shadow-sm">
+        <div class="card-body text-muted text-center py-5">
+            <i class="bi bi-people" style="font-size: 2rem;"></i>
+            <div class="mt-2">No technicians registered yet.</div>
+        </div>
+    </div>
 
     <div class="row g-3">
-        <div class="col-md-4" th:each="tech : ${technicians}">
-            <a th:href="@{/technicians/{id}(id=${tech.id})}" class="text-decoration-none">
-                <div class="card menu-card shadow-sm h-100">
-                    <div class="card-body text-center py-4">
-                        <div class="menu-icon"><i class="bi bi-person-circle"></i></div>
-                        <h6 class="card-title mt-2" th:text="${tech.getName()}">Name</h6>
-                        <small class="text-muted" th:text="${tech.email}">user@example.com</small>
+        <div class="col-md-6 col-lg-4" th:each="s : ${summaries}">
+            <a th:href="@{/technicians/{id}(id=${s.technician.id})}" class="text-decoration-none text-dark">
+                <div class="card shadow-sm h-100 tech-card">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-person-circle me-2" style="font-size: 1.8rem;"></i>
+                            <div class="flex-grow-1 min-w-0">
+                                <h6 class="mb-0 text-truncate" th:text="${s.technician.getName()}">Name</h6>
+                                <small class="text-muted text-truncate d-block" th:text="${s.technician.email}">email</small>
+                            </div>
+                            <span th:if="${s.paused}" class="badge bg-warning text-dark ms-2">Paused</span>
+                            <span th:if="${!s.paused and s.clockedIn}" class="badge bg-success ms-2">Clocked In</span>
+                            <span th:if="${!s.clockedIn}" class="badge bg-secondary ms-2">Off</span>
+                        </div>
+
+                        <hr class="my-2">
+
+                        <div class="small">
+                            <div class="mb-1">
+                                <i class="bi bi-clock me-1 text-muted"></i>
+                                <span th:if="${s.clockedIn}">
+                                    Clocked in
+                                    <span th:if="${s.clockInTime != null}"
+                                          th:text="'at ' + ${#temporals.format(s.clockInTime, 'h:mm a')}">at time</span>
+                                </span>
+                                <span th:unless="${s.clockedIn}" class="text-muted">Not clocked in</span>
+                            </div>
+                            <div>
+                                <i class="bi bi-list-task me-1 text-muted"></i>
+                                <span th:if="${s.currentTaskLabel != null}"
+                                      th:text="${s.currentTaskLabel}" class="fw-semibold">Task</span>
+                                <span th:if="${s.currentTaskLabel != null and s.taskStartedAt != null}"
+                                      class="text-muted"
+                                      th:text="' — since ' + ${#temporals.format(s.taskStartedAt, 'h:mm a')}"> — since time</span>
+                                <span th:unless="${s.currentTaskLabel != null}" class="text-muted">No active task</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </a>
         </div>
     </div>
-
-    <div th:if="${#lists.isEmpty(technicians)}" class="text-muted mt-3">
-        No technicians registered yet.
-    </div>
 </main>
+
+<style>
+    .tech-card { transition: transform 0.1s ease, box-shadow 0.1s ease; }
+    .tech-card:hover { transform: translateY(-2px); box-shadow: 0 0.5rem 1rem rgba(0,0,0,.1) !important; }
+    .min-w-0 { min-width: 0; }
+</style>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
 </body>

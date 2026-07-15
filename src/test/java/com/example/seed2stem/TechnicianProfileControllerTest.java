@@ -71,13 +71,90 @@ class TechnicianProfileControllerTest {
         session.setAttribute("loggedInUser", managerUser);
         Model model = new ConcurrentModel();
         when(userRepository.findByAccountType(AccountType.TECHNICIAN)).thenReturn(List.of(techUser));
+        when(timeEntryService.getAllActiveEntries()).thenReturn(List.of());
+        when(checklistRunRepository.findAllByStatusWithUserAndTask(ChecklistRunStatus.IN_PROGRESS))
+                .thenReturn(List.of());
+        when(taskPauseRepository.findRunIdsWithOpenPause()).thenReturn(List.of());
 
         String result = controller.listTechnicians(session, model);
 
         assertEquals("technician-list", result);
-        List<User> techs = (List<User>) model.getAttribute("technicians");
-        assertEquals(1, techs.size());
-        assertEquals("tech", techs.get(0).getEmail());
+        @SuppressWarnings("unchecked")
+        List<TechnicianProfileController.TechnicianSummary> summaries =
+                (List<TechnicianProfileController.TechnicianSummary>) model.getAttribute("summaries");
+        assertEquals(1, summaries.size());
+        TechnicianProfileController.TechnicianSummary s = summaries.get(0);
+        assertEquals("tech", s.getTechnician().getEmail());
+        assertFalse(s.isClockedIn());
+        assertFalse(s.isPaused());
+        assertNull(s.getCurrentTaskLabel());
+        assertEquals(0L, model.getAttribute("clockedInCount"));
+        assertEquals(0L, model.getAttribute("workingCount"));
+        assertEquals(0L, model.getAttribute("pausedCount"));
+    }
+
+    @Test
+    void listTechnicians_manager_populatesClockedInAndActiveTask() {
+        session.setAttribute("loggedInUser", managerUser);
+        Model model = new ConcurrentModel();
+        when(userRepository.findByAccountType(AccountType.TECHNICIAN)).thenReturn(List.of(techUser));
+
+        TimeEntry activeEntry = new TimeEntry();
+        activeEntry.setUser(techUser);
+        activeEntry.setClockInTime(java.time.LocalDateTime.of(2026, 7, 15, 8, 15));
+        when(timeEntryService.getAllActiveEntries()).thenReturn(List.of(activeEntry));
+
+        Task task = new Task();
+        task.setTitle("Water clones");
+        ChecklistRun run = new ChecklistRun();
+        run.setId(42L);
+        run.setCompletedBy(techUser);
+        run.setTask(task);
+        run.setStartTime(java.time.LocalDateTime.of(2026, 7, 15, 9, 0));
+        when(checklistRunRepository.findAllByStatusWithUserAndTask(ChecklistRunStatus.IN_PROGRESS))
+                .thenReturn(List.of(run));
+        when(taskPauseRepository.findRunIdsWithOpenPause()).thenReturn(List.of());
+
+        controller.listTechnicians(session, model);
+
+        @SuppressWarnings("unchecked")
+        List<TechnicianProfileController.TechnicianSummary> summaries =
+                (List<TechnicianProfileController.TechnicianSummary>) model.getAttribute("summaries");
+        TechnicianProfileController.TechnicianSummary s = summaries.get(0);
+        assertTrue(s.isClockedIn());
+        assertFalse(s.isPaused());
+        assertEquals("Water clones", s.getCurrentTaskLabel());
+        assertEquals(42L, s.getCurrentRunId());
+        assertEquals(1L, model.getAttribute("clockedInCount"));
+        assertEquals(1L, model.getAttribute("workingCount"));
+        assertEquals(0L, model.getAttribute("pausedCount"));
+    }
+
+    @Test
+    void listTechnicians_manager_flagsPausedRun() {
+        session.setAttribute("loggedInUser", managerUser);
+        Model model = new ConcurrentModel();
+        when(userRepository.findByAccountType(AccountType.TECHNICIAN)).thenReturn(List.of(techUser));
+        when(timeEntryService.getAllActiveEntries()).thenReturn(List.of());
+
+        Task task = new Task();
+        task.setTitle("Trim buds");
+        ChecklistRun run = new ChecklistRun();
+        run.setId(7L);
+        run.setCompletedBy(techUser);
+        run.setTask(task);
+        when(checklistRunRepository.findAllByStatusWithUserAndTask(ChecklistRunStatus.IN_PROGRESS))
+                .thenReturn(List.of(run));
+        when(taskPauseRepository.findRunIdsWithOpenPause()).thenReturn(List.of(7L));
+
+        controller.listTechnicians(session, model);
+
+        @SuppressWarnings("unchecked")
+        List<TechnicianProfileController.TechnicianSummary> summaries =
+                (List<TechnicianProfileController.TechnicianSummary>) model.getAttribute("summaries");
+        assertTrue(summaries.get(0).isPaused());
+        assertEquals(0L, model.getAttribute("workingCount"));
+        assertEquals(1L, model.getAttribute("pausedCount"));
     }
 
     // --- technicianProfile ---

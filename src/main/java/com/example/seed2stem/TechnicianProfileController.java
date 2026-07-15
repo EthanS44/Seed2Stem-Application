@@ -16,7 +16,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/technicians")
@@ -52,7 +57,66 @@ public class TechnicianProfileController {
         }
 
         List<User> technicians = userRepository.findByAccountType(AccountType.TECHNICIAN);
-        model.addAttribute("technicians", technicians);
+
+        // Bulk-fetch: one query each for active clock-ins, in-progress runs, and open pauses.
+        // Then join in memory so we don't do N*3 queries per technician.
+        Map<Long, TimeEntry> activeEntryByUserId = new HashMap<>();
+        for (TimeEntry entry : timeEntryService.getAllActiveEntries()) {
+            if (entry.getUser() != null) {
+                activeEntryByUserId.put(entry.getUser().getId(), entry);
+            }
+        }
+        Map<Long, ChecklistRun> activeRunByUserId = new HashMap<>();
+        List<ChecklistRun> allActiveRuns = checklistRunRepository
+                .findAllByStatusWithUserAndTask(ChecklistRunStatus.IN_PROGRESS);
+        for (ChecklistRun run : allActiveRuns) {
+            if (run.getCompletedBy() == null) continue;
+            Long uid = run.getCompletedBy().getId();
+            // Keep the earliest-started run per user for the dashboard "current task" display.
+            ChecklistRun existing = activeRunByUserId.get(uid);
+            if (existing == null
+                    || (run.getStartTime() != null && existing.getStartTime() != null
+                        && run.getStartTime().isBefore(existing.getStartTime()))) {
+                activeRunByUserId.put(uid, run);
+            }
+        }
+        Set<Long> runsWithOpenPause = new HashSet<>(taskPauseRepository.findRunIdsWithOpenPause());
+
+        List<TechnicianSummary> summaries = new ArrayList<>();
+        for (User tech : technicians) {
+            TimeEntry activeEntry = activeEntryByUserId.get(tech.getId());
+            ChecklistRun activeRun = activeRunByUserId.get(tech.getId());
+            boolean paused = activeRun != null && runsWithOpenPause.contains(activeRun.getId());
+            String taskLabel = null;
+            Long runId = null;
+            LocalDateTime taskStartedAt = null;
+            if (activeRun != null) {
+                taskLabel = activeRun.getTask() != null
+                        ? activeRun.getTask().getTitle()
+                        : activeRun.getChecklistName();
+                runId = activeRun.getId();
+                taskStartedAt = activeRun.getStartTime();
+            }
+            summaries.add(new TechnicianSummary(
+                    tech,
+                    activeEntry != null,
+                    activeEntry != null ? activeEntry.getClockInTime() : null,
+                    paused,
+                    taskLabel,
+                    runId,
+                    taskStartedAt));
+        }
+
+        // Sort: clocked in first, then paused, then off; ties broken by name.
+        summaries.sort(Comparator
+                .comparingInt((TechnicianSummary s) -> s.clockedIn ? 0 : 1)
+                .thenComparingInt(s -> s.currentTaskLabel != null ? 0 : 1)
+                .thenComparing(s -> s.technician.getName(), Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
+
+        model.addAttribute("summaries", summaries);
+        model.addAttribute("clockedInCount", summaries.stream().filter(s -> s.clockedIn).count());
+        model.addAttribute("workingCount", summaries.stream().filter(s -> s.currentTaskLabel != null && !s.paused).count());
+        model.addAttribute("pausedCount", summaries.stream().filter(s -> s.paused).count());
         return "technician-list";
     }
 
@@ -220,6 +284,36 @@ public class TechnicianProfileController {
         model.addAttribute("downtimeMinutesTotal", downtimeMinutesTotal);
         model.addAttribute("isActive", isActive);
         return "time-entry-detail";
+    }
+
+    public static class TechnicianSummary {
+        public final User technician;
+        public final boolean clockedIn;
+        public final LocalDateTime clockInTime;
+        public final boolean paused;
+        public final String currentTaskLabel;
+        public final Long currentRunId;
+        public final LocalDateTime taskStartedAt;
+
+        TechnicianSummary(User technician, boolean clockedIn, LocalDateTime clockInTime,
+                          boolean paused, String currentTaskLabel, Long currentRunId,
+                          LocalDateTime taskStartedAt) {
+            this.technician = technician;
+            this.clockedIn = clockedIn;
+            this.clockInTime = clockInTime;
+            this.paused = paused;
+            this.currentTaskLabel = currentTaskLabel;
+            this.currentRunId = currentRunId;
+            this.taskStartedAt = taskStartedAt;
+        }
+
+        public User getTechnician() { return technician; }
+        public boolean isClockedIn() { return clockedIn; }
+        public LocalDateTime getClockInTime() { return clockInTime; }
+        public boolean isPaused() { return paused; }
+        public String getCurrentTaskLabel() { return currentTaskLabel; }
+        public Long getCurrentRunId() { return currentRunId; }
+        public LocalDateTime getTaskStartedAt() { return taskStartedAt; }
     }
 
     public static class TimelineSegment {
