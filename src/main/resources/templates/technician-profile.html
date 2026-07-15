@@ -71,11 +71,7 @@
             </thead>
             <tbody>
                 <tr th:each="entry : ${timeEntries}">
-                    <td>
-                        <a th:href="@{/technicians/{techId}/time-entries/{entryId}(techId=${technician.id}, entryId=${entry.id})}"
-                           class="text-decoration-none"
-                           th:text="${#temporals.format(entry.date, 'EEE, MMM d')}">Mon, Mar 25</a>
-                    </td>
+                    <td th:text="${#temporals.format(entry.date, 'EEE, MMM d')}">Mon, Mar 25</td>
                     <td th:text="${#temporals.format(entry.clockInTime, 'h:mm a')}">9:00 AM</td>
                     <td>
                         <span th:if="${entry.clockOutTime != null}" th:text="${#temporals.format(entry.clockOutTime, 'h:mm a')}">5:00 PM</span>
@@ -86,13 +82,19 @@
                         <span th:if="${entry.totalHours == null}">—</span>
                     </td>
                     <td th:text="${entry.notes != null ? entry.notes : '—'}">—</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-secondary"
-                                type="button" data-bs-toggle="modal"
-                                th:attr="data-bs-target='#editModal' + ${entry.id}"
-                                title="Edit">
-                            <i class="bi bi-pencil"></i>
-                        </button>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-1">
+                            <a th:href="@{/technicians/{techId}/time-entries/{entryId}(techId=${technician.id}, entryId=${entry.id})}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-bar-chart me-1"></i> Shift Breakdown
+                            </a>
+                            <button class="btn btn-sm btn-outline-secondary"
+                                    type="button" data-bs-toggle="modal"
+                                    th:attr="data-bs-target='#editModal' + ${entry.id}"
+                                    title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             </tbody>
