@@ -1,21 +1,21 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Seed2Stem - Technician Profile')}"></head>
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Manager Profile')}"></head>
 <body>
 
 <nav th:replace="~{fragments/layout :: topbar}"></nav>
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <a th:href="@{/technicians}" class="btn btn-outline-secondary btn-sm mb-3">
-        <i class="bi bi-arrow-left me-1"></i> All Technicians
+    <a th:href="@{/managers}" class="btn btn-outline-secondary btn-sm mb-3">
+        <i class="bi bi-arrow-left me-1"></i> All Managers
     </a>
 
     <div class="d-flex align-items-center mb-4">
-        <i class="bi bi-person-circle me-3" style="font-size:2.5rem; color:var(--s2s-green)"></i>
+        <i class="bi bi-person-badge me-3" style="font-size:2.5rem; color:var(--s2s-green)"></i>
         <div>
-            <h4 class="mb-0" th:text="${technician.getName()}">Name</h4>
-            <small class="text-muted" th:text="${technician.email}">user@example.com</small>
+            <h4 class="mb-0" th:text="${manager.getName()}">Name</h4>
+            <small class="text-muted" th:text="${manager.email}">user@example.com</small>
         </div>
     </div>
 
@@ -32,11 +32,11 @@
     <!-- Time Tracking Summary -->
     <div class="row g-3 mb-4">
         <div class="col-md-4">
-            <div class="card h-100" th:classappend="${techClockedIn ? 'border-success' : ''}">
+            <div class="card h-100" th:classappend="${mgrClockedIn ? 'border-success' : ''}">
                 <div class="card-body text-center">
-                    <i class="bi bi-clock" th:classappend="${techClockedIn ? ' text-success' : ' text-muted'}" style="font-size: 1.5rem;"></i>
-                    <h6 class="mt-2" th:text="${techClockedIn ? 'Currently Clocked In' : 'Not Clocked In'}"
-                        th:classappend="${techClockedIn ? ' text-success' : ' text-muted'}">Status</h6>
+                    <i class="bi bi-clock" th:classappend="${mgrClockedIn ? ' text-success' : ' text-muted'}" style="font-size: 1.5rem;"></i>
+                    <h6 class="mt-2" th:text="${mgrClockedIn ? 'Currently Clocked In' : 'Not Clocked In'}"
+                        th:classappend="${mgrClockedIn ? ' text-success' : ' text-muted'}">Status</h6>
                 </div>
             </div>
         </div>
@@ -84,7 +84,7 @@
                     <td th:text="${entry.notes != null ? entry.notes : '—'}">—</td>
                     <td class="text-end">
                         <div class="d-inline-flex gap-1">
-                            <a th:href="@{/technicians/{techId}/time-entries/{entryId}(techId=${technician.id}, entryId=${entry.id})}"
+                            <a th:href="@{/managers/{mgrId}/time-entries/{entryId}(mgrId=${manager.id}, entryId=${entry.id})}"
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-bar-chart me-1"></i> Shift Breakdown
                             </a>
@@ -106,7 +106,7 @@
         <div class="modal fade" th:id="'editModal' + ${entry.id}" tabindex="-1">
             <div class="modal-dialog">
                 <div class="modal-content">
-                    <form method="post" th:action="@{/technicians/{techId}/time-entries/{entryId}/edit(techId=${technician.id}, entryId=${entry.id})}">
+                    <form method="post" th:action="@{/managers/{mgrId}/time-entries/{entryId}/edit(mgrId=${manager.id}, entryId=${entry.id})}">
                         <div class="modal-header">
                             <h5 class="modal-title">Edit Time Entry</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

@@ -7,7 +7,7 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <a th:href="@{/technicians/{id}(id=${technician.id})}" class="btn btn-outline-secondary btn-sm mb-3">
+    <a th:href="@{${backUrl ?: '/technicians/' + technician.id}}" class="btn btn-outline-secondary btn-sm mb-3">
         <i class="bi bi-arrow-left me-1"></i> Back to Profile
     </a>
 

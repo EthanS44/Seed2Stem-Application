@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Seed2Stem - Technicians')}"></head>
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Managers')}"></head>
 <body>
 
 <nav th:replace="~{fragments/layout :: topbar}"></nav>
@@ -8,7 +8,7 @@
 
 <main class="s2s-content">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0">Technicians</h4>
+        <h4 class="mb-0">Managers</h4>
     </div>
 
     <div class="row g-3 mb-4">
@@ -41,20 +41,20 @@
     <div th:if="${#lists.isEmpty(summaries)}" class="card shadow-sm">
         <div class="card-body text-muted text-center py-5">
             <i class="bi bi-people" style="font-size: 2rem;"></i>
-            <div class="mt-2">No technicians registered yet.</div>
+            <div class="mt-2">No managers registered yet.</div>
         </div>
     </div>
 
     <div class="row g-3">
         <div class="col-md-6 col-lg-4" th:each="s : ${summaries}">
-            <a th:href="@{/technicians/{id}(id=${s.technician.id})}" class="text-decoration-none text-dark">
+            <a th:href="@{/managers/{id}(id=${s.manager.id})}" class="text-decoration-none text-dark">
                 <div class="card shadow-sm h-100 tech-card">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-2">
-                            <i class="bi bi-person-circle me-2" style="font-size: 1.8rem;"></i>
+                            <i class="bi bi-person-badge me-2" style="font-size: 1.8rem;"></i>
                             <div class="flex-grow-1 min-w-0">
-                                <h6 class="mb-0 text-truncate" th:text="${s.technician.getName()}">Name</h6>
-                                <small class="text-muted text-truncate d-block" th:text="${s.technician.email}">email</small>
+                                <h6 class="mb-0 text-truncate" th:text="${s.manager.getName()}">Name</h6>
+                                <small class="text-muted text-truncate d-block" th:text="${s.manager.email}">email</small>
                             </div>
                             <span th:if="${s.paused}" class="badge bg-warning text-dark ms-2">Paused</span>
                             <span th:if="${!s.paused and s.clockedIn}" class="badge bg-success ms-2">Clocked In</span>
