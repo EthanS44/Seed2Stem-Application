@@ -116,7 +116,7 @@ class ManagerProfileControllerTest {
         when(timeEntryService.getAllActiveEntries()).thenReturn(List.of(activeEntry));
 
         Task task = new Task();
-        task.setTitle("Approve batches");
+        task.setTitle("Approve checklists");
         ChecklistRun run = new ChecklistRun();
         run.setId(42L);
         run.setCompletedBy(managerUser);
@@ -134,7 +134,7 @@ class ManagerProfileControllerTest {
         ManagerProfileController.ManagerSummary s = summaries.get(0);
         assertTrue(s.isClockedIn());
         assertFalse(s.isPaused());
-        assertEquals("Approve batches", s.getCurrentTaskLabel());
+        assertEquals("Approve checklists", s.getCurrentTaskLabel());
         assertEquals(42L, s.getCurrentRunId());
         assertEquals(1L, model.getAttribute("clockedInCount"));
         assertEquals(1L, model.getAttribute("workingCount"));

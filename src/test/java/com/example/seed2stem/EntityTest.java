@@ -55,42 +55,6 @@ class EntityTest {
         assertEquals(AccountType.MANAGER, user.getAccountType());
     }
 
-    // --- Batch ---
-
-    @Test
-    void batch_defaultStatus_isCloning() {
-        Batch batch = new Batch();
-        assertEquals(BatchStatus.CLONING, batch.getStatus());
-    }
-
-    @Test
-    void batch_settersAndGetters_work() {
-        Batch batch = new Batch();
-        batch.setId(1L);
-        batch.setBatchCode("26-074-BLD-B1-316-01");
-        batch.setStrain("Blue Dream");
-        batch.setStrainAcronym("BLD");
-        batch.setRoom("B1");
-        batch.setPlantCount(50);
-        batch.setStartDate(LocalDate.of(2026, 3, 15));
-        batch.setHarvestDate(LocalDate.of(2026, 6, 1));
-        batch.setHarvestWeightGrams(500.0);
-        batch.setCoaSampleWeightGrams(10.0);
-        batch.setNotes("Test batch");
-
-        assertEquals(1L, batch.getId());
-        assertEquals("26-074-BLD-B1-316-01", batch.getBatchCode());
-        assertEquals("Blue Dream", batch.getStrain());
-        assertEquals("BLD", batch.getStrainAcronym());
-        assertEquals("B1", batch.getRoom());
-        assertEquals(50, batch.getPlantCount());
-        assertEquals(LocalDate.of(2026, 3, 15), batch.getStartDate());
-        assertEquals(LocalDate.of(2026, 6, 1), batch.getHarvestDate());
-        assertEquals(500.0, batch.getHarvestWeightGrams());
-        assertEquals(10.0, batch.getCoaSampleWeightGrams());
-        assertEquals("Test batch", batch.getNotes());
-    }
-
     // --- ChecklistRun ---
 
     @Test
@@ -176,26 +140,6 @@ class EntityTest {
 
         assertEquals(run, resp.getChecklistRun());
         assertEquals(item, resp.getChecklistItem());
-    }
-
-    // --- BatchStatus enum ---
-
-    @Test
-    void batchStatus_allValuesExist() {
-        assertEquals(9, BatchStatus.values().length);
-    }
-
-    @Test
-    void batchStatus_displayNames() {
-        assertEquals("Cloning", BatchStatus.CLONING.getDisplayName());
-        assertEquals("Vegetative", BatchStatus.VEGETATIVE.getDisplayName());
-        assertEquals("Flowering", BatchStatus.FLOWERING.getDisplayName());
-        assertEquals("Harvested", BatchStatus.HARVESTED.getDisplayName());
-        assertEquals("Debucking", BatchStatus.DEBUCKING.getDisplayName());
-        assertEquals("Trimming", BatchStatus.TRIMMING.getDisplayName());
-        assertEquals("Packaging", BatchStatus.PACKAGING.getDisplayName());
-        assertEquals("Packaged", BatchStatus.PACKAGED.getDisplayName());
-        assertEquals("Destroyed", BatchStatus.DESTROYED.getDisplayName());
     }
 
     // --- Task (userCreated fields) ---
@@ -359,16 +303,16 @@ class EntityTest {
     @Test
     void calendarEventDTO_parameterizedConstructor() {
         CalendarEventDTO dto = new CalendarEventDTO(
-                "batch-1", "Batch Started", "2026-03-15", null,
-                true, "#2e7d32", "/batches/1", "batch-start");
+                "run-1", "AM Inspection", "2026-03-15", null,
+                true, "#0277bd", "/checklist-runs/runs/1", "checklist-run");
 
-        assertEquals("batch-1", dto.getId());
-        assertEquals("Batch Started", dto.getTitle());
+        assertEquals("run-1", dto.getId());
+        assertEquals("AM Inspection", dto.getTitle());
         assertEquals("2026-03-15", dto.getStart());
         assertNull(dto.getEnd());
         assertTrue(dto.isAllDay());
-        assertEquals("#2e7d32", dto.getColor());
-        assertEquals("/batches/1", dto.getUrl());
-        assertEquals("batch-start", dto.getEventType());
+        assertEquals("#0277bd", dto.getColor());
+        assertEquals("/checklist-runs/runs/1", dto.getUrl());
+        assertEquals("checklist-run", dto.getEventType());
     }
 }

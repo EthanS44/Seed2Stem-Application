@@ -204,17 +204,6 @@ body {
     color: white;
 }
 
-/* ===== Batch Status Badges ===== */
-.badge-cloning { background-color: #8e24aa; }
-.badge-vegetative { background-color: #2e7d32; }
-.badge-flowering { background-color: #f9a825; color: #333; }
-.badge-harvested { background-color: #e65100; }
-.badge-debucking { background-color: #4e342e; }
-.badge-trimming { background-color: #0277bd; }
-.badge-packaging { background-color: #00695c; }
-.badge-packaged { background-color: #1b5e20; }
-.badge-destroyed { background-color: #b71c1c; }
-
 /* ===== Calendar ===== */
 #calendar {
     background: #fff;
