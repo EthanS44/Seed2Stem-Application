@@ -7,10 +7,13 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <a th:if="${task != null}" th:href="@{/developer/standard-tasks}" class="btn btn-outline-secondary btn-sm mb-3">
-        <i class="bi bi-arrow-left me-1"></i> Standard Tasks
-    </a>
-    <h4 class="mb-4" th:text="${task == null ? 'New Standard Task' : 'Edit Standard Task'}">New Standard Task</h4>
+    <a th:href="@{/developer/standard-tasks}" class="back-link"><i class="bi bi-arrow-left"></i>Standard Tasks</a>
+    <div class="page-head">
+        <div>
+            <h4 th:text="${task == null ? 'New Standard Task' : 'Edit Standard Task'}">New Standard Task</h4>
+            <div class="sub" th:text="${task == null ? 'Build a task technicians can pick and complete.' : task.title}">Build a task.</div>
+        </div>
+    </div>
 
     <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
         <span th:text="${error}"></span>
@@ -19,7 +22,7 @@
 
     <div class="row">
         <div class="col-md-10">
-            <div class="card shadow-sm">
+            <div class="card">
                 <div class="card-body">
                     <p class="text-muted mb-4" th:if="${task == null}">
                         Build a standard task with a checklist for technicians to complete. Use headers to group questions into sections.

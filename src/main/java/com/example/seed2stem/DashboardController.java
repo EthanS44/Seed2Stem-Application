@@ -175,12 +175,8 @@ public class DashboardController {
                 : checklistRunService.getActiveRunsForUser(user);
         model.addAttribute("activeTasks", activeTasks);
 
-        // For the manager/developer view, mark which runs are currently paused
-        // so the row can show a "Paused" badge.
-        Set<Long> pausedRunIds = isManager
-                ? new HashSet<>(taskPauseRepository.findRunIdsWithOpenPause())
-                : Set.of();
-        model.addAttribute("pausedRunIds", pausedRunIds);
+        // Mark which runs are currently paused so the row can show a "Paused" pill.
+        model.addAttribute("pausedRunIds", new HashSet<>(taskPauseRepository.findRunIdsWithOpenPause()));
 
         model.addAttribute("isManager", isManager);
         if (isManager) {

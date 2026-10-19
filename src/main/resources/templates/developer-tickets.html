@@ -7,29 +7,27 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h4 class="mb-0" th:text="${showResolved} ? 'Resolved Tickets' : 'Open Tickets'">Open Tickets</h4>
-        <div class="d-flex gap-2">
-            <a th:if="${!showResolved}"
-               th:href="@{/developer/tickets(showResolved=true)}"
-               class="btn btn-outline-secondary">
-                <i class="bi bi-check2-all me-1"></i>
-                Show Resolved <span class="badge bg-secondary ms-1" th:text="${resolvedCount}">0</span>
-            </a>
-            <a th:if="${showResolved}"
-               th:href="@{/developer/tickets}"
-               class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i>
-                Back to Open <span class="badge bg-warning text-dark ms-1" th:text="${openCount}">0</span>
-            </a>
+    <div class="page-head">
+        <div>
+            <h4>Tickets</h4>
+            <div class="sub" th:text="${showResolved}
+                 ? 'Resolved tickets. Reopen one if it needs more work.'
+                 : 'Bug reports and suggestions from users. Resolve a ticket once it is handled or dismissed.'">Bug reports and suggestions.</div>
         </div>
     </div>
-    <p class="text-muted mb-4"
-       th:text="${showResolved}
-         ? 'Tickets you have already resolved. You can reopen one if it needs more work.'
-         : 'Bug reports and suggestions submitted by users. Resolve a ticket once you have addressed (or chosen to dismiss) it.'">
-        Bug reports and suggestions submitted by users.
-    </p>
+
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${!showResolved} ? 'active'" th:href="@{/developer/tickets}">
+                Open <span class="pill ms-1" th:classappend="${openCount > 0} ? 'warn'" th:text="${openCount}">0</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" th:classappend="${showResolved} ? 'active'" th:href="@{/developer/tickets(showResolved=true)}">
+                Resolved <span class="pill ms-1" th:text="${resolvedCount}">0</span>
+            </a>
+        </li>
+    </ul>
 
     <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
         <span th:text="${success}"></span>
@@ -42,7 +40,7 @@
 
     <div class="row">
         <div class="col-12">
-            <div th:if="${#lists.isEmpty(tickets)}" class="card shadow-sm">
+            <div th:if="${#lists.isEmpty(tickets)}" class="card">
                 <div class="card-body text-muted text-center py-5">
                     <i class="bi bi-inbox" style="font-size: 2rem;"></i>
                     <div class="mt-2">
@@ -52,7 +50,7 @@
                 </div>
             </div>
 
-            <div th:each="ticket : ${tickets}" class="card shadow-sm mb-3">
+            <div th:each="ticket : ${tickets}" class="card mb-3">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
                         <div class="flex-grow-1">
@@ -60,9 +58,9 @@
                             <small class="text-muted">
                                 <i class="bi bi-person me-1"></i>
                                 <span th:if="${ticket.getSubmittedBy() != null}"
-                                      th:text="${ticket.getSubmittedBy().getFirstName() + ' ' + ticket.getSubmittedBy().getLastName()}">Name</span>
-                                &nbsp;&bull;&nbsp;
-                                <span th:text="${#temporals.format(ticket.getSubmittedAt(), 'MMM d, yyyy h:mm a')}">Date</span>
+                                      th:text="${ticket.getSubmittedBy().getName()}">Name</span>
+                                &middot;
+                                <span th:text="${@fmt.when(ticket.getSubmittedAt())}">Date</span>
                                 <span th:if="${ticket.getResolvedAt() != null}">
                                     &nbsp;&bull;&nbsp;
                                     <i class="bi bi-check2 me-1"></i>Resolved

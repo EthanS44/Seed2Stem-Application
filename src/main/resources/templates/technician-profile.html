@@ -7,19 +7,19 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <a th:href="@{/technicians}" class="btn btn-outline-secondary btn-sm mb-3">
-        <i class="bi bi-arrow-left me-1"></i> All Technicians
-    </a>
-
-    <div class="d-flex align-items-center mb-4">
-        <i class="bi bi-person-circle me-3" style="font-size:2.5rem; color:var(--s2s-green)"></i>
-        <div>
-            <h4 class="mb-0" th:text="${technician.getName()}">Name</h4>
-            <small class="text-muted" th:text="${technician.email}">user@example.com</small>
+    <a th:href="@{/technicians}" class="back-link"><i class="bi bi-arrow-left"></i>Technicians</a>
+    <div class="page-head">
+        <div class="d-flex align-items-center gap-3">
+            <span class="avatar" style="width:52px;height:52px;font-size:1.1rem" th:text="${@fmt.initials(technician)}">TT</span>
+            <div>
+                <h4 th:text="${technician.getName()}">Name</h4>
+                <div class="sub" th:text="${technician.email}">user@example.com</div>
+            </div>
         </div>
+        <span th:if="${techClockedIn}" class="pill ok"><i class="bi bi-circle-fill" style="font-size:.5rem"></i>On the clock</span>
+        <span th:unless="${techClockedIn}" class="pill">Not clocked in</span>
     </div>
 
-    <!-- Flash messages -->
     <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
         <span th:text="${success}"></span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -29,76 +29,61 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
 
-    <!-- Time Tracking Summary -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="card h-100" th:classappend="${techClockedIn ? 'border-success' : ''}">
-                <div class="card-body text-center">
-                    <i class="bi bi-clock" th:classappend="${techClockedIn ? ' text-success' : ' text-muted'}" style="font-size: 1.5rem;"></i>
-                    <h6 class="mt-2" th:text="${techClockedIn ? 'Currently Clocked In' : 'Not Clocked In'}"
-                        th:classappend="${techClockedIn ? ' text-success' : ' text-muted'}">Status</h6>
-                </div>
+    <div class="row g-2 g-md-3 mb-4">
+        <div class="col-6 col-md-4">
+            <div class="s2s-stat">
+                <span class="chip"><i class="bi bi-stopwatch"></i></span>
+                <span><span class="num d-block" th:text="${totalHoursMonth + ' h'}">0 h</span><span class="lbl">Last 30 days</span></span>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <h3 class="mb-0" th:text="${totalHoursMonth + 'h'}">0h</h3>
-                    <small class="text-muted">Last 30 Days</small>
-                </div>
+        <div class="col-6 col-md-4">
+            <div class="s2s-stat">
+                <span class="chip"><i class="bi bi-check2-square"></i></span>
+                <span><span class="num d-block" th:text="${completedRuns.size()}">0</span><span class="lbl">Tasks submitted</span></span>
             </div>
         </div>
     </div>
 
-    <!-- Time Entries -->
-    <h5 class="mb-3">Time Entries (Last 30 Days)</h5>
-
-    <div th:if="${#lists.isEmpty(timeEntries)}" class="text-muted mb-4">
-        No time entries in the last 30 days.
-    </div>
-
-    <div th:if="${!#lists.isEmpty(timeEntries)}" class="mb-4">
-        <table class="table table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th>Date</th>
-                    <th>Clock In</th>
-                    <th>Clock Out</th>
-                    <th>Hours</th>
-                    <th>Notes</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="entry : ${timeEntries}">
-                    <td th:text="${#temporals.format(entry.date, 'EEE, MMM d')}">Mon, Mar 25</td>
-                    <td th:text="${#temporals.format(entry.clockInTime, 'h:mm a')}">9:00 AM</td>
-                    <td>
-                        <span th:if="${entry.clockOutTime != null}" th:text="${#temporals.format(entry.clockOutTime, 'h:mm a')}">5:00 PM</span>
-                        <span th:if="${entry.clockOutTime == null}" class="badge bg-success">Active</span>
-                    </td>
-                    <td>
-                        <span th:if="${entry.totalHours != null}" th:text="${entry.totalHours + 'h'}">8.0h</span>
-                        <span th:if="${entry.totalHours == null}">—</span>
-                    </td>
-                    <td th:text="${entry.notes != null ? entry.notes : '—'}">—</td>
-                    <td class="text-end">
-                        <div class="d-inline-flex gap-1">
+    <!-- Time entries -->
+    <div class="s2s-panel mb-4">
+        <div class="panel-head"><h6><i class="bi bi-clock-history me-2"></i>Time entries · last 30 days</h6></div>
+        <div th:if="${#lists.isEmpty(timeEntries)}" class="s2s-empty">No time entries in the last 30 days.</div>
+        <div th:if="${!#lists.isEmpty(timeEntries)}" class="table-responsive">
+            <table class="table table-hover align-middle mb-0 table-stack">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Clock in</th>
+                        <th>Clock out</th>
+                        <th class="text-end">Hours</th>
+                        <th>Notes</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="entry : ${timeEntries}">
+                        <td class="fw-semibold" th:text="${#temporals.format(entry.date, 'EEE, MMM d')}">Mon, Mar 25</td>
+                        <td data-label="Clock in" th:text="${#temporals.format(entry.clockInTime, 'h:mm a')}">9:00 AM</td>
+                        <td data-label="Clock out">
+                            <span th:if="${entry.clockOutTime != null}" th:text="${#temporals.format(entry.clockOutTime, 'h:mm a')}">5:00 PM</span>
+                            <span th:if="${entry.clockOutTime == null}" class="pill ok">Active</span>
+                        </td>
+                        <td data-label="Hours" class="text-end" th:text="${entry.totalHours != null ? entry.totalHours + ' h' : '—'}">8.0 h</td>
+                        <td data-label="Notes" class="text-muted" th:text="${entry.notes != null and !entry.notes.isBlank() ? entry.notes : '—'}">—</td>
+                        <td class="text-end text-nowrap">
                             <a th:href="@{/technicians/{techId}/time-entries/{entryId}(techId=${technician.id}, entryId=${entry.id})}"
                                class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-bar-chart me-1"></i> Shift Breakdown
+                                <i class="bi bi-bar-chart me-1"></i>Shift Breakdown
                             </a>
-                            <button class="btn btn-sm btn-outline-secondary"
-                                    type="button" data-bs-toggle="modal"
-                                    th:attr="data-bs-target='#editModal' + ${entry.id}"
-                                    title="Edit">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal"
+                                    th:attr="data-bs-target='#editModal' + ${entry.id}" title="Edit time entry">
                                 <i class="bi bi-pencil"></i>
                             </button>
-                        </div>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- Edit Modals -->
@@ -137,42 +122,21 @@
         </div>
     </div>
 
-    <h5 class="mb-3">Completed Tasks</h5>
 
-    <div th:if="${#lists.isEmpty(completedRuns)}" class="text-muted">
-        No completed tasks yet.
-    </div>
-
-    <div th:if="${!#lists.isEmpty(completedRuns)}">
-        <table class="table table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th>Task</th>
-                    <th>Checklist</th>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th>Status</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="run : ${completedRuns}">
-                    <td th:text="${run.task != null ? run.task.title : '—'}">Task</td>
-                    <td th:text="${run.checklistName}">Checklist</td>
-                    <td th:text="${#temporals.format(run.startTime, 'MMM d, yyyy')}">Mar 25, 2026</td>
-                    <td th:text="${#temporals.format(run.startTime, 'h:mm a')}">9:30 AM</td>
-                    <td>
-                        <span class="badge bg-success" th:if="${run.status.name() == 'APPROVED'}">Approved</span>
-                        <span class="badge bg-warning text-dark" th:if="${run.status.name() == 'PENDING'}">Pending</span>
-                    </td>
-                    <td>
-                        <a th:href="@{/checklist-runs/runs/{id}(id=${run.id})}" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <!-- Completed tasks -->
+    <div class="s2s-panel">
+        <div class="panel-head"><h6><i class="bi bi-check2-square me-2"></i>Submitted tasks</h6></div>
+        <div th:if="${#lists.isEmpty(completedRuns)}" class="s2s-empty">No submitted tasks yet.</div>
+        <a th:each="run : ${completedRuns}" class="s2s-row" th:href="@{/checklist-runs/runs/{id}(id=${run.id})}">
+            <span class="grow">
+                <span class="title d-block" th:text="${run.task != null ? run.task.title : run.checklistName}">Task</span>
+                <span class="meta d-block" th:text="${#temporals.format(run.startTime, 'EEE, MMM d · h:mm a')}">Mar 25 · 9:30 AM</span>
+            </span>
+            <span th:if="${run.failCount > 0}" class="pill bad d-none d-sm-inline-flex" th:text="${run.failCount + ' failed'}">1 failed</span>
+            <span th:if="${run.status.name() == 'APPROVED'}" class="pill ok"><i class="bi bi-check2"></i>Approved</span>
+            <span th:if="${run.status.name() == 'PENDING'}" class="pill warn">Pending</span>
+            <i class="bi bi-chevron-right chev"></i>
+        </a>
     </div>
 </main>
 

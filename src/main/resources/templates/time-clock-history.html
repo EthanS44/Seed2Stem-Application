@@ -7,65 +7,72 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <a th:href="@{/time-clock}" class="btn btn-outline-secondary btn-sm mb-3">
-        <i class="bi bi-arrow-left me-1"></i> Back to Time Clock
-    </a>
-
-    <h4 class="mb-4">Time History</h4>
-
-    <!-- Date Range Filter -->
-    <form class="row g-2 mb-4" method="get" th:action="@{/time-clock/history}">
-        <div class="col-auto">
-            <label class="form-label mb-0">From</label>
-            <input type="date" name="startDate" class="form-control" th:value="${startDate}">
+    <a th:href="@{/time-clock}" class="back-link"><i class="bi bi-arrow-left"></i>Time Clock</a>
+    <div class="page-head">
+        <div>
+            <h4>Time History</h4>
+            <div class="sub">
+                <span th:text="${#temporals.format(startDate, 'MMM d')}">Mar 1</span> –
+                <span th:text="${#temporals.format(endDate, 'MMM d, yyyy')}">Mar 31, 2026</span>
+            </div>
         </div>
-        <div class="col-auto">
-            <label class="form-label mb-0">To</label>
-            <input type="date" name="endDate" class="form-control" th:value="${endDate}">
-        </div>
-        <div class="col-auto d-flex align-items-end">
-            <button type="submit" class="btn btn-s2s">Filter</button>
-        </div>
-    </form>
-
-    <!-- Total Hours -->
-    <div class="alert alert-light border mb-3">
-        <strong>Total Hours:</strong> <span th:text="${totalHours}">0</span>h
-        <span class="text-muted ms-2">(
-            <span th:text="${#temporals.format(startDate, 'MMM d')}">Mar 1</span> –
-            <span th:text="${#temporals.format(endDate, 'MMM d, yyyy')}">Mar 31, 2026</span>
-        )</span>
     </div>
 
-    <!-- Entries Table -->
-    <div th:if="${#lists.isEmpty(entries)}" class="text-muted">No entries in this period.</div>
-    <div th:if="${!#lists.isEmpty(entries)}" class="table-responsive">
-        <table class="table table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th>Date</th>
-                    <th>Clock In</th>
-                    <th>Clock Out</th>
-                    <th>Hours</th>
-                    <th>Notes</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="entry : ${entries}">
-                    <td th:text="${#temporals.format(entry.date, 'EEE, MMM d, yyyy')}">Mon, Mar 25, 2026</td>
-                    <td th:text="${#temporals.format(entry.clockInTime, 'h:mm a')}">9:00 AM</td>
-                    <td>
-                        <span th:if="${entry.clockOutTime != null}" th:text="${#temporals.format(entry.clockOutTime, 'h:mm a')}">5:00 PM</span>
-                        <span th:if="${entry.clockOutTime == null}" class="badge bg-success">Active</span>
-                    </td>
-                    <td>
-                        <span th:if="${entry.totalHours != null}" th:text="${entry.totalHours + 'h'}">8.0h</span>
-                        <span th:if="${entry.totalHours == null}">—</span>
-                    </td>
-                    <td th:text="${entry.notes != null ? entry.notes : '—'}">—</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="row g-3 mb-3">
+        <div class="col-md-7 col-lg-6">
+            <form class="s2s-card d-flex flex-wrap align-items-end gap-2 py-3" method="get" th:action="@{/time-clock/history}">
+                <div class="flex-fill">
+                    <label class="form-label small fw-semibold mb-1" for="startDate">From</label>
+                    <input type="date" id="startDate" name="startDate" class="form-control" th:value="${startDate}">
+                </div>
+                <div class="flex-fill">
+                    <label class="form-label small fw-semibold mb-1" for="endDate">To</label>
+                    <input type="date" id="endDate" name="endDate" class="form-control" th:value="${endDate}">
+                </div>
+                <button type="submit" class="btn btn-s2s">Show</button>
+            </form>
+        </div>
+        <div class="col-6 col-md-auto">
+            <div class="s2s-stat">
+                <span class="chip"><i class="bi bi-stopwatch"></i></span>
+                <span><span class="num d-block" th:text="${totalHours + ' h'}">0 h</span><span class="lbl">Total hours</span></span>
+            </div>
+        </div>
+        <div class="col-6 col-md-auto">
+            <div class="s2s-stat">
+                <span class="chip"><i class="bi bi-calendar-check"></i></span>
+                <span><span class="num d-block" th:text="${entries.size()}">0</span><span class="lbl">Shifts</span></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="s2s-panel">
+        <div th:if="${#lists.isEmpty(entries)}" class="s2s-empty">No shifts in this period.</div>
+        <div th:if="${!#lists.isEmpty(entries)}" class="table-responsive">
+            <table class="table table-hover align-middle mb-0 table-stack">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Clock in</th>
+                        <th>Clock out</th>
+                        <th class="text-end">Hours</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="entry : ${entries}">
+                        <td class="fw-semibold" th:text="${#temporals.format(entry.date, 'EEE, MMM d, yyyy')}">Mon, Mar 25, 2026</td>
+                        <td data-label="Clock in" th:text="${#temporals.format(entry.clockInTime, 'h:mm a')}">9:00 AM</td>
+                        <td data-label="Clock out">
+                            <span th:if="${entry.clockOutTime != null}" th:text="${#temporals.format(entry.clockOutTime, 'h:mm a')}">5:00 PM</span>
+                            <span th:if="${entry.clockOutTime == null}" class="pill ok">Active</span>
+                        </td>
+                        <td data-label="Hours" class="text-end" th:text="${entry.totalHours != null ? entry.totalHours + ' h' : '—'}">8.0 h</td>
+                        <td data-label="Notes" class="text-muted" th:text="${entry.notes != null and !entry.notes.isBlank() ? entry.notes : '—'}">—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </main>
 

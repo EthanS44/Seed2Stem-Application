@@ -7,7 +7,12 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <h4 class="mb-3">Calendar</h4>
+    <div class="page-head">
+        <div>
+            <h4>Calendar</h4>
+            <div class="sub">Task runs by day. Tap a day to see it hour by hour.</div>
+        </div>
+    </div>
 
     <div class="calendar-legend">
         <span class="calendar-legend-item" data-event-type="checklist-run">
@@ -25,13 +30,14 @@
 document.addEventListener('DOMContentLoaded', function () {
     var hiddenTypes = {};
     var calendarEl = document.getElementById('calendar');
+    // Phones get a week list and a two-row toolbar; the month grid is too cramped there.
+    var narrow = window.matchMedia('(max-width: 575.98px)').matches;
     var calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridDay,listWeek'
-        },
+        initialView: narrow ? 'listWeek' : 'dayGridMonth',
+        headerToolbar: narrow
+            ? { left: 'prev,next', center: 'title', right: 'today' }
+            : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridDay,listWeek' },
+        footerToolbar: narrow ? { center: 'dayGridMonth,listWeek' } : false,
         dateClick: function (info) {
             calendar.changeView('timeGridDay', info.dateStr);
         },

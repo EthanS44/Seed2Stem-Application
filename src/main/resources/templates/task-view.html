@@ -8,19 +8,24 @@
 
 <main class="s2s-content">
     <div class="row">
-        <div class="col-lg-10">
-            <div class="d-flex align-items-center mb-4">
-                <a th:href="@{/dashboard/task-dashboard}" class="btn btn-outline-secondary me-3">
-                    <i class="bi bi-arrow-left"></i>
-                </a>
-                <h4 class="mb-0" th:text="${task.getTitle()}">Task Name</h4>
+        <div class="col-lg-10 col-xl-9">
+            <a th:href="@{/dashboard/task-dashboard}" class="back-link"><i class="bi bi-arrow-left"></i>Tasks</a>
+            <div class="page-head">
+                <div>
+                    <h4 th:text="${task.getTitle()}">Task Name</h4>
+                    <div class="sub d-flex flex-wrap gap-2 mt-1">
+                        <span th:if="${task.isBatchTask()}" class="pill ok"><i class="bi bi-journal-text"></i>Adds to a batch record</span>
+                        <span th:if="${task.getSopFileName() != null}" class="pill"><i class="bi bi-file-earmark-pdf"></i>SOP to read first</span>
+                        <span th:if="${task.getChecklist() != null and !task.getChecklist().getItems().isEmpty()}" class="pill"
+                              th:text="${task.getChecklist().getItems().size() + ' checklist items'}">12 items</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    <p class="text-muted fs-5" th:text="${task.getDescription()}">
-                        Task description goes here.
-                    </p>
+            <div class="s2s-card">
+                <div>
+                    <p class="mb-0" th:if="${task.getDescription() != null and !task.getDescription().isBlank()}"
+                       th:text="${task.getDescription()}">Task description goes here.</p>
 
                     <!-- Inline SOP PDF, rendered via pdf.js so we can detect
                          scroll-to-bottom and gate the Start Task button. Only
@@ -40,7 +45,7 @@
 
                         <div id="sopContainer"
                              th:data-sop-url="@{/tasks/{id}/sop(id=${task.getId()})}"
-                             style="height: clamp(360px, 60vh, 700px); overflow-y:auto; border:1px solid #dee2e6; border-radius:0.375rem; background:#f8f9fa; padding:1rem;">
+                             style="height: clamp(360px, 60vh, 700px); overflow-y:auto; border:1px solid var(--s2s-line); border-radius:10px; background:#f8fafb; padding:1rem;">
                             <div id="sopLoading" class="text-center text-muted py-5">
                                 <div class="spinner-border spinner-border-sm me-2" role="status"></div>
                                 Loading SOP&hellip;
@@ -59,7 +64,7 @@
                        th:href="@{/tasks/{id}/start(id=${task.getId()})}"
                        th:attr="data-sop-required=${task.getSopFileName() != null ? 'true' : 'false'}"
                        id="startTaskBtn"
-                       class="btn btn-s2s btn-lg mt-2">
+                       class="btn btn-s2s btn-lg mt-3 start-task-btn">
                         <i class="bi bi-play-fill me-1"></i> Start Task
                     </a>
 

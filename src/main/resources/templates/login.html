@@ -4,10 +4,11 @@
 <body class="auth-wrapper">
 
 <div class="auth-card">
-    <div class="card shadow-sm">
+    <div class="card">
         <div class="card-body p-4 text-center">
             <img th:src="@{/Seed2Stem_Logo.png}" alt="Seed2Stem" class="img-fluid mb-3">
-            <h4 class="mb-3">Login</h4>
+            <h4 class="mb-1">Sign in</h4>
+            <p class="text-muted small mb-3">Welcome back to Seed2Stem.</p>
 
             <div th:if="${param.error}" class="alert alert-danger py-2" th:text="${param.error}"></div>
             <div th:if="${param.success}" class="alert alert-success py-2" th:text="${param.success}"></div>

@@ -7,19 +7,23 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <div class="d-flex align-items-center gap-2 mb-1">
-        <span class="badge bg-success"><i class="bi bi-circle-fill me-1" style="font-size: 0.6rem;"></i>In Progress</span>
-        <small class="text-muted">Started <span th:text="${#temporals.format(run.getStartTime(), 'h:mm a')}">12:00 PM</span></small>
+    <a th:href="@{/dashboard/task-dashboard}" class="back-link"><i class="bi bi-arrow-left"></i>Tasks</a>
+    <div class="page-head">
+        <div>
+            <h4 th:text="${task.getTitle()}">Task Name</h4>
+            <div class="sub d-flex align-items-center gap-2 mt-1">
+                <span class="pill info"><i class="bi bi-play-fill"></i>In progress</span>
+                <span th:text="${'Started ' + @fmt.when(run.getStartTime())}">Started 12:00 PM</span>
+            </div>
+        </div>
     </div>
-    <h4 class="mb-4" th:text="${task.getTitle()}">Task Name</h4>
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-lg-8 col-xl-7">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <p class="text-muted mb-3">
-                        Describe what you're doing as you work. You can save your progress and come back,
-                        or submit when finished. Your submission will be sent for manager approval.
+                    <p class="text-muted small mb-3">
+                        Describe what you're doing as you work. Pause to save and come back later, or submit when finished.
                     </p>
 
                     <form th:action="@{/tasks/runs/{runId}/submit-user-task(runId=${run.getId()})}" method="post" id="submitForm">

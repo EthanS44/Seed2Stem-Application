@@ -9,18 +9,19 @@
 <main class="s2s-content">
     <div class="row">
         <div class="col-lg-7">
-            <h4 class="mb-2">Report an Issue</h4>
-            <p class="text-muted mb-4">
-                Found a bug or have a suggestion? Let the developers know. Be as specific
-                as you can about what you were doing when the issue happened.
-            </p>
+            <div class="page-head">
+                <div>
+                    <h4>Report an Issue</h4>
+                    <div class="sub">Found a bug or have a suggestion? Say what you were doing when it happened.</div>
+                </div>
+            </div>
 
             <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
                 <span th:text="${error}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 
-            <div class="card shadow-sm">
+            <div class="card">
                 <div class="card-body">
                     <form th:action="@{/tickets}" method="post">
                         <div class="mb-3">

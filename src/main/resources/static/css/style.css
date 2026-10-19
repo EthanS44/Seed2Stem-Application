@@ -207,9 +207,13 @@ body {
 /* ===== Calendar ===== */
 #calendar {
     background: #fff;
-    border-radius: 8px;
+    border: 1px solid var(--s2s-line);
+    border-radius: 10px;
     padding: 1rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+@media (max-width: 575.98px) {
+    #calendar { padding: 0.6rem; }
+    #calendar .fc-toolbar-title { font-size: 1.05rem; }
 }
 
 .fc .fc-button-primary {
@@ -542,3 +546,141 @@ a.s2s-row:hover { background: #f8fafb; color: var(--s2s-ink); }
     .review-head { padding: 0.9rem 1rem; }
     .check-row .value { max-width: 50%; }
 }
+
+/* ============================================================================
+ * App-wide harmonization: restyles plain Bootstrap pieces so every page
+ * matches the dashboards (thin borders, white surfaces, soft status colours).
+ * ============================================================================ */
+body { color: var(--s2s-ink); }
+.s2s-content h4 { font-weight: 650; }
+
+.card { border: 1px solid var(--s2s-line); border-radius: 10px; }
+.card.shadow-sm, .card.shadow { box-shadow: none !important; }
+.card > .card-header { background: #fff; border-bottom-color: var(--s2s-line); padding: 0.75rem 1rem; }
+.card > .card-header:first-child { border-radius: 10px 10px 0 0; }
+.card-header h5, .card-header h6, .card-header .card-title { font-size: 1rem; font-weight: 650; }
+
+.table { --bs-table-border-color: var(--s2s-line); }
+.table > thead > tr > th,
+.table-light > tr > th,
+.table thead.table-light th {
+    background: #f8fafb;
+    color: var(--s2s-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--s2s-line);
+    white-space: nowrap;
+}
+.table-hover > tbody > tr:hover > * { --bs-table-bg-state: #f8fafb; }
+.card > .table-responsive > .table,
+.card > .table { margin-bottom: 0; }
+
+/* Badges become soft pills, matching .pill */
+.badge { border-radius: 999px; font-weight: 600; padding: 0.35em 0.7em; }
+.badge.bg-success { background: var(--s2s-green-tint) !important; color: var(--s2s-green-dark) !important; }
+.badge.bg-warning { background: var(--s2s-amber-tint) !important; color: var(--s2s-amber) !important; }
+.badge.bg-danger { background: var(--s2s-red-tint) !important; color: var(--s2s-red) !important; }
+.badge.bg-info, .badge.bg-primary { background: var(--s2s-blue-tint) !important; color: var(--s2s-blue) !important; }
+.badge.bg-secondary { background: #eef1f4 !important; color: #44505c !important; }
+
+/* Brand green for primary actions */
+.btn-success, .btn-primary {
+    --bs-btn-bg: var(--s2s-green); --bs-btn-border-color: var(--s2s-green);
+    --bs-btn-hover-bg: var(--s2s-green-dark); --bs-btn-hover-border-color: var(--s2s-green-dark);
+    --bs-btn-active-bg: var(--s2s-green-dark); --bs-btn-active-border-color: var(--s2s-green-dark);
+    --bs-btn-disabled-bg: var(--s2s-green); --bs-btn-disabled-border-color: var(--s2s-green);
+}
+.btn-outline-success, .btn-outline-primary {
+    --bs-btn-color: var(--s2s-green); --bs-btn-border-color: #a5cfa8;
+    --bs-btn-hover-bg: var(--s2s-green); --bs-btn-hover-border-color: var(--s2s-green); --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: var(--s2s-green-dark); --bs-btn-active-border-color: var(--s2s-green-dark);
+}
+.btn-outline-secondary { --bs-btn-border-color: #cfd6dc; --bs-btn-color: #44505c; }
+
+.form-control:focus, .form-select:focus, .form-check-input:focus {
+    border-color: #81c784;
+    box-shadow: 0 0 0 0.2rem rgba(46, 125, 50, 0.15);
+}
+.form-check-input:checked { background-color: var(--s2s-green); border-color: var(--s2s-green); }
+.form-label.fw-bold { font-weight: 600 !important; }
+
+.list-group-item { border-color: var(--s2s-line); }
+.list-group-item-action:hover { background: #f8fafb; }
+.alert { border-radius: 10px; }
+.modal-content { border-radius: 12px; border: 0; }
+.nav-tabs .nav-link.active { color: var(--s2s-green-dark); font-weight: 600; }
+
+/* "← Back" link above a page header */
+.back-link { display: inline-flex; align-items: center; gap: 0.3rem; margin-bottom: 0.5rem; color: var(--s2s-green); text-decoration: none; font-size: 0.9rem; }
+.back-link:hover { color: var(--s2s-green-dark); }
+
+/* Plain content card used by forms and detail pages */
+.s2s-card { background: #fff; border: 1px solid var(--s2s-line); border-radius: 10px; padding: 1.25rem; }
+@media (max-width: 767.98px) { .s2s-card { padding: 1rem; } }
+
+/* Tables that become stacked rows on phones: add .table-stack and data-label on each td */
+@media (max-width: 575.98px) {
+    .table-stack thead { display: none; }
+    .table-stack, .table-stack tbody, .table-stack tr, .table-stack td { display: block; width: 100%; }
+    .table-stack tr { border-bottom: 1px solid var(--s2s-line); padding: 0.5rem 0.25rem; }
+    .table-stack > tbody > tr > td { border: 0; padding: 0.2rem 0.75rem; text-align: left !important; }
+    .table-stack > tbody > tr > td[data-label]::before {
+        content: attr(data-label);
+        display: inline-block;
+        min-width: 7.5rem;
+        color: var(--s2s-muted);
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .start-task-btn { display: block; width: 100%; }
+}
+
+.checklist-section-title {
+    margin: 0 -1rem 1rem;
+    padding: 0.6rem 1rem;
+    background: #f8fafb;
+    border-top: 1px solid var(--s2s-line);
+    border-bottom: 1px solid var(--s2s-line);
+    font-weight: 650;
+    color: var(--s2s-ink);
+}
+@media (min-width: 768px) { .checklist-section-title { margin: 0 -1.5rem 1rem; padding: 0.6rem 1.5rem; } }
+
+/* Time clock */
+.clock-icon {
+    display: inline-grid; place-items: center;
+    width: 64px; height: 64px; border-radius: 50%;
+    background: var(--s2s-green-tint); color: var(--s2s-green); font-size: 1.8rem;
+}
+.clock-timer { font-size: 2.6rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; margin: 0.75rem 0 0.25rem; }
+@media (max-width: 575.98px) { .clock-btn { width: 100%; } }
+.min-w-0 { min-width: 0; }
+
+/* Request rows: actions sit on the right on desktop, wrap to a full-width line on phones */
+.request-actions { display: flex; gap: 0.5rem; align-items: center; }
+.request-actions select, .request-actions input { min-width: 150px; }
+@media (max-width: 767.98px) {
+    .request-row .request-actions { flex: 1 1 100%; flex-wrap: wrap; padding-left: calc(34px + 0.75rem); }
+    .request-actions form:first-child { flex: 1 1 auto; }
+    .request-actions select, .request-actions input { min-width: 0; flex: 1 1 auto; }
+}
+
+/* Sign-in pages */
+.auth-wrapper {
+    background: radial-gradient(1200px 600px at 50% -10%, #e3f0e4 0%, var(--s2s-bg) 60%);
+    padding: 1.5rem 1rem;
+}
+.auth-card { max-width: 420px; }
+.auth-card .card { border-radius: 14px; box-shadow: 0 12px 32px rgba(16, 24, 40, 0.08) !important; }
+.auth-card .card-body { padding: 2rem 1.75rem !important; }
+.auth-card img { max-height: 72px; width: auto; }
+.auth-card h4 { font-weight: 650; }
+.auth-card .form-control { padding: 0.65rem 0.85rem; }
+.auth-card .btn-s2s { padding: 0.65rem; font-weight: 600; }
+.auth-card a:not(.btn) { color: var(--s2s-green); }
+@media (max-width: 575.98px) { .auth-card .card-body { padding: 1.5rem 1.25rem !important; } }

@@ -7,16 +7,20 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <h4 class="mb-4">Create Task</h4>
+    <a th:href="@{/dashboard/task-dashboard}" class="back-link"><i class="bi bi-arrow-left"></i>Tasks</a>
+    <div class="page-head">
+        <div>
+            <h4>Create Task</h4>
+            <div class="sub">Log work that isn't one of the standard tasks.</div>
+        </div>
+    </div>
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-lg-8 col-xl-7">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <p class="text-muted mb-4">
-                        Use this form to create and start logging a task that isn't in Seed2Stem.
-                        Once started, you'll be able to describe what you did while you work.
-                        Your submission will be sent for manager approval.
+                    <p class="text-muted small mb-4">
+                        Once started, you'll describe what you did as you work. Your submission goes to a manager for approval.
                     </p>
 
                     <form th:action="@{/tasks/create}" method="post">

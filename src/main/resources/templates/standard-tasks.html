@@ -7,30 +7,25 @@
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h4 class="mb-0" th:text="${showArchived} ? 'Archived Standard Tasks' : 'Standard Tasks'">Standard Tasks</h4>
+    <div class="page-head">
+        <div>
+            <h4 th:text="${showArchived} ? 'Archived Standard Tasks' : 'Standard Tasks'">Standard Tasks</h4>
+            <div class="sub" th:text="${showArchived}
+                 ? 'Archived tasks keep their history. Restore one to make it selectable again.'
+                 : 'Tasks technicians can pick and complete. Click a task to edit it.'">Tasks technicians can pick.</div>
+        </div>
         <div class="d-flex gap-2">
-            <a th:if="${!showArchived}"
-               th:href="@{/developer/standard-tasks(showArchived=true)}"
-               class="btn btn-outline-secondary">
-                <i class="bi bi-archive me-1"></i> Show Archived
+            <a th:if="${!showArchived}" th:href="@{/developer/standard-tasks(showArchived=true)}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-archive me-1"></i>Archived
             </a>
-            <a th:if="${showArchived}"
-               th:href="@{/developer/standard-tasks}"
-               class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Back to Active
+            <a th:if="${showArchived}" th:href="@{/developer/standard-tasks}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Active tasks
             </a>
-            <a th:href="@{/developer/standard-tasks/new}" class="btn btn-success" th:unless="${showArchived}">
-                <i class="bi bi-plus-circle me-1"></i> New Standard Task
+            <a th:href="@{/developer/standard-tasks/new}" class="btn btn-s2s btn-sm" th:unless="${showArchived}">
+                <i class="bi bi-plus-circle me-1"></i>New Standard Task
             </a>
         </div>
     </div>
-    <p class="text-muted mb-4"
-       th:text="${showArchived}
-         ? 'Tasks that have been archived. Historical runs and responses are preserved. Restore to make a task selectable again.'
-         : 'Predefined tasks with checklists that technicians can select and complete.'">
-        Predefined tasks with checklists that technicians can select and complete.
-    </p>
 
     <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
         <span th:text="${success}"></span>
@@ -43,9 +38,9 @@
 
     <div class="row">
         <div class="col-12">
-            <div class="card shadow-sm">
+            <div class="card">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0 align-middle">
+                    <table class="table table-hover mb-0 align-middle table-stack">
                         <thead class="table-light">
                             <tr>
                                 <th>Title</th>
@@ -61,12 +56,12 @@
                                 <td>
                                     <a th:href="@{/developer/standard-tasks/{id}/edit(id=${task.getId()})}"
                                        class="fw-semibold text-decoration-none" th:text="${task.getTitle()}">Task Title</a>
-                                    <span th:if="${task.isBatchTask()}" class="badge bg-success-subtle text-success-emphasis border ms-1"
+                                    <span th:if="${task.isBatchTask()}" class="pill ok ms-1"
                                           th:text="${'Batch: ' + task.getBatchAction().getDisplayName()}">Batch</span>
                                 </td>
-                                <td th:text="${task.getDescription()}" class="text-muted">Description</td>
-                                <td th:text="${task.getChecklist() != null ? task.getChecklist().getName() : '—'}">Checklist Name</td>
-                                <td class="text-end" th:text="${task.getChecklist() != null ? task.getChecklist().getItems().size() : 0}">0</td>
+                                <td data-label="Description" th:text="${task.getDescription() != null and !task.getDescription().isBlank() ? task.getDescription() : '—'}" class="text-muted">Description</td>
+                                <td data-label="Checklist" th:text="${task.getChecklist() != null ? task.getChecklist().getName() + (task.getChecklist().getVersion() != null and task.getChecklist().getVersion() > 1 ? ' (v' + task.getChecklist().getVersion() + ')' : '') : '—'}">Checklist Name</td>
+                                <td data-label="Items" class="text-end" th:text="${task.getChecklist() != null ? task.getChecklist().getItems().size() : 0}">0</td>
                                 <td class="text-end">
                                     <!-- Active task: show Archive (with confirm) -->
                                     <form th:unless="${showArchived}"
