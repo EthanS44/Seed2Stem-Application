@@ -1,217 +1,228 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Seed2Stem - Checklist Review')}"></head>
+<head th:replace="~{fragments/layout :: head(${'Seed2Stem - ' + task.getTitle()})}"></head>
 <body>
 
 <nav th:replace="~{fragments/layout :: topbar}"></nav>
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
-<main class="s2s-content">
-    <div class="row">
-        <div class="col-lg-10">
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
+<!-- One page for viewing a task run: in progress, awaiting approval (with the
+     manager's decision panel), approved, or rejected. -->
+<main class="s2s-content" th:classappend="${canDecide} ? 'has-decision-bar'">
+    <a th:href="@{/dashboard/home-dashboard}" class="btn btn-link px-0 mb-2 text-decoration-none"
+       onclick="if (history.length > 1) { history.back(); return false; }">
+        <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
 
-                    <h3 class="mb-3" th:text="${task.getTitle()}">Checklist Name</h3>
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
 
-                    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+    <div class="row g-3">
+        <div th:class="${canDecide} ? 'col-lg-8' : 'col-xl-9'">
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>Completed by:</strong>
-                                <span th:text="${run.getCompletedBy().getName()}">Name</span></p>
-                            <p class="mb-1"><strong>Inspection Date:</strong>
-                                <span th:text="${#temporals.format(run.getStartTime(), 'MMM d, yyyy')}">Date</span></p>
-                        </div>
-                        <div class="col-md-6">
-                            <p class="mb-1"><strong>Start Time:</strong>
-                                <span th:text="${#temporals.format(run.getStartTime(), 'h:mm a')}">Start</span></p>
-                            <p class="mb-1" th:if="${run.getEndTime() != null}"><strong>End Time:</strong>
-                                <span th:text="${#temporals.format(run.getEndTime(), 'h:mm a')}">End</span></p>
-                            <p class="mb-1" th:if="${run.getChecklistVersion() != null}">
-                                <strong>Checklist Version:</strong>
-                                <span th:text="${run.getChecklistVersion()}">1</span>
-                            </p>
-                        </div>
+            <!-- Header -->
+            <div class="review-head">
+                <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                    <h4 th:text="${task.getTitle()}">Task</h4>
+                    <span th:switch="${run.status.name()}">
+                        <span th:case="'IN_PROGRESS'" class="pill info"><i class="bi bi-play-fill"></i>In progress</span>
+                        <span th:case="'PENDING'" class="pill warn"><i class="bi bi-hourglass-split"></i>Awaiting approval</span>
+                        <span th:case="'APPROVED'" class="pill ok"><i class="bi bi-check2"></i>Approved</span>
+                        <span th:case="'REJECTED'" class="pill bad"><i class="bi bi-x"></i>Rejected</span>
+                    </span>
+                </div>
+                <div class="review-facts">
+                    <span><i class="bi bi-person me-1"></i><strong th:text="${run.completedBy.getName()}">Tech</strong></span>
+                    <span><i class="bi bi-calendar3 me-1"></i><span th:text="${#temporals.format(run.startTime, 'EEE, MMM d, yyyy')}">Date</span></span>
+                    <span><i class="bi bi-clock me-1"></i>
+                        <span th:text="${#temporals.format(run.startTime, 'h:mm a')}">9:00 AM</span><span th:if="${run.endTime != null}"
+                              th:text="${' – ' + #temporals.format(run.endTime, 'h:mm a')}"> – 9:45 AM</span>
+                        <span th:if="${run.durationMinutes != null}" th:text="${'(' + @fmt.minutes(run.durationMinutes) + ')'}">(45 min)</span>
+                    </span>
+                    <span th:if="${run.checklistVersion != null and run.checklistVersion > 1}" th:text="${'Checklist v' + run.checklistVersion}">v2</span>
+                </div>
+            </div>
+
+            <!-- Decision already made -->
+            <div th:if="${run.status.name() == 'APPROVED' or run.status.name() == 'REJECTED'}"
+                 class="result-banner" th:classappend="${run.status.name() == 'APPROVED'} ? 'ok' : 'bad'">
+                <i class="bi" th:classappend="${run.status.name() == 'APPROVED'} ? 'bi-patch-check' : 'bi-arrow-return-left'"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">
+                        <span th:text="${run.status.name() == 'APPROVED'} ? 'Approved' : 'Rejected'">Approved</span>
+                        <span th:if="${run.authorizedBy != null}" th:text="${' by ' + run.authorizedBy.getName()}"></span>
+                        <span th:if="${run.authorizedAt != null}" class="fw-normal" th:text="${' · ' + @fmt.when(run.authorizedAt)}"></span>
                     </div>
+                    <div th:if="${run.managerComments != null and !run.managerComments.isBlank()}"
+                         class="mt-1" th:text="${'“' + run.managerComments + '”'}">Comment</div>
+                    <a th:if="${canResubmit}" class="btn btn-sm btn-danger mt-2"
+                       th:href="@{/tasks/{taskId}/resume/{runId}(taskId=${task.id}, runId=${run.id})}">
+                        <i class="bi bi-pencil me-1"></i>Fix and resubmit
+                    </a>
+                </div>
+            </div>
 
-                    <!-- Status badge -->
-                    <div class="mb-3" th:if="${run.getStatus().name() == 'IN_PROGRESS'}">
-                        <span class="badge bg-info fs-6">
-                            <i class="bi bi-play-circle me-1"></i>IN PROGRESS
-                        </span>
+            <!-- Paused right now -->
+            <div th:if="${openPause != null}" class="result-banner" style="background:var(--s2s-amber-tint);border-color:#f3dcb2;color:#7a4a00">
+                <i class="bi bi-pause-circle"></i>
+                <div>
+                    <div class="fw-semibold">Paused since <span th:text="${@fmt.when(openPause.startTime)}">12:00 PM</span></div>
+                    <div th:if="${openPause.reason != null and !openPause.reason.isBlank()}" th:text="${openPause.reason}">Reason</div>
+                </div>
+            </div>
+
+            <div th:if="${isInProgress and !hasAnyResponse}" class="s2s-panel s2s-empty mb-3">
+                <i class="bi bi-hourglass d-block fs-3 mb-1"></i>
+                Nothing saved yet. Answers appear here when the task is paused or submitted.
+            </div>
+
+            <!-- Result summary: failures first -->
+            <div th:if="${!isInProgress and !failures.isEmpty()}" class="result-banner bad">
+                <i class="bi bi-exclamation-octagon"></i>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold" th:text="${failures.size() + ' of ' + passFailChecks + ' checks failed'}">2 of 25 checks failed</div>
+                    <ul>
+                        <li th:each="f : ${failures}">
+                            <a th:href="${'#' + failureAnchors[f.id]}" th:text="${f.checklistItem.shortLabel}">Fans</a><span
+                               th:if="${f.textAnswer != null and !f.textAnswer.isBlank()}" th:text="${' — ' + f.textAnswer}"></span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div th:if="${!isInProgress and failures.isEmpty() and passFailChecks > 0}" class="result-banner ok">
+                <i class="bi bi-check-circle"></i>
+                <div class="fw-semibold" th:text="${'All ' + passFailChecks + ' checks passed'}">All checks passed</div>
+            </div>
+
+            <!-- Batch record entry -->
+            <div th:if="${batchEntry != null}" class="s2s-panel mb-3">
+                <div class="panel-head">
+                    <h6><i class="bi bi-journal-text me-2"></i>Batch record — <span th:text="${batchEntry.action.getDisplayName()}">Action</span></h6>
+                    <span class="pill"
+                          th:classappend="${batchEntry.status.name() == 'APPROVED'} ? 'ok' : (${batchEntry.status.name() == 'REJECTED'} ? 'bad' : 'warn')"
+                          th:text="${batchEntry.status.name() == 'APPROVED'} ? 'On batch record' : (${batchEntry.status.name() == 'REJECTED'} ? 'Voided' : 'Added on approval')">Status</span>
+                </div>
+                <div class="check-row">
+                    <div class="label">Batch</div>
+                    <div class="value">
+                        <a th:if="${batchEntry.batch != null}" th:href="@{/batch-records/{id}(id=${batchEntry.batch.id})}"
+                           class="font-monospace" th:text="${batchEntry.batch.batchCode}">code</a>
+                        <span th:if="${batchEntry.batch == null}" class="font-monospace"
+                              th:text="${batchEntry.proposedBatchCode != null ? batchEntry.proposedBatchCode : '—'}">code</span>
+                        <div th:if="${batchEntry.batch == null and batchEntry.proposedBatchCode != null}" class="small text-muted fw-normal">created on approval</div>
                     </div>
-                    <div class="mb-3" th:if="${run.getStatus().name() == 'PENDING'}">
-                        <span class="badge bg-warning text-dark fs-6">PENDING REVIEW</span>
+                </div>
+                <div class="check-row" th:if="${batchEntry.room != null}"><div class="label">Room</div><div class="value" th:text="${batchEntry.room.getDisplayName()}"></div></div>
+                <div class="check-row" th:if="${batchEntry.getVarietyLabel() != null and batchEntry.action.isCreatesBatch()}"><div class="label">Variety</div><div class="value" th:text="${batchEntry.getVarietyLabel()}"></div></div>
+                <div class="check-row" th:if="${batchEntry.plantCount != null}"><div class="label">Plant count</div><div class="value" th:text="${batchEntry.plantCount}"></div></div>
+                <div class="check-row" th:if="${batchEntry.weightKg != null}">
+                    <div class="label" th:text="${batchEntry.action.name() == 'HARVEST'} ? 'Wet weight' : (${batchEntry.action.name() == 'DRY_WEIGHT'} ? 'Dry flower weight' : 'Weight destroyed')">Weight</div>
+                    <div class="value" th:text="${#numbers.formatDecimal(batchEntry.weightKg, 1, 3) + ' kg'}"></div>
+                </div>
+                <div class="check-row" th:if="${batchEntry.fanLeafKg != null}"><div class="label">Fan leaves</div><div class="value" th:text="${#numbers.formatDecimal(batchEntry.fanLeafKg, 1, 3) + ' kg'}"></div></div>
+                <div class="check-row" th:if="${batchEntry.stemKg != null}"><div class="label">Stems</div><div class="value" th:text="${#numbers.formatDecimal(batchEntry.stemKg, 1, 3) + ' kg'}"></div></div>
+                <div class="check-row" th:if="${batchEntry.trimKg != null}"><div class="label">Trim</div><div class="value" th:text="${#numbers.formatDecimal(batchEntry.trimKg, 1, 3) + ' kg'}"></div></div>
+                <div class="check-row" th:if="${batchEntry.flowerTrimmedKg != null}"><div class="label">Flower trimmed</div><div class="value" th:text="${#numbers.formatDecimal(batchEntry.flowerTrimmedKg, 1, 3) + ' kg'}"></div></div>
+                <div class="check-row" th:if="${batchEntry.source != null}"><div class="label" th:text="${batchEntry.action.name() == 'CLONING'} ? 'Mother / source batch' : 'Supplier / source'">Source</div><div class="value" th:text="${batchEntry.source}"></div></div>
+                <div class="check-row" th:if="${batchEntry.lotNumber != null}"><div class="label">Lot number</div><div class="value" th:text="${batchEntry.lotNumber}"></div></div>
+                <div class="check-row" th:if="${batchEntry.filterWork != null}"><div class="label">Filters</div><div class="value" th:text="${batchEntry.filterWork.getDisplayName() + (batchEntry.filterCount != null ? ', ' + batchEntry.filterCount + ' filters' : '') + (batchEntry.filterRating != null ? ', MERV ' + batchEntry.filterRating : '')}"></div></div>
+                <div class="check-row" th:if="${batchEntry.material != null}"><div class="label">Material</div><div class="value" th:text="${batchEntry.material.getDisplayName()}"></div></div>
+                <div class="check-row" th:if="${batchEntry.destructionMethod != null}"><div class="label">Method</div><div class="value" th:text="${batchEntry.destructionMethod}"></div></div>
+                <div class="check-row" th:if="${batchEntry.witness != null}"><div class="label">Witness</div><div class="value" th:text="${batchEntry.witness}"></div></div>
+                <div class="check-row" th:if="${batchEntry.notes != null}"><div class="label">Notes</div><div class="value text" th:text="${batchEntry.notes}"></div></div>
+            </div>
+
+            <!-- Checklist answers, by section -->
+            <div th:each="sec : ${sections}" class="s2s-panel check-section" th:id="${sec.anchor}">
+                <div class="panel-head">
+                    <h6 th:text="${sec.title != null ? sec.title.replaceAll(':\s*$', '') : 'Checklist'}">Room B1</h6>
+                    <span th:if="${sec.failCount > 0}" class="pill bad" th:text="${sec.failCount + ' failed'}">1 failed</span>
+                    <span th:if="${sec.failCount == 0}" class="count" th:text="${sec.responses.size() + (sec.responses.size() == 1 ? ' item' : ' items')}">8 items</span>
+                </div>
+                <div th:each="resp : ${sec.responses}" class="check-row"
+                     th:with="item=${resp.checklistItem}, type=${resp.checklistItem.responseType.name()}"
+                     th:classappend="${resp.failed} ? 'failed'">
+                    <div class="label">
+                        <div class="fw-semibold" th:text="${item.shortLabel}">Humidity</div>
+                        <div class="q" th:if="${item.category != null}" th:text="${item.text}">Record humidity level. (%)</div>
+                        <div class="note" th:if="${type == 'BOOLEAN_TEXT' and resp.textAnswer != null and !resp.textAnswer.isBlank()}"
+                             th:classappend="${!resp.failed} ? 'text-muted'" th:text="${resp.textAnswer}">Note</div>
+                        <div class="mt-1" th:if="${type == 'TEXT'}" th:text="${resp.textAnswer != null and !resp.textAnswer.isBlank() ? resp.textAnswer : '—'}">Answer</div>
                     </div>
-                    <div class="mb-3" th:if="${run.getStatus().name() == 'REJECTED'}">
-                        <span class="badge bg-danger fs-6">REJECTED</span>
+                    <div class="value" th:if="${type == 'BOOLEAN_TEXT'}">
+                        <span th:if="${resp.booleanAnswer != null and resp.booleanAnswer}" class="pill ok"><i class="bi bi-check2"></i>Pass</span>
+                        <span th:if="${resp.failed}" class="pill bad"><i class="bi bi-x"></i>Fail</span>
+                        <span th:if="${resp.booleanAnswer == null}" class="pill">—</span>
                     </div>
-                    <div class="mb-3" th:if="${run.getStatus().name() == 'APPROVED'}">
-                        <span class="badge bg-success fs-6">APPROVED</span>
+                    <div class="value" th:if="${type == 'INTEGER' or type == 'NUMBER' or type == 'DECIMAL'}"
+                         th:text="${resp.numericLabel != null ? resp.numericLabel : '—'}">20%</div>
+                    <div class="value" th:if="${type == 'NONE'}">
+                        <span th:if="${resp.booleanAnswer != null and resp.booleanAnswer}" class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Done</span>
+                        <span th:unless="${resp.booleanAnswer != null and resp.booleanAnswer}" class="text-muted">Not done</span>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Currently-paused banner (only when a TaskPause is open) -->
-                    <div th:if="${openPause != null}" class="alert alert-warning d-flex align-items-start mb-3">
-                        <i class="bi bi-pause-circle-fill fs-4 me-2"></i>
-                        <div>
-                            <div class="fw-semibold">Currently paused</div>
-                            <div class="small">
-                                Paused at
-                                <span th:text="${#temporals.format(openPause.getStartTime(), 'h:mm a')}">12:00 PM</span>
-                                <span th:if="${openPause.getReason() != null and !openPause.getReason().isBlank()}">
-                                    &nbsp;&bull;&nbsp; Reason:
-                                    <span th:text="${openPause.getReason()}">break</span>
-                                </span>
-                                <span th:if="${openPause.getReason() == null or openPause.getReason().isBlank()}">
-                                    &nbsp;&bull;&nbsp; <em>No reason given</em>
-                                </span>
-                            </div>
-                        </div>
+        <!-- Manager decision -->
+        <div class="col-lg-4" th:if="${canDecide}">
+            <div class="s2s-panel decision-card" id="decision">
+                <div class="panel-head"><h6><i class="bi bi-clipboard-check me-2"></i>Your decision</h6></div>
+                <div class="p-3">
+                    <p class="small mb-2" th:if="${!failures.isEmpty()}">
+                        <i class="bi bi-exclamation-octagon text-danger me-1"></i>
+                        <span th:text="${failures.size() + (failures.size() == 1 ? ' check failed.' : ' checks failed.')}">2 checks failed.</span>
+                        Approve if the issues were handled, or reject so <span th:text="${run.completedBy.firstName}">Tina</span> can fix and resubmit.
+                    </p>
+                    <label for="managerComments" class="form-label small fw-semibold">Comments</label>
+                    <textarea class="form-control" id="managerComments" rows="3"
+                              placeholder="Optional when approving. Required when rejecting — say what needs fixing."></textarea>
+                    <div class="invalid-feedback">Say what needs fixing before rejecting.</div>
+                    <div class="d-none d-lg-flex gap-2 mt-3">
+                        <button type="button" class="btn btn-s2s flex-fill" data-decision="approve"><i class="bi bi-check2-circle me-1"></i>Approve</button>
+                        <button type="button" class="btn btn-outline-danger flex-fill" data-decision="reject"><i class="bi bi-x-circle me-1"></i>Reject</button>
                     </div>
-
-                    <!-- Progress hint for in-progress runs with no saved responses yet -->
-                    <div th:if="${isInProgress and !hasAnyResponse}"
-                         class="alert alert-light border small mb-3">
-                        <i class="bi bi-info-circle me-1"></i>
-                        Technician hasn't saved any progress yet. Responses are persisted when they pause or submit.
-                    </div>
-
-                    <hr>
-
-                    <!-- Rooms Grid -->
-                    <div class="row g-3 mt-2">
-                        <div class="col-md-4" th:each="header : ${headers}">
-                            <div class="card bg-light h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title border-bottom pb-2" th:text="${header.text}">Room</h6>
-
-                                    <div th:each="resp : ${responsesByHeader[header.id]}">
-
-                                        <!-- BOOLEAN_TEXT items: use category displayName -->
-                                        <div th:if="${resp.checklistItem.responseType.name() == 'BOOLEAN_TEXT'}"
-                                             class="d-flex justify-content-between align-items-center mb-1">
-                                            <strong class="small"
-                                                    th:text="${resp.checklistItem.category != null ? resp.checklistItem.category.displayName : resp.checklistItem.text}">
-                                                Label
-                                            </strong>
-                                            <span class="status-dot"
-                                                  th:classappend="${(resp.booleanAnswer ?: false) ? 'green' : 'red'}"></span>
-                                        </div>
-                                        <div th:if="${resp.checklistItem.responseType.name() == 'BOOLEAN_TEXT' and (resp.booleanAnswer ?: false) == false and resp.textAnswer != null and !resp.textAnswer.isBlank()}"
-                                             class="text-danger small mb-2" th:text="${resp.textAnswer}"></div>
-
-                                        <!-- TEXT items -->
-                                        <div th:if="${resp.checklistItem.responseType.name() == 'TEXT'}" class="small mb-1">
-                                            <strong th:text="${resp.checklistItem.category != null ? resp.checklistItem.category.displayName : resp.checklistItem.text}">Label</strong>:
-                                            <span th:text="${resp.textAnswer}"></span>
-                                        </div>
-
-                                        <!-- INTEGER / NUMBER / DECIMAL items: use category displayName -->
-                                        <div th:if="${resp.checklistItem.responseType.name() == 'INTEGER' or resp.checklistItem.responseType.name() == 'NUMBER' or resp.checklistItem.responseType.name() == 'DECIMAL'}" class="small mb-1">
-                                            <strong th:text="${resp.checklistItem.category != null ? resp.checklistItem.category.displayName : resp.checklistItem.text}">Label</strong>:
-                                            <span th:text="${resp.numericAnswer}"></span>
-                                        </div>
-
-                                        <!-- NONE (checkbox) items -->
-                                        <div th:if="${resp.checklistItem.responseType.name() == 'NONE'}"
-                                             class="d-flex justify-content-between align-items-center mb-1">
-                                            <strong class="small" th:text="${resp.checklistItem.text}">Label</strong>
-                                            <i class="bi bi-check-square-fill text-success"
-                                               th:if="${resp.booleanAnswer != null and resp.booleanAnswer}"></i>
-                                        </div>
-
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Batch record entry this run will add (or added) -->
-                    <div th:if="${batchEntry != null}" class="card border-success mb-3">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0"><i class="bi bi-journal-text me-2"></i>Batch Record —
-                                <span th:text="${batchEntry.action.getDisplayName()}">Action</span></h6>
-                            <span class="badge"
-                                  th:classappend="${batchEntry.status.name() == 'APPROVED'} ? 'bg-success' : (${batchEntry.status.name() == 'REJECTED'} ? 'bg-danger' : 'bg-warning text-dark')"
-                                  th:text="${batchEntry.status.name() == 'APPROVED'} ? 'On batch record' : (${batchEntry.status.name() == 'REJECTED'} ? 'Voided' : 'Added on approval')">Status</span>
-                        </div>
-                        <div class="card-body">
-                            <dl class="row mb-0 small">
-                                <dt class="col-sm-4">Batch</dt>
-                                <dd class="col-sm-8">
-                                    <a th:if="${batchEntry.batch != null}" th:href="@{/batch-records/{id}(id=${batchEntry.batch.id})}"
-                                       class="font-monospace" th:text="${batchEntry.batch.batchCode}">code</a>
-                                    <span th:if="${batchEntry.batch == null}" class="font-monospace"
-                                          th:text="${batchEntry.proposedBatchCode != null ? batchEntry.proposedBatchCode + ' (created on approval)' : '—'}">code</span>
-                                </dd>
-                                <th:block th:if="${batchEntry.room != null}"><dt class="col-sm-4">Room</dt><dd class="col-sm-8" th:text="${batchEntry.room.getDisplayName()}"></dd></th:block>
-                                <th:block th:if="${batchEntry.getVarietyLabel() != null and batchEntry.action.isCreatesBatch()}"><dt class="col-sm-4">Variety</dt><dd class="col-sm-8" th:text="${batchEntry.getVarietyLabel()}"></dd></th:block>
-                                <th:block th:if="${batchEntry.plantCount != null}"><dt class="col-sm-4">Plant count</dt><dd class="col-sm-8" th:text="${batchEntry.plantCount}"></dd></th:block>
-                                <th:block th:if="${batchEntry.weightKg != null}"><dt class="col-sm-4" th:text="${batchEntry.action.name() == 'HARVEST'} ? 'Wet weight' : (${batchEntry.action.name() == 'DRY_WEIGHT'} ? 'Dry flower weight' : 'Weight destroyed')">Weight</dt><dd class="col-sm-8" th:text="${#numbers.formatDecimal(batchEntry.weightKg, 1, 3) + ' kg'}"></dd></th:block>
-                                <th:block th:if="${batchEntry.fanLeafKg != null}"><dt class="col-sm-4">Fan leaves</dt><dd class="col-sm-8" th:text="${#numbers.formatDecimal(batchEntry.fanLeafKg, 1, 3) + ' kg'}"></dd></th:block>
-                                <th:block th:if="${batchEntry.stemKg != null}"><dt class="col-sm-4">Stems</dt><dd class="col-sm-8" th:text="${#numbers.formatDecimal(batchEntry.stemKg, 1, 3) + ' kg'}"></dd></th:block>
-                                <th:block th:if="${batchEntry.trimKg != null}"><dt class="col-sm-4">Trim</dt><dd class="col-sm-8" th:text="${#numbers.formatDecimal(batchEntry.trimKg, 1, 3) + ' kg'}"></dd></th:block>
-                                <th:block th:if="${batchEntry.flowerTrimmedKg != null}"><dt class="col-sm-4">Flower trimmed</dt><dd class="col-sm-8" th:text="${#numbers.formatDecimal(batchEntry.flowerTrimmedKg, 1, 3) + ' kg'}"></dd></th:block>
-                                <th:block th:if="${batchEntry.source != null}"><dt class="col-sm-4" th:text="${batchEntry.action.name() == 'CLONING'} ? 'Mother / source batch' : 'Supplier / source'">Source</dt><dd class="col-sm-8" th:text="${batchEntry.source}"></dd></th:block>
-                                <th:block th:if="${batchEntry.lotNumber != null}"><dt class="col-sm-4">Lot number</dt><dd class="col-sm-8" th:text="${batchEntry.lotNumber}"></dd></th:block>
-                                <th:block th:if="${batchEntry.filterWork != null}"><dt class="col-sm-4">Filters</dt><dd class="col-sm-8" th:text="${batchEntry.filterWork.getDisplayName() + (batchEntry.filterCount != null ? ', ' + batchEntry.filterCount + ' filters' : '') + (batchEntry.filterRating != null ? ', MERV ' + batchEntry.filterRating : '')}"></dd></th:block>
-                                <th:block th:if="${batchEntry.material != null}"><dt class="col-sm-4">Material</dt><dd class="col-sm-8" th:text="${batchEntry.material.getDisplayName()}"></dd></th:block>
-                                <th:block th:if="${batchEntry.destructionMethod != null}"><dt class="col-sm-4">Method</dt><dd class="col-sm-8" th:text="${batchEntry.destructionMethod}"></dd></th:block>
-                                <th:block th:if="${batchEntry.witness != null}"><dt class="col-sm-4">Witness</dt><dd class="col-sm-8" th:text="${batchEntry.witness}"></dd></th:block>
-                                <th:block th:if="${batchEntry.notes != null}"><dt class="col-sm-4">Notes</dt><dd class="col-sm-8" th:text="${batchEntry.notes}"></dd></th:block>
-                            </dl>
-                        </div>
-                    </div>
-
-                    <hr class="mt-4">
-
-                    <!-- Manager Approval / Rejection (only show if PENDING) -->
-                    <div th:if="${run.getStatus().name() == 'PENDING'}">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold">Manager Comments:</label>
-                            <textarea class="form-control" id="managerComments" name="managerComments" rows="3"
-                                      placeholder="Enter your comments here" form="approveForm"></textarea>
-                        </div>
-
-                        <div class="d-flex gap-3">
-                            <form id="approveForm"
-                                  th:action="@{/checklist-runs/runs/{runId}/approve(runId=${run.getId()})}"
-                                  method="post">
-                                <input type="hidden" name="runId" th:value="${run.getId()}"/>
-                                <button type="submit" class="btn btn-s2s btn-lg">
-                                    <i class="bi bi-check-circle me-1"></i> Approve
-                                </button>
-                            </form>
-
-                            <form th:action="@{/checklist-runs/runs/{runId}/reject(runId=${run.getId()})}"
-                                  method="post">
-                                <input type="hidden" name="runId" th:value="${run.getId()}"/>
-                                <input type="hidden" name="managerComments" id="rejectComments"/>
-                                <button type="submit" class="btn btn-danger btn-lg"
-                                        onclick="document.getElementById('rejectComments').value = document.getElementById('managerComments').value;">
-                                    <i class="bi bi-x-circle me-1"></i> Reject
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Show previous manager comments if already reviewed -->
-                    <div th:if="${run.getStatus().name() != 'PENDING' and run.getManagerComments() != null and !run.getManagerComments().isBlank()}">
-                        <h6>Manager Comments:</h6>
-                        <p th:text="${run.getManagerComments()}">Comments</p>
-                        <p class="small text-muted" th:if="${run.getAuthorizedBy() != null}">
-                            Reviewed by <span th:text="${run.getAuthorizedBy().getName()}">Manager</span>
-                            on <span th:text="${#temporals.format(run.getAuthorizedAt(), 'MMM d, yyyy h:mm a')}">Date</span>
-                        </p>
-                    </div>
-
                 </div>
             </div>
         </div>
     </div>
+
+    <th:block th:if="${canDecide}">
+        <form id="approveForm" th:action="@{/checklist-runs/runs/{id}/approve(id=${run.id})}" method="post" class="d-none">
+            <input type="hidden" name="managerComments">
+        </form>
+        <form id="rejectForm" th:action="@{/checklist-runs/runs/{id}/reject(id=${run.id})}" method="post" class="d-none">
+            <input type="hidden" name="managerComments">
+        </form>
+        <!-- Phone / tablet: decision buttons pinned to the bottom of the screen -->
+        <div class="decision-bar d-lg-none">
+            <button type="button" class="btn btn-outline-danger" data-decision="reject"><i class="bi bi-x-circle me-1"></i>Reject</button>
+            <button type="button" class="btn btn-s2s" data-decision="approve"><i class="bi bi-check2-circle me-1"></i>Approve</button>
+        </div>
+    </th:block>
 </main>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
+<script th:if="${canDecide}">
+    (function () {
+        const comments = document.getElementById('managerComments');
+        document.querySelectorAll('[data-decision]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const reject = btn.dataset.decision === 'reject';
+                const text = comments.value.trim();
+                if (reject && !text) {
+                    comments.classList.add('is-invalid');
+                    comments.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    comments.focus({preventScroll: true});
+                    return;
+                }
+                const form = document.getElementById(reject ? 'rejectForm' : 'approveForm');
+                form.querySelector('[name=managerComments]').value = text;
+                document.querySelectorAll('[data-decision]').forEach(b => b.disabled = true);
+                form.submit();
+            });
+        });
+        comments.addEventListener('input', () => comments.classList.remove('is-invalid'));
+    })();
+</script>
 </body>
 </html>

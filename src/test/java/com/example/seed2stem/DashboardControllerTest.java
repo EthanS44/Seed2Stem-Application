@@ -33,6 +33,21 @@ class DashboardControllerTest {
     @Mock
     private TaskPauseRepository taskPauseRepository;
 
+    @Mock
+    private ChecklistRunRepository runRepo;
+
+    @Mock
+    private BatchRecordService batchRecordService;
+
+    @Mock
+    private RegistrationRequestRepository registrationRequestRepo;
+
+    @Mock
+    private PasswordResetRequestRepository passwordResetRequestRepo;
+
+    @Mock
+    private TicketRepository ticketRepo;
+
     @InjectMocks
     private DashboardController controller;
 
@@ -102,13 +117,19 @@ class DashboardControllerTest {
         ChecklistRun run2 = new ChecklistRun();
         when(checklistRunService.getActiveRunsForUser(techUser))
                 .thenReturn(List.of(run1, run2));
-        when(timeEntryService.isClockedIn(techUser)).thenReturn(true);
+        TimeEntry shift = new TimeEntry();
+        shift.setClockInTime(java.time.LocalDateTime.now().minusHours(2));
+        when(timeEntryService.getActiveEntry(techUser)).thenReturn(java.util.Optional.of(shift));
+        when(runRepo.countByCompletedByAndStatus(techUser, ChecklistRunStatus.PENDING)).thenReturn(1L);
 
         String result = controller.technicianDashboard(session, model);
 
         assertEquals("technician-dashboard", result);
         assertEquals(2, model.getAttribute("activeTaskCount"));
         assertEquals(true, model.getAttribute("clockedIn"));
+        assertEquals(1L, model.getAttribute("awaitingCount"));
+        assertEquals(2.0, (double) model.getAttribute("hoursThisWeek"), 0.1);
+        assertTrue(((String) model.getAttribute("greeting")).endsWith(techUser.getFirstName()));
     }
 
     // --- managerDashboard ---
@@ -129,14 +150,22 @@ class DashboardControllerTest {
                 .thenReturn(List.of(new ChecklistRun(), new ChecklistRun()));
         when(checklistRunService.getAllActiveRuns())
                 .thenReturn(List.of(new ChecklistRun(), new ChecklistRun(), new ChecklistRun()));
-        when(timeEntryService.countClockedIn()).thenReturn(4L);
+        when(timeEntryService.getAllActiveEntries())
+                .thenReturn(List.of(new TimeEntry(), new TimeEntry(), new TimeEntry(), new TimeEntry()));
+        java.util.Map<Room, FilterStatus> filters = new java.util.LinkedHashMap<>();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        filters.put(Room.B1, new FilterStatus(Room.B1, today.minusDays(20), today));
+        filters.put(Room.B2, new FilterStatus(Room.B2, today.minusDays(1), today));
+        when(batchRecordService.filterStatuses()).thenReturn(filters);
 
         String result = controller.managerDashboard(session, model);
 
-        assertEquals("manager-dashboard", result);
+        assertEquals("staff-dashboard", result);
+        assertEquals(false, model.getAttribute("isDeveloper"));
         assertEquals(2, model.getAttribute("pendingCount"));
         assertEquals(3, model.getAttribute("allActiveTaskCount"));
         assertEquals(4L, model.getAttribute("clockedInCount"));
+        assertEquals(1, ((List<?>) model.getAttribute("filterAlerts")).size()); // only the overdue room
     }
 
     // --- developerDashboard ---
@@ -155,14 +184,18 @@ class DashboardControllerTest {
         Model model = new ConcurrentModel();
         when(checklistRunService.getPendingChecklists()).thenReturn(List.of());
         when(checklistRunService.getAllActiveRuns()).thenReturn(List.of(new ChecklistRun()));
-        when(timeEntryService.countClockedIn()).thenReturn(1L);
+        when(timeEntryService.getAllActiveEntries()).thenReturn(List.of(new TimeEntry()));
+        when(batchRecordService.filterStatuses()).thenReturn(java.util.Map.of());
+        when(ticketRepo.countByStatus(TicketStatus.OPEN)).thenReturn(3L);
 
         String result = controller.developerDashboard(session, model);
 
-        assertEquals("developer-dashboard", result);
+        assertEquals("staff-dashboard", result);
+        assertEquals(true, model.getAttribute("isDeveloper"));
         assertEquals(0, model.getAttribute("pendingCount"));
         assertEquals(1, model.getAttribute("allActiveTaskCount"));
         assertEquals(1L, model.getAttribute("clockedInCount"));
+        assertEquals(3L, model.getAttribute("openTicketCount"));
     }
 
     // --- taskDashboard ---

@@ -79,4 +79,16 @@ public class ChecklistItem {
     public void setChecklist(Checklist checklist) {
         this.checklist = checklist;
     }
+
+    /** Unit written in trailing parentheses of the question, e.g. "(%)" or "(°C)"; null if none. */
+    public String getUnit() {
+        if (text == null) return null;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\(([^()]{1,6})\\)\\s*$").matcher(text);
+        return m.find() ? m.group(1).trim() : null;
+    }
+
+    /** Short label for review screens: the category name when set, else the question text. */
+    public String getShortLabel() {
+        return category != null ? category.getDisplayName() : text;
+    }
 }

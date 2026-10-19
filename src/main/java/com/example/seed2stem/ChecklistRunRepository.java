@@ -24,6 +24,12 @@ public interface ChecklistRunRepository
     @Query("SELECT r FROM ChecklistRun r JOIN FETCH r.task WHERE r.completedBy = :user AND r.status IN ('APPROVED', 'PENDING') ORDER BY r.startTime DESC")
     List<ChecklistRun> findCompletedByUserOrderByStartTimeDesc(@Param("user") User user);
 
+    /** A technician's latest submitted runs (pending, approved or rejected) for their dashboard. */
+    @Query("SELECT r FROM ChecklistRun r JOIN FETCH r.task WHERE r.completedBy = :user AND r.status <> 'IN_PROGRESS' ORDER BY r.endTime DESC, r.startTime DESC")
+    List<ChecklistRun> findRecentSubmittedByUser(@Param("user") User user, org.springframework.data.domain.Pageable page);
+
+    long countByCompletedByAndStatus(User completedBy, ChecklistRunStatus status);
+
     Optional<ChecklistRun> findFirstByTask(Task task);
 
     @Query("SELECT r FROM ChecklistRun r JOIN FETCH r.completedBy JOIN FETCH r.task WHERE r.status = :status ORDER BY r.startTime ASC")

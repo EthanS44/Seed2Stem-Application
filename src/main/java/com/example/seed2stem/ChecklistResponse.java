@@ -62,5 +62,22 @@ public class ChecklistResponse {
     public ChecklistItem getChecklistItem() {
         return checklistItem;
     }
-}
 
+    /** A pass/fail check answered FAIL. */
+    public boolean isFailed() {
+        return checklistItem != null
+                && checklistItem.getResponseType() == ChecklistResponseType.BOOLEAN_TEXT
+                && Boolean.FALSE.equals(booleanAnswer);
+    }
+
+    /** Numeric answer without a trailing ".0", plus the question's unit when it has one. */
+    public String getNumericLabel() {
+        if (numericAnswer == null) return null;
+        String n = numericAnswer == Math.rint(numericAnswer)
+                ? String.valueOf(numericAnswer.longValue())
+                : java.math.BigDecimal.valueOf(numericAnswer).stripTrailingZeros().toPlainString();
+        String unit = checklistItem != null ? checklistItem.getUnit() : null;
+        if (unit == null) return n;
+        return "%".equals(unit) || unit.startsWith("°") ? n + unit : n + " " + unit;
+    }
+}

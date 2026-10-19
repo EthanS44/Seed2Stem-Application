@@ -116,4 +116,16 @@ public class ChecklistRun {
     public void setChecklistVersion(Integer checklistVersion) {
         this.checklistVersion = checklistVersion;
     }
+
+    /** Pass/fail checks answered FAIL — shown as a count on dashboards and the review page. */
+    public int getFailCount() {
+        if (responses == null) return 0;
+        return (int) responses.stream().filter(ChecklistResponse::isFailed).count();
+    }
+
+    /** Minutes from start to submit, or null while in progress. */
+    public Long getDurationMinutes() {
+        if (startTime == null || endTime == null) return null;
+        return java.time.Duration.between(startTime, endTime).toMinutes();
+    }
 }

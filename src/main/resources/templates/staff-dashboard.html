@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Dashboard')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<!-- Manager and developer dashboard: what needs attention right now. -->
+<main class="s2s-content">
+    <div class="page-head">
+        <div>
+            <h4 th:text="${greeting}">Good morning</h4>
+            <div class="sub" th:text="${#temporals.format(today, 'EEEE, MMMM d')}">Monday, October 19</div>
+        </div>
+        <a th:if="${isDeveloper}" th:href="@{/admin/export.xlsx}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export to Excel
+        </a>
+    </div>
+
+    <!-- Stat tiles -->
+    <div class="row g-2 g-md-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <a href="#approvals" class="s2s-stat" th:classappend="${pendingCount > 0} ? 'attn'">
+                <span class="chip"><i class="bi bi-clipboard-check"></i></span>
+                <span><span class="num d-block" th:text="${pendingCount}">0</span><span class="lbl">Needs approval</span></span>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a th:href="@{/dashboard/task-dashboard}" class="s2s-stat info">
+                <span class="chip"><i class="bi bi-play-circle"></i></span>
+                <span><span class="num d-block" th:text="${allActiveTaskCount}">0</span><span class="lbl">In progress</span></span>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a th:href="@{/technicians}" class="s2s-stat">
+                <span class="chip"><i class="bi bi-person-check"></i></span>
+                <span><span class="num d-block" th:text="${clockedInCount}">0</span><span class="lbl">On the clock</span></span>
+            </a>
+        </div>
+        <div class="col-6 col-lg-3">
+            <a th:href="@{/batch-records}" class="s2s-stat" th:classappend="${!filterAlerts.isEmpty()} ? 'alert'">
+                <span class="chip"><i class="bi bi-wind"></i></span>
+                <span><span class="num d-block" th:text="${filterAlerts.size()}">0</span>
+                    <span class="lbl">Filter alerts</span></span>
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Approvals -->
+        <div class="col-lg-7">
+            <div class="s2s-panel mb-3" id="approvals">
+                <div class="panel-head">
+                    <h6><i class="bi bi-clipboard-check me-2"></i>Needs your approval</h6>
+                    <span class="pill warn" th:if="${pendingCount > 0}" th:text="${pendingCount + ' waiting'}">2 waiting</span>
+                </div>
+                <div th:if="${pendingRuns.isEmpty()}" class="s2s-empty">
+                    <i class="bi bi-check2-circle d-block fs-3 mb-1 text-success"></i>
+                    Nothing waiting. You're all caught up.
+                </div>
+                <a th:each="run : ${pendingRuns}" class="s2s-row" th:href="@{/checklist-runs/runs/{id}(id=${run.id})}">
+                    <span class="avatar" th:text="${@fmt.initials(run.completedBy)}">TT</span>
+                    <span class="grow">
+                        <span class="title d-block" th:text="${run.task != null ? run.task.title : run.checklistName}">Task</span>
+                        <span class="meta d-block">
+                            <span th:text="${run.completedBy.getName()}">Tech</span>
+                            &middot; submitted <span th:text="${@fmt.ago(run.endTime)}">5 min ago</span>
+                        </span>
+                    </span>
+                    <span th:if="${run.failCount > 0}" class="pill bad"
+                          th:text="${run.failCount + (run.failCount == 1 ? ' failed' : ' failed')}">2 failed</span>
+                    <span th:if="${run.failCount == 0}" class="pill ok d-none d-sm-inline-flex">No failures</span>
+                    <i class="bi bi-chevron-right chev"></i>
+                </a>
+            </div>
+
+            <!-- Developer admin queue -->
+            <div th:if="${isDeveloper}" class="s2s-panel mb-3">
+                <div class="panel-head"><h6><i class="bi bi-inbox me-2"></i>Admin queue</h6></div>
+                <a class="s2s-row" th:href="@{/developer/registration-requests}">
+                    <i class="bi bi-person-plus text-muted"></i>
+                    <span class="grow"><span class="title d-block">Registration requests</span></span>
+                    <span class="pill" th:classappend="${registrationCount > 0} ? 'warn'" th:text="${registrationCount}">0</span>
+                    <i class="bi bi-chevron-right chev"></i>
+                </a>
+                <a class="s2s-row" th:href="@{/developer/password-reset-requests}">
+                    <i class="bi bi-key text-muted"></i>
+                    <span class="grow"><span class="title d-block">Password reset requests</span></span>
+                    <span class="pill" th:classappend="${passwordResetCount > 0} ? 'warn'" th:text="${passwordResetCount}">0</span>
+                    <i class="bi bi-chevron-right chev"></i>
+                </a>
+                <a class="s2s-row" th:href="@{/developer/tickets}">
+                    <i class="bi bi-ticket-perforated text-muted"></i>
+                    <span class="grow"><span class="title d-block">Open tickets</span></span>
+                    <span class="pill" th:classappend="${openTicketCount > 0} ? 'warn'" th:text="${openTicketCount}">0</span>
+                    <i class="bi bi-chevron-right chev"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Live activity -->
+        <div class="col-lg-5">
+            <div class="s2s-panel mb-3">
+                <div class="panel-head">
+                    <h6><i class="bi bi-activity me-2"></i>Happening now</h6>
+                    <a th:href="@{/dashboard/task-dashboard}">All tasks</a>
+                </div>
+                <div th:if="${activeRuns.isEmpty()}" class="s2s-empty">No tasks in progress.</div>
+                <a th:each="run : ${activeRuns}" class="s2s-row" th:href="@{/checklist-runs/runs/{id}(id=${run.id})}">
+                    <span class="avatar" th:text="${@fmt.initials(run.completedBy)}">TT</span>
+                    <span class="grow">
+                        <span class="title d-block" th:text="${run.task != null ? run.task.title : run.checklistName}">Task</span>
+                        <span class="meta d-block" th:text="${run.completedBy.getName() + ' · started ' + @fmt.when(run.startTime)}">Tech · started</span>
+                    </span>
+                    <span th:if="${pausedRunIds.contains(run.id)}" class="pill warn"><i class="bi bi-pause-fill"></i>Paused</span>
+                    <span th:unless="${pausedRunIds.contains(run.id)}" class="pill info">Working</span>
+                </a>
+            </div>
+
+            <div class="s2s-panel mb-3">
+                <div class="panel-head">
+                    <h6><i class="bi bi-clock me-2"></i>On the clock</h6>
+                    <a th:href="@{/technicians}">Technicians</a>
+                </div>
+                <div th:if="${onTheClock.isEmpty()}" class="s2s-empty">Nobody is clocked in.</div>
+                <div th:each="entry : ${onTheClock}" class="s2s-row">
+                    <span class="avatar" th:text="${@fmt.initials(entry.user)}">TT</span>
+                    <span class="grow">
+                        <span class="title d-block" th:text="${entry.user.getName()}">Name</span>
+                        <span class="meta d-block" th:text="${'Since ' + @fmt.when(entry.clockInTime)}">Since 8:00 AM</span>
+                    </span>
+                </div>
+            </div>
+
+            <div th:if="${!filterAlerts.isEmpty()}" class="s2s-panel mb-3">
+                <div class="panel-head"><h6><i class="bi bi-wind me-2"></i>Filter changes</h6></div>
+                <a th:each="fs : ${filterAlerts}" class="s2s-row" th:href="@{/batch-records}">
+                    <span class="grow">
+                        <span class="title d-block" th:text="${'Room ' + fs.room.getDisplayName()}">Room B1</span>
+                        <span class="meta d-block" th:text="${fs.summary}">Last changed 9 days ago</span>
+                    </span>
+                    <span class="pill" th:classappend="${fs.state == 'OVERDUE'} ? 'bad' : 'warn'"
+                          th:text="${fs.state == 'OVERDUE'} ? 'Overdue' : 'Due'">Due</span>
+                    <i class="bi bi-chevron-right chev"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shortcuts (the sidebar is hidden behind the menu on phones) -->
+    <p class="section-label mt-2">Go to</p>
+    <div class="quick-links">
+        <a th:href="@{/dashboard/task-dashboard}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-task me-1"></i>Tasks</a>
+        <a th:href="@{/batch-records}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-journal-text me-1"></i>Batch Records</a>
+        <a th:href="@{/technicians}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-people me-1"></i>Technicians</a>
+        <a th:href="@{/time-clock}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clock me-1"></i>Time Clock</a>
+        <a th:if="${isDeveloper}" th:href="@{/managers}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-person-badge me-1"></i>Managers</a>
+        <a th:if="${isDeveloper}" th:href="@{/developer/standard-tasks}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clipboard-check me-1"></i>Standard Tasks</a>
+        <a th:if="${isDeveloper}" th:href="@{/developer/user-created-tasks}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil-square me-1"></i>User Created Tasks</a>
+        <a th:href="@{/settings}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-gear me-1"></i>Settings</a>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

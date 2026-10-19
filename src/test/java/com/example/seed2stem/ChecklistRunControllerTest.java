@@ -501,8 +501,9 @@ class ChecklistRunControllerTest {
         assertEquals("checklist-review-view", result);
         assertNotNull(model.getAttribute("run"));
         assertNotNull(model.getAttribute("task"));
-        assertNotNull(model.getAttribute("responsesByHeader"));
-        assertNotNull(model.getAttribute("headers"));
+        assertNotNull(model.getAttribute("sections"));
+        assertNotNull(model.getAttribute("failures"));
+        assertEquals(true, model.getAttribute("canDecide")); // manager viewing a pending run
     }
 
     // --- approveChecklistRun ---
@@ -540,7 +541,7 @@ class ChecklistRunControllerTest {
 
     @Test
     void rejectChecklistRun_noUser_redirectsToLogin() {
-        String result = controller.rejectChecklistRun(1L, "Redo", session);
+        String result = controller.rejectChecklistRun(1L, "Redo", session, new RedirectAttributesModelMap());
         assertEquals("redirect:/auth/login", result);
     }
 
@@ -549,9 +550,41 @@ class ChecklistRunControllerTest {
         session.setAttribute("loggedInUser", managerUser);
         when(batchRecordService.rejectRun(1L, managerUser, "Redo section 3")).thenReturn(run);
 
-        String result = controller.rejectChecklistRun(1L, "Redo section 3", session);
+        String result = controller.rejectChecklistRun(1L, "Redo section 3", session, new RedirectAttributesModelMap());
         assertEquals("redirect:/dashboard/task-dashboard", result);
         verify(batchRecordService).rejectRun(1L, managerUser, "Redo section 3");
+    }
+
+    @Test
+    void rejectChecklistRun_blankComment_returnsToReviewWithError() {
+        session.setAttribute("loggedInUser", managerUser);
+        RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
+
+        String result = controller.rejectChecklistRun(1L, "  ", session, redirect);
+
+        assertEquals("redirect:/checklist-runs/runs/1", result);
+        assertNotNull(redirect.getFlashAttributes().get("error"));
+        verify(batchRecordService, never()).rejectRun(any(), any(), any());
+    }
+
+    @Test
+    void approveChecklistRun_technician_isBlocked() {
+        session.setAttribute("loggedInUser", techUser);
+
+        String result = controller.approveChecklistRun(1L, "self-approve", session, new RedirectAttributesModelMap());
+
+        assertEquals("redirect:/dashboard/home-dashboard", result);
+        verify(batchRecordService, never()).approveRun(any(), any(), any());
+    }
+
+    @Test
+    void rejectChecklistRun_technician_isBlocked() {
+        session.setAttribute("loggedInUser", techUser);
+
+        String result = controller.rejectChecklistRun(1L, "nope", session, new RedirectAttributesModelMap());
+
+        assertEquals("redirect:/dashboard/home-dashboard", result);
+        verify(batchRecordService, never()).rejectRun(any(), any(), any());
     }
 
     // --- getPendingChecklists ---

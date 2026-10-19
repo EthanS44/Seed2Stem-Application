@@ -262,20 +262,39 @@ public class ChecklistRunController {
                         r -> r,
                         (existing, replacement) -> replacement));
 
-        Map<Long, List<ChecklistResponse>> responsesByHeader = new LinkedHashMap<>();
-        ChecklistItem currentHeader = null;
-
+        // Group answers into the checklist's sections. Questions before the first header
+        // (checklists built without headers) get an untitled section instead of being dropped.
+        List<ReviewSection> sections = new ArrayList<>();
+        ReviewSection current = null;
         for (ChecklistItem item : items) {
             if (item.getItemType() == ChecklistItemType.HEADER) {
-                currentHeader = item;
-                responsesByHeader.put(item.getId(), new ArrayList<>());
-            } else if (currentHeader != null) {
-                ChecklistResponse r = responseMap.get(item.getId());
-                if (r != null) {
-                    responsesByHeader.get(currentHeader.getId()).add(r);
+                current = new ReviewSection(item.getText(), sections.size());
+                sections.add(current);
+                continue;
+            }
+            ChecklistResponse r = responseMap.get(item.getId());
+            if (r == null) continue;
+            if (current == null) {
+                current = new ReviewSection(null, sections.size());
+                sections.add(current);
+            }
+            current.responses.add(r);
+        }
+        sections.removeIf(sec -> sec.responses.isEmpty());
+
+        List<ChecklistResponse> failures = new ArrayList<>();
+        Map<Long, String> failureAnchors = new LinkedHashMap<>();
+        for (ReviewSection sec : sections) {
+            for (ChecklistResponse r : sec.responses) {
+                if (r.isFailed()) {
+                    failures.add(r);
+                    failureAnchors.put(r.getId(), sec.getAnchor());
                 }
             }
         }
+        long passFailChecks = responseMap.values().stream()
+                .filter(r -> r.getChecklistItem().getResponseType() == ChecklistResponseType.BOOLEAN_TEXT)
+                .count();
 
         // For IN_PROGRESS runs, expose the currently-open pause (if any) so the
         // review template can show the reason a tech is paused right now.
@@ -283,17 +302,21 @@ public class ChecklistRunController {
                 .findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run)
                 .orElse(null);
 
+        boolean pending = run.getStatus() == ChecklistRunStatus.PENDING;
         model.addAttribute("run", run);
         model.addAttribute("task", run.getTask());
-        model.addAttribute("responsesByHeader", responsesByHeader);
-        model.addAttribute("headers", items.stream()
-                .filter(i -> i.getItemType() == ChecklistItemType.HEADER)
-                .toList()
-        );
+        model.addAttribute("sections", sections);
+        model.addAttribute("failures", failures);
+        model.addAttribute("failureAnchors", failureAnchors);
+        model.addAttribute("passFailChecks", passFailChecks);
         model.addAttribute("openPause", openPause);
-        model.addAttribute("batchEntry", batchRecordService.entryForRun(runId).orElse(null));
         model.addAttribute("isInProgress", run.getStatus() == ChecklistRunStatus.IN_PROGRESS);
         model.addAttribute("hasAnyResponse", !responseMap.isEmpty());
+        model.addAttribute("batchEntry", batchRecordService.entryForRun(runId).orElse(null));
+        model.addAttribute("canDecide", pending && isManagerOrDev);
+        model.addAttribute("isOwnRun", isOwnRun);
+        model.addAttribute("canResubmit", isOwnRun && run.getStatus() == ChecklistRunStatus.REJECTED
+                && !run.getTask().isUserCreated());
 
         return "checklist-review-view";
     }
@@ -306,6 +329,7 @@ public class ChecklistRunController {
             RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
+        if (!canReview(user)) return "redirect:/dashboard/home-dashboard";
 
         // Through the batch service so the batch record and the run approve together.
         try {
@@ -320,13 +344,40 @@ public class ChecklistRunController {
     @PostMapping("/runs/{runId}/reject")
     public String rejectChecklistRun(
             @PathVariable Long runId,
-            @RequestParam("managerComments") String managerComments,
-            HttpSession session) {
+            @RequestParam(value = "managerComments", required = false) String managerComments,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
+        if (!canReview(user)) return "redirect:/dashboard/home-dashboard";
+        if (managerComments == null || managerComments.isBlank()) {
+            redirectAttributes.addFlashAttribute("error", "Add a comment saying what needs fixing before sending it back.");
+            return "redirect:/checklist-runs/runs/" + runId;
+        }
 
-        batchRecordService.rejectRun(runId, user, managerComments);
+        batchRecordService.rejectRun(runId, user, managerComments.trim());
         return "redirect:/dashboard/task-dashboard";
+    }
+
+    private static boolean canReview(User user) {
+        return user.getAccountType() == AccountType.MANAGER || user.getAccountType() == AccountType.DEVELOPER;
+    }
+
+    /** One header's answers on the review page. */
+    public static class ReviewSection {
+        private final String title;
+        private final int index;
+        private final List<ChecklistResponse> responses = new ArrayList<>();
+
+        ReviewSection(String title, int index) {
+            this.title = title;
+            this.index = index;
+        }
+
+        public String getTitle() { return title; }
+        public List<ChecklistResponse> getResponses() { return responses; }
+        public String getAnchor() { return "section-" + index; }
+        public long getFailCount() { return responses.stream().filter(ChecklistResponse::isFailed).count(); }
     }
 
     @GetMapping("/pending")

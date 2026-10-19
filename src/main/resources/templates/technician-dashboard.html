@@ -6,72 +6,110 @@
 <nav th:replace="~{fragments/layout :: topbar}"></nav>
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
+<!-- Technician dashboard: my shift, my tasks, and what happened to what I submitted. -->
 <main class="s2s-content">
-    <h4 class="mb-4">Technician Dashboard</h4>
+    <div class="page-head">
+        <div>
+            <h4 th:text="${greeting}">Good morning</h4>
+            <div class="sub" th:text="${#temporals.format(today, 'EEEE, MMMM d')}">Monday, October 19</div>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <span th:if="${clockedIn}" class="pill ok"><i class="bi bi-circle-fill" style="font-size:.5rem"></i>
+                <span th:text="${'On the clock since ' + @fmt.when(shiftStart)}">On the clock</span></span>
+            <a th:if="${clockedIn}" th:href="@{/time-clock}" class="btn btn-outline-secondary btn-sm">Clock out</a>
+            <form th:unless="${clockedIn}" th:action="@{/time-clock/clock-in}" method="post" class="m-0">
+                <button type="submit" class="btn btn-s2s btn-sm"><i class="bi bi-clock me-1"></i>Clock in</button>
+            </form>
+        </div>
+    </div>
 
-    <!-- Summary Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-6">
-            <div class="card text-white bg-info h-100">
-                <div class="card-body">
-                    <h6 class="card-title"><i class="bi bi-play-circle me-1"></i> Active Tasks</h6>
-                    <h2 class="mb-0" th:text="${activeTaskCount != null ? activeTaskCount : 0}">0</h2>
-                </div>
+    <!-- Stat tiles -->
+    <div class="row g-2 g-md-3 mb-4">
+        <div class="col-4">
+            <a href="#continue" class="s2s-stat info">
+                <span class="chip d-none d-sm-grid"><i class="bi bi-play-circle"></i></span>
+                <span><span class="num d-block" th:text="${activeTaskCount}">0</span><span class="lbl">In progress</span></span>
+            </a>
+        </div>
+        <div class="col-4">
+            <a href="#recent" class="s2s-stat" th:classappend="${awaitingCount > 0} ? 'attn'">
+                <span class="chip d-none d-sm-grid"><i class="bi bi-hourglass-split"></i></span>
+                <span><span class="num d-block" th:text="${awaitingCount}">0</span><span class="lbl">Pending</span></span>
+            </a>
+        </div>
+        <div class="col-4">
+            <a th:href="@{/time-clock/history}" class="s2s-stat">
+                <span class="chip d-none d-sm-grid"><i class="bi bi-stopwatch"></i></span>
+                <span><span class="num d-block" th:text="${hoursThisWeek + ' h'}">0 h</span><span class="lbl">This week</span></span>
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <!-- Continue where you left off -->
+            <div class="s2s-panel mb-3" id="continue">
+                <div class="panel-head"><h6><i class="bi bi-play-circle me-2"></i>Continue where you left off</h6></div>
+                <div th:if="${activeRuns.isEmpty()}" class="s2s-empty">No tasks in progress. Start one from the list.</div>
+                <a th:each="run : ${activeRuns}" class="s2s-row"
+                   th:href="@{/tasks/{taskId}/resume/{runId}(taskId=${run.task.id}, runId=${run.id})}">
+                    <span class="grow">
+                        <span class="title d-block" th:text="${run.task.title}">Task</span>
+                        <span class="meta d-block" th:text="${'Started ' + @fmt.when(run.startTime)}">Started 9:40 AM</span>
+                    </span>
+                    <span th:if="${pausedRunIds.contains(run.id)}" class="pill warn"><i class="bi bi-pause-fill"></i>Paused</span>
+                    <span class="btn btn-s2s btn-sm">Resume</span>
+                </a>
+            </div>
+
+            <!-- Recent submissions -->
+            <div class="s2s-panel mb-3" id="recent">
+                <div class="panel-head"><h6><i class="bi bi-send-check me-2"></i>Recently submitted</h6></div>
+                <div th:if="${recentRuns.isEmpty()}" class="s2s-empty">Tasks you submit will show up here with their approval status.</div>
+                <a th:each="run : ${recentRuns}" class="s2s-row" th:href="@{/checklist-runs/runs/{id}(id=${run.id})}">
+                    <span class="grow">
+                        <span class="title d-block" th:text="${run.task.title}">Task</span>
+                        <span class="meta d-block"
+                              th:text="${run.status.name() == 'REJECTED' and run.managerComments != null and !run.managerComments.isBlank()}
+                                        ? ${'“' + run.managerComments + '”'}
+                                        : ${'Submitted ' + @fmt.when(run.endTime)}">Submitted 9:40 AM</span>
+                    </span>
+                    <span th:if="${run.status.name() == 'PENDING'}" class="pill warn">Awaiting approval</span>
+                    <span th:if="${run.status.name() == 'APPROVED'}" class="pill ok"><i class="bi bi-check2"></i>Approved</span>
+                    <span th:if="${run.status.name() == 'REJECTED'}" class="pill bad">Rejected</span>
+                    <i class="bi bi-chevron-right chev"></i>
+                </a>
             </div>
         </div>
-        <div class="col-6 col-md-6">
-            <div class="card text-white h-100" th:classappend="${clockedIn ? 'bg-success' : 'bg-secondary'}">
-                <div class="card-body">
-                    <h6 class="card-title"><i class="bi bi-clock me-1"></i> Clock Status</h6>
-                    <h2 class="mb-0" th:text="${clockedIn ? 'Clocked In' : 'Not Clocked In'}">Status</h2>
+
+        <!-- Start a task -->
+        <div class="col-lg-5">
+            <div class="s2s-panel mb-3">
+                <div class="panel-head">
+                    <h6><i class="bi bi-list-task me-2"></i>Start a task</h6>
+                    <a th:href="@{/dashboard/task-dashboard}">All tasks</a>
                 </div>
+                <div th:if="${availableTasks.isEmpty()}" class="s2s-empty">No tasks available.</div>
+                <a th:each="task : ${availableTasks}" class="s2s-row" th:href="@{/tasks/{id}(id=${task.id})}">
+                    <span class="grow">
+                        <span class="title d-block" th:text="${task.title}">Task</span>
+                        <span th:if="${task.isBatchTask()}" class="meta d-block">
+                            <i class="bi bi-journal-text me-1"></i>Adds to a batch record
+                        </span>
+                    </span>
+                    <i class="bi bi-chevron-right chev"></i>
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- Quick Access Grid -->
-    <h5 class="mb-3">Quick Access</h5>
-    <div class="row g-3">
-        <div class="col-md-4">
-            <a th:href="@{/dashboard/task-dashboard}" class="text-decoration-none">
-                <div class="card menu-card shadow-sm h-100">
-                    <div class="card-body text-center py-4">
-                        <div class="menu-icon"><i class="bi bi-list-task"></i></div>
-                        <h6 class="card-title mt-2">My Tasks</h6>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4">
-            <a th:href="@{/time-clock}" class="text-decoration-none">
-                <div class="card menu-card shadow-sm h-100">
-                    <div class="card-body text-center py-4">
-                        <div class="menu-icon"><i class="bi bi-clock"></i></div>
-                        <h6 class="card-title mt-2">Time Clock</h6>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4">
-            <a th:href="@{/calendar}" class="text-decoration-none">
-                <div class="card menu-card shadow-sm h-100">
-                    <div class="card-body text-center py-4">
-                        <div class="menu-icon"><i class="bi bi-calendar3"></i></div>
-                        <h6 class="card-title mt-2">Calendar</h6>
-                    </div>
-                </div>
-            </a>
-        </div>
-        <div class="col-md-4">
-            <a th:href="@{/settings}" class="text-decoration-none">
-                <div class="card menu-card shadow-sm h-100">
-                    <div class="card-body text-center py-4">
-                        <div class="menu-icon"><i class="bi bi-gear"></i></div>
-                        <h6 class="card-title mt-2">Settings</h6>
-                    </div>
-                </div>
-            </a>
-        </div>
+    <p class="section-label mt-2">Go to</p>
+    <div class="quick-links">
+        <a th:href="@{/tasks/create}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-plus-circle me-1"></i>Create a task</a>
+        <a th:href="@{/time-clock}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clock me-1"></i>Time Clock</a>
+        <a th:href="@{/calendar}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-calendar3 me-1"></i>Calendar</a>
+        <a th:href="@{/tickets/new}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bug me-1"></i>Report Issue</a>
+        <a th:href="@{/settings}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-gear me-1"></i>Settings</a>
     </div>
 </main>
 
