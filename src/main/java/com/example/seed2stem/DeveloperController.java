@@ -277,9 +277,7 @@ public class DeveloperController {
             return "redirect:/dashboard/home-dashboard";
         }
 
-        model.addAttribute("responseTypes", ChecklistResponseType.selectableForBuilder());
-        model.addAttribute("batchActions", BatchAction.values());
-        model.addAttribute("error", error);
+        addBuilderModel(model, null, error);
         return "create-standard-task";
     }
 
@@ -289,6 +287,7 @@ public class DeveloperController {
                                      @RequestParam(required = false) List<String> itemType,
                                      @RequestParam(required = false) List<String> itemText,
                                      @RequestParam(required = false) List<String> responseType,
+                                     @RequestParam(required = false) List<String> itemCategory,
                                      @RequestParam(value = "sopPdfFile", required = false) MultipartFile sopPdfFile,
                                      @RequestParam(value = "batchAction", required = false) String batchAction,
                                      HttpSession session,
@@ -298,100 +297,22 @@ public class DeveloperController {
         if (user.getAccountType() != AccountType.DEVELOPER) {
             return "redirect:/dashboard/home-dashboard";
         }
-
-        if (title == null || title.trim().isEmpty()) {
-            redirectAttributes.addAttribute("error", "Task name is required");
-            return "redirect:/developer/standard-tasks/new";
-        }
-        BatchAction action;
-        try {
-            action = (batchAction == null || batchAction.isBlank())
-                    ? BatchAction.NONE : BatchAction.valueOf(batchAction);
-        } catch (IllegalArgumentException e) {
-            redirectAttributes.addAttribute("error", "Unknown batch record action: " + batchAction);
-            return "redirect:/developer/standard-tasks/new";
-        }
-        // A batch task already has its inputs (room, batch, action fields), so checklist items are optional.
-        boolean needsItems = action == BatchAction.NONE;
-        if (needsItems && (itemType == null || itemType.isEmpty())) {
-            redirectAttributes.addAttribute("error", "At least one checklist item is required");
-            return "redirect:/developer/standard-tasks/new";
-        }
-        if (itemType == null) itemType = List.of();
-
-        // Validate uploaded SOP PDF (optional). Reject non-PDFs by extension,
-        // content-type, and magic bytes to prevent disguised uploads.
-        byte[] sopBytes = null;
-        String sopName = null;
-        if (sopPdfFile != null && !sopPdfFile.isEmpty()) {
-            String originalName = sopPdfFile.getOriginalFilename();
-            String contentType = sopPdfFile.getContentType();
-            if (originalName == null || !originalName.toLowerCase().endsWith(".pdf")
-                    || contentType == null || !contentType.equalsIgnoreCase("application/pdf")) {
-                redirectAttributes.addAttribute("error", "SOP file must be a PDF.");
-                return "redirect:/developer/standard-tasks/new";
-            }
-            try {
-                sopBytes = sopPdfFile.getBytes();
-            } catch (IOException e) {
-                redirectAttributes.addAttribute("error", "Failed to read uploaded SOP: " + e.getMessage());
-                return "redirect:/developer/standard-tasks/new";
-            }
-            // PDF magic-byte check: every valid PDF starts with "%PDF".
-            if (sopBytes.length < 4
-                    || sopBytes[0] != '%' || sopBytes[1] != 'P'
-                    || sopBytes[2] != 'D' || sopBytes[3] != 'F') {
-                redirectAttributes.addAttribute("error", "Uploaded SOP is not a valid PDF document.");
-                return "redirect:/developer/standard-tasks/new";
-            }
-            sopName = originalName;
-        }
+        String back = "redirect:/developer/standard-tasks/new";
 
         try {
-            Checklist checklist = new Checklist();
-            checklist.setName(title.trim());
-            checklist.setVersion(1);
+            TaskForm form = parseForm(title, batchAction, itemType, itemText, responseType, itemCategory, sopPdfFile);
 
-            int displayOrder = 1;
-            int questionOrder = 1;
-            for (int i = 0; i < itemType.size(); i++) {
-                String type = itemType.get(i);
-                String text = (itemText != null && i < itemText.size()) ? itemText.get(i) : "";
-                if (text == null || text.trim().isEmpty()) continue;
-
-                ChecklistItem item = new ChecklistItem();
-                item.setText(text.trim());
-                item.setDisplayOrder(displayOrder++);
-                item.setChecklist(checklist);
-
-                if ("HEADER".equals(type)) {
-                    item.setItemType(ChecklistItemType.HEADER);
-                    item.setResponseType(ChecklistResponseType.NONE);
-                } else {
-                    item.setItemType(ChecklistItemType.QUESTION);
-                    String rt = (responseType != null && i < responseType.size()) ? responseType.get(i) : "TEXT";
-                    item.setResponseType(ChecklistResponseType.valueOf(
-                            (rt == null || rt.isEmpty()) ? "TEXT" : rt));
-                    item.setQuestionOrder(questionOrder++);
-                }
-                checklist.addItem(item);
-            }
-
-            if (needsItems && checklist.getItems().isEmpty()) {
-                redirectAttributes.addAttribute("error", "At least one non-empty checklist item is required");
-                return "redirect:/developer/standard-tasks/new";
-            }
-
+            Checklist checklist = newChecklist(form.title(), 1, form.items());
             Task task = new Task();
-            task.setTitle(title.trim());
+            task.setTitle(form.title());
             task.setDescription(description != null ? description.trim() : null);
             task.setChecklist(checklist);
             task.setUserCreated(false);
             task.setCreatedBy(user);
-            task.setBatchAction(action);
-            if (sopBytes != null) {
-                task.setSopFileName(sopName);
-                task.setSopData(sopBytes);
+            task.setBatchAction(form.action());
+            if (form.sop() != null) {
+                task.setSopFileName(form.sop().name());
+                task.setSopData(form.sop().bytes());
             }
 
             checklistRepo.save(checklist);
@@ -399,13 +320,246 @@ public class DeveloperController {
 
             redirectAttributes.addAttribute("success", "Standard task \"" + task.getTitle() + "\" created");
             return "redirect:/developer/standard-tasks";
-        } catch (IllegalArgumentException e) {
-            redirectAttributes.addAttribute("error", "Invalid response type or category: " + e.getMessage());
-            return "redirect:/developer/standard-tasks/new";
+        } catch (InvalidTaskForm e) {
+            redirectAttributes.addAttribute("error", e.getMessage());
+            return back;
         } catch (RuntimeException e) {
             redirectAttributes.addAttribute("error", "Failed to create task: " + e.getMessage());
-            return "redirect:/developer/standard-tasks/new";
+            return back;
         }
+    }
+
+    @GetMapping("/standard-tasks/{id}/edit")
+    public String editStandardTaskForm(@PathVariable Long id, HttpSession session, Model model,
+                                       @RequestParam(value = "error", required = false) String error) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+        if (user.getAccountType() != AccountType.DEVELOPER) {
+            return "redirect:/dashboard/home-dashboard";
+        }
+
+        Task task = taskRepo.findById(id).orElse(null);
+        if (task == null || task.isUserCreated()) {
+            return "redirect:/developer/standard-tasks";
+        }
+
+        addBuilderModel(model, task, error);
+        return "create-standard-task";
+    }
+
+    /**
+     * Saves edits to a standard task. When the checklist items change, they are
+     * saved as a new checklist version and the old one is kept, so past runs
+     * still show the questions they were actually answered against.
+     */
+    @PostMapping("/standard-tasks/{id}")
+    public String updateStandardTask(@PathVariable Long id,
+                                     @RequestParam String title,
+                                     @RequestParam(required = false) String description,
+                                     @RequestParam(required = false) List<String> itemType,
+                                     @RequestParam(required = false) List<String> itemText,
+                                     @RequestParam(required = false) List<String> responseType,
+                                     @RequestParam(required = false) List<String> itemCategory,
+                                     @RequestParam(value = "sopPdfFile", required = false) MultipartFile sopPdfFile,
+                                     @RequestParam(value = "removeSop", required = false, defaultValue = "false") boolean removeSop,
+                                     @RequestParam(value = "batchAction", required = false) String batchAction,
+                                     HttpSession session,
+                                     RedirectAttributes redirectAttributes) {
+        User user = (User) session.getAttribute("loggedInUser");
+        if (user == null) return "redirect:/auth/login";
+        if (user.getAccountType() != AccountType.DEVELOPER) {
+            return "redirect:/dashboard/home-dashboard";
+        }
+
+        Task task = taskRepo.findById(id).orElse(null);
+        if (task == null || task.isUserCreated()) {
+            return "redirect:/developer/standard-tasks";
+        }
+        String back = "redirect:/developer/standard-tasks/" + id + "/edit";
+
+        try {
+            TaskForm form = parseForm(title, batchAction, itemType, itemText, responseType, itemCategory, sopPdfFile);
+
+            Checklist current = task.getChecklist();
+            if (current == null || !sameItems(current.getItems(), form.items())) {
+                int version = current != null && current.getVersion() != null ? current.getVersion() + 1 : 1;
+                Checklist next = newChecklist(form.title(), version, form.items());
+                checklistRepo.save(next);
+                task.setChecklist(next);
+            } else if (!form.title().equals(current.getName())) {
+                current.setName(form.title());
+                checklistRepo.save(current);
+            }
+
+            task.setTitle(form.title());
+            task.setDescription(description != null ? description.trim() : null);
+            task.setBatchAction(form.action());
+            if (form.sop() != null) {
+                task.setSopFileName(form.sop().name());
+                task.setSopData(form.sop().bytes());
+            } else if (removeSop) {
+                task.setSopFileName(null);
+                task.setSopData(null);
+            }
+            taskRepo.save(task);
+
+            redirectAttributes.addAttribute("success", "Standard task \"" + task.getTitle() + "\" saved");
+            return "redirect:/developer/standard-tasks" + (task.isDeleted() ? "?showArchived=true" : "");
+        } catch (InvalidTaskForm e) {
+            redirectAttributes.addAttribute("error", e.getMessage());
+            return back;
+        } catch (RuntimeException e) {
+            redirectAttributes.addAttribute("error", "Failed to save task: " + e.getMessage());
+            return back;
+        }
+    }
+
+    // ------------------------------------------------------------ task builder helpers
+
+    /** Model for the builder page; {@code task} is null when creating. */
+    private void addBuilderModel(Model model, Task task, String error) {
+        model.addAttribute("responseTypes", ChecklistResponseType.selectableForBuilder());
+        model.addAttribute("batchActions", BatchAction.values());
+        model.addAttribute("task", task);
+        List<Map<String, String>> items = new java.util.ArrayList<>();
+        if (task != null && task.getChecklist() != null) {
+            for (ChecklistItem item : task.getChecklist().getItems()) {
+                Map<String, String> row = new HashMap<>();
+                row.put("type", item.getItemType().name());
+                row.put("text", item.getText());
+                row.put("responseType", item.getResponseType().name());
+                row.put("responseLabel", item.getResponseType().getDisplayName());
+                row.put("category", item.getCategory() != null ? item.getCategory().name() : "");
+                items.add(row);
+            }
+        }
+        model.addAttribute("existingItems", items);
+        model.addAttribute("error", error);
+    }
+
+    private record SopUpload(String name, byte[] bytes) {}
+
+    /** category is kept from existing items (seeded checklists use it for short review labels); null for new ones. */
+    private record ItemSpec(ChecklistItemType type, String text, ChecklistResponseType responseType,
+                            ChecklistItemCategory category) {}
+
+    private record TaskForm(String title, BatchAction action, List<ItemSpec> items, SopUpload sop) {}
+
+    /** A builder input the developer needs to fix; the message is shown on the form. */
+    private static class InvalidTaskForm extends Exception {
+        InvalidTaskForm(String message) {
+            super(message);
+        }
+    }
+
+    private TaskForm parseForm(String title, String batchAction, List<String> itemType, List<String> itemText,
+                               List<String> responseType, List<String> itemCategory,
+                               MultipartFile sopPdfFile) throws InvalidTaskForm {
+        if (title == null || title.trim().isEmpty()) {
+            throw new InvalidTaskForm("Task name is required");
+        }
+
+        BatchAction action;
+        try {
+            action = (batchAction == null || batchAction.isBlank())
+                    ? BatchAction.NONE : BatchAction.valueOf(batchAction);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidTaskForm("Unknown batch record action: " + batchAction);
+        }
+
+        List<ItemSpec> items = new java.util.ArrayList<>();
+        if (itemType != null) {
+            for (int i = 0; i < itemType.size(); i++) {
+                String text = (itemText != null && i < itemText.size()) ? itemText.get(i) : "";
+                if (text == null || text.trim().isEmpty()) continue;
+                ChecklistItemCategory category = parseCategory(
+                        (itemCategory != null && i < itemCategory.size()) ? itemCategory.get(i) : null);
+                if ("HEADER".equals(itemType.get(i))) {
+                    items.add(new ItemSpec(ChecklistItemType.HEADER, text.trim(), ChecklistResponseType.NONE, category));
+                } else {
+                    String rt = (responseType != null && i < responseType.size()) ? responseType.get(i) : "TEXT";
+                    try {
+                        items.add(new ItemSpec(ChecklistItemType.QUESTION, text.trim(),
+                                ChecklistResponseType.valueOf((rt == null || rt.isEmpty()) ? "TEXT" : rt), category));
+                    } catch (IllegalArgumentException e) {
+                        throw new InvalidTaskForm("Invalid response type: " + rt);
+                    }
+                }
+            }
+        }
+        // A batch task already has its inputs (room, batch, action fields), so checklist items are optional.
+        if (action == BatchAction.NONE && items.isEmpty()) {
+            throw new InvalidTaskForm("At least one checklist item is required");
+        }
+
+        return new TaskForm(title.trim(), action, items, readSop(sopPdfFile));
+    }
+
+    private static ChecklistItemCategory parseCategory(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return ChecklistItemCategory.valueOf(value);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Validates an uploaded SOP (optional). Rejects non-PDFs by extension,
+     * content-type, and magic bytes to prevent disguised uploads.
+     */
+    private SopUpload readSop(MultipartFile sopPdfFile) throws InvalidTaskForm {
+        if (sopPdfFile == null || sopPdfFile.isEmpty()) return null;
+        String originalName = sopPdfFile.getOriginalFilename();
+        String contentType = sopPdfFile.getContentType();
+        if (originalName == null || !originalName.toLowerCase().endsWith(".pdf")
+                || contentType == null || !contentType.equalsIgnoreCase("application/pdf")) {
+            throw new InvalidTaskForm("SOP file must be a PDF.");
+        }
+        byte[] bytes;
+        try {
+            bytes = sopPdfFile.getBytes();
+        } catch (IOException e) {
+            throw new InvalidTaskForm("Failed to read uploaded SOP: " + e.getMessage());
+        }
+        // PDF magic-byte check: every valid PDF starts with "%PDF".
+        if (bytes.length < 4 || bytes[0] != '%' || bytes[1] != 'P' || bytes[2] != 'D' || bytes[3] != 'F') {
+            throw new InvalidTaskForm("Uploaded SOP is not a valid PDF document.");
+        }
+        return new SopUpload(originalName, bytes);
+    }
+
+    private static Checklist newChecklist(String name, int version, List<ItemSpec> specs) {
+        Checklist checklist = new Checklist();
+        checklist.setName(name);
+        checklist.setVersion(version);
+        int displayOrder = 1;
+        int questionOrder = 1;
+        for (ItemSpec spec : specs) {
+            ChecklistItem item = new ChecklistItem();
+            item.setText(spec.text());
+            item.setItemType(spec.type());
+            item.setResponseType(spec.responseType());
+            item.setCategory(spec.category());
+            item.setDisplayOrder(displayOrder++);
+            if (spec.type() == ChecklistItemType.QUESTION) item.setQuestionOrder(questionOrder++);
+            item.setChecklist(checklist);
+            checklist.addItem(item);
+        }
+        return checklist;
+    }
+
+    private static boolean sameItems(List<ChecklistItem> existing, List<ItemSpec> specs) {
+        if (existing.size() != specs.size()) return false;
+        for (int i = 0; i < specs.size(); i++) {
+            ChecklistItem item = existing.get(i);
+            ItemSpec spec = specs.get(i);
+            if (item.getItemType() != spec.type() || item.getResponseType() != spec.responseType()
+                    || item.getCategory() != spec.category() || !spec.text().equals(item.getText())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** Friendly redirect when a developer uploads an SOP larger than the multipart limit. */

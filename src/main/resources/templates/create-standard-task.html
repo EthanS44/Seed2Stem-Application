@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Seed2Stem - New Standard Task')}"></head>
+<head th:replace="~{fragments/layout :: head(${task == null ? 'Seed2Stem - New Standard Task' : 'Seed2Stem - Edit Standard Task'})}"></head>
 <body>
 
 <nav th:replace="~{fragments/layout :: topbar}"></nav>
 <nav th:replace="~{fragments/layout :: sidebar}"></nav>
 
 <main class="s2s-content">
-    <h4 class="mb-4">New Standard Task</h4>
+    <a th:if="${task != null}" th:href="@{/developer/standard-tasks}" class="btn btn-outline-secondary btn-sm mb-3">
+        <i class="bi bi-arrow-left me-1"></i> Standard Tasks
+    </a>
+    <h4 class="mb-4" th:text="${task == null ? 'New Standard Task' : 'Edit Standard Task'}">New Standard Task</h4>
 
     <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
         <span th:text="${error}"></span>
@@ -18,25 +21,43 @@
         <div class="col-md-10">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <p class="text-muted mb-4">
+                    <p class="text-muted mb-4" th:if="${task == null}">
                         Build a standard task with a checklist for technicians to complete. Use headers to group questions into sections.
                     </p>
+                    <div class="alert alert-light border small mb-4" th:if="${task != null}">
+                        Changes apply to runs started from now on. If you change the checklist items, they're saved as a new
+                        checklist version; past runs keep the questions they were answered against.
+                        <span th:if="${task.isDeleted()}" class="d-block mt-1"><strong>This task is archived.</strong> Restore it from the archived list to make it available again.</span>
+                    </div>
 
-                    <form th:action="@{/developer/standard-tasks}" method="post" enctype="multipart/form-data" id="taskForm">
+                    <form th:action="${task == null} ? @{/developer/standard-tasks} : @{/developer/standard-tasks/{id}(id=${task.id})}"
+                          method="post" enctype="multipart/form-data" id="taskForm">
                         <div class="mb-3">
                             <label for="title" class="form-label fw-bold">Task Name</label>
                             <input type="text" class="form-control" id="title" name="title"
+                                   th:value="${task != null ? task.title : ''}"
                                    placeholder="e.g., AM Production Area Inspection" required>
                         </div>
 
                         <div class="mb-4">
                             <label for="description" class="form-label fw-bold">Task Description <span class="text-muted fw-normal">(optional)</span></label>
                             <textarea class="form-control" id="description" name="description" rows="2"
+                                      th:text="${task != null ? task.description : ''}"
                                       placeholder="When and why this task should be performed..."></textarea>
                         </div>
 
                         <div class="mb-4">
                             <label for="sopPdfFile" class="form-label fw-bold">SOP Document <span class="text-muted fw-normal">(optional, PDF)</span></label>
+                            <div th:if="${task != null and task.sopFileName != null}" class="d-flex align-items-center flex-wrap gap-3 mb-2">
+                                <span class="small">
+                                    <i class="bi bi-file-earmark-pdf text-danger me-1"></i>Current:
+                                    <a th:href="@{/tasks/{id}/sop(id=${task.id})}" target="_blank" th:text="${task.sopFileName}">sop.pdf</a>
+                                </span>
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="checkbox" id="removeSop" name="removeSop" value="true">
+                                    <label class="form-check-label small" for="removeSop">Remove current SOP</label>
+                                </div>
+                            </div>
                             <input type="file" class="form-control" id="sopPdfFile" name="sopPdfFile" accept="application/pdf,.pdf">
                             <small class="form-text text-muted">
                                 Upload a PDF Standard Operating Procedure. Technicians will see it on the task page before they start. Max 10 MB.
@@ -49,7 +70,8 @@
                                 <option th:each="ba : ${batchActions}"
                                         th:value="${ba.name()}"
                                         th:text="${ba.getDisplayName()}"
-                                        th:attr="data-description=${ba.getDescription()}">None</option>
+                                        th:attr="data-description=${ba.getDescription()}"
+                                        th:selected="${task != null and task.getBatchAction() == ba}">None</option>
                             </select>
                             <div class="form-text" id="batchActionHelp"></div>
                             <div class="form-text" id="batchActionCommon" style="display:none;">
@@ -80,7 +102,8 @@
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-success">
-                                <i class="bi bi-check-circle me-1"></i> Create Standard Task
+                                <i class="bi bi-check-circle me-1"></i>
+                                <span th:text="${task == null ? 'Create Standard Task' : 'Save Changes'}">Create Standard Task</span>
                             </button>
                             <a th:href="@{/developer/standard-tasks}" class="btn btn-outline-secondary">Cancel</a>
                         </div>
@@ -98,9 +121,14 @@
             <div class="d-flex align-items-start gap-2">
                 <span class="badge bg-primary mt-2">Header</span>
                 <input type="hidden" name="itemType" value="HEADER">
+                <input type="hidden" name="itemCategory" value="">
                 <input type="hidden" name="responseType" value="NONE">
                 <input type="text" name="itemText" class="form-control"
                        placeholder="Section header (e.g., Room B1 (Lights Off):)" required>
+                <div class="btn-group-vertical btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary up-btn" title="Move up"><i class="bi bi-chevron-up"></i></button>
+                    <button type="button" class="btn btn-outline-secondary down-btn" title="Move down"><i class="bi bi-chevron-down"></i></button>
+                </div>
                 <button type="button" class="btn btn-outline-danger btn-sm remove-btn" title="Remove">
                     <i class="bi bi-x-lg"></i>
                 </button>
@@ -116,6 +144,7 @@
             <div class="d-flex align-items-start gap-2">
                 <span class="badge bg-success mt-2">Question</span>
                 <input type="hidden" name="itemType" value="QUESTION">
+                <input type="hidden" name="itemCategory" value="">
                 <div class="flex-grow-1">
                     <input type="text" name="itemText" class="form-control mb-2"
                            placeholder="Question text (e.g., Record humidity level. (%))" required>
@@ -123,6 +152,10 @@
                         <option value="" disabled selected>Response Type</option>
                         <option th:each="rt : ${responseTypes}" th:value="${rt.name()}" th:text="${rt.getDisplayName()}"></option>
                     </select>
+                </div>
+                <div class="btn-group-vertical btn-group-sm">
+                    <button type="button" class="btn btn-outline-secondary up-btn" title="Move up"><i class="bi bi-chevron-up"></i></button>
+                    <button type="button" class="btn btn-outline-secondary down-btn" title="Move down"><i class="bi bi-chevron-down"></i></button>
                 </div>
                 <button type="button" class="btn btn-outline-danger btn-sm remove-btn" title="Remove">
                     <i class="bi bi-x-lg"></i>
@@ -134,8 +167,9 @@
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
 
-<script>
+<script th:inline="javascript">
     (function () {
+        const EXISTING_ITEMS = /*[[${existingItems}]]*/ [];
         const itemsContainer = document.getElementById('items');
         const emptyHint = document.getElementById('emptyHint');
         const headerTpl = document.getElementById('headerTemplate');
@@ -145,19 +179,41 @@
             emptyHint.style.display = itemsContainer.children.length === 0 ? '' : 'none';
         }
 
-        function addRow(template) {
+        function addRow(template, values) {
             const clone = template.content.firstElementChild.cloneNode(true);
-            const removeBtn = clone.querySelector('.remove-btn');
-            removeBtn.addEventListener('click', function () {
+            clone.querySelector('.remove-btn').addEventListener('click', function () {
                 clone.remove();
                 updateEmptyHint();
             });
+            clone.querySelector('.up-btn').addEventListener('click', function () {
+                if (clone.previousElementSibling) itemsContainer.insertBefore(clone, clone.previousElementSibling);
+            });
+            clone.querySelector('.down-btn').addEventListener('click', function () {
+                if (clone.nextElementSibling) itemsContainer.insertBefore(clone.nextElementSibling, clone);
+            });
             itemsContainer.appendChild(clone);
             updateEmptyHint();
-            // Focus the text input of the new row
             const input = clone.querySelector('input[name="itemText"]');
-            if (input) input.focus();
+            if (values) {
+                input.value = values.text;
+                clone.querySelector('input[name="itemCategory"]').value = values.category || '';
+                const select = clone.querySelector('select[name="responseType"]');
+                if (select) {
+                    // Keep types the builder no longer offers (e.g. INTEGER on seeded checklists).
+                    if (![...select.options].some(o => o.value === values.responseType)) {
+                        select.add(new Option(values.responseLabel, values.responseType));
+                    }
+                    select.value = values.responseType;
+                }
+            } else if (input) {
+                // Focus the text input of a newly added row
+                input.focus();
+            }
         }
+
+        EXISTING_ITEMS.forEach(function (item) {
+            addRow(item.type === 'HEADER' ? headerTpl : questionTpl, item);
+        });
 
         document.getElementById('addHeaderBtn').addEventListener('click', function () {
             addRow(headerTpl);

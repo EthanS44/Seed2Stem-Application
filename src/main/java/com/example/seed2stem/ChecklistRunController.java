@@ -244,8 +244,15 @@ public class ChecklistRunController {
             return "redirect:/dashboard/task-dashboard";
         }
 
-        List<ChecklistItem> items = run.getTask().getChecklist().getItems();
         List<ChecklistResponse> responses = run.getResponses() != null ? run.getResponses() : List.of();
+        // Editing a task's checklist points the task at a new version; show the version this run answered.
+        Checklist answered = responses.stream()
+                .map(ChecklistResponse::getChecklistItem)
+                .filter(i -> i != null && i.getChecklist() != null)
+                .map(ChecklistItem::getChecklist)
+                .findFirst()
+                .orElse(run.getTask().getChecklist());
+        List<ChecklistItem> items = answered.getItems();
 
         // Use merge function to handle potential duplicate responses for the same item
         Map<Long, ChecklistResponse> responseMap = responses.stream()

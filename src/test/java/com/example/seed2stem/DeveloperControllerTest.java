@@ -338,7 +338,7 @@ class DeveloperControllerTest {
                 "Run every morning",
                 List.of("HEADER", "QUESTION"),
                 List.of("Room 1", "Temperature"),
-                List.of("NONE", "NUMBER"),
+                List.of("NONE", "NUMBER"), null,
                 null, // no file uploaded
                 null, // no batch action
                 session,
@@ -356,7 +356,7 @@ class DeveloperControllerTest {
         RedirectAttributes redirect = new RedirectAttributesModelMap();
 
         String result = controller.createStandardTask(
-                "Harvest", "Log the harvest", null, null, null,
+                "Harvest", "Log the harvest", null, null, null, null,
                 null, "HARVEST", session, redirect);
 
         assertEquals("redirect:/developer/standard-tasks", result);
@@ -369,7 +369,7 @@ class DeveloperControllerTest {
         RedirectAttributes redirect = new RedirectAttributesModelMap();
 
         String result = controller.createStandardTask(
-                "Empty", "desc", null, null, null,
+                "Empty", "desc", null, null, null, null,
                 null, "NONE", session, redirect);
 
         assertEquals("redirect:/developer/standard-tasks/new", result);
@@ -389,7 +389,7 @@ class DeveloperControllerTest {
                 "desc",
                 List.of("QUESTION"),
                 List.of("Temp"),
-                List.of("NUMBER"),
+                List.of("NUMBER"), null,
                 pdf,
                 null, // no batch action
                 session,
@@ -412,7 +412,7 @@ class DeveloperControllerTest {
 
         String result = controller.createStandardTask(
                 "Task", "desc",
-                List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
+                List.of("QUESTION"), List.of("Q"), List.of("TEXT"), null,
                 bogus, null, session, redirect);
 
         assertEquals("redirect:/developer/standard-tasks/new", result);
@@ -429,7 +429,7 @@ class DeveloperControllerTest {
 
         String result = controller.createStandardTask(
                 "Task", "desc",
-                List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
+                List.of("QUESTION"), List.of("Q"), List.of("TEXT"), null,
                 notPdf, null, session, redirect);
 
         assertEquals("redirect:/developer/standard-tasks/new", result);
@@ -448,7 +448,7 @@ class DeveloperControllerTest {
 
         String result = controller.createStandardTask(
                 "Task", "desc",
-                List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
+                List.of("QUESTION"), List.of("Q"), List.of("TEXT"), null,
                 fake, null, session, redirect);
 
         assertEquals("redirect:/developer/standard-tasks/new", result);
@@ -465,7 +465,7 @@ class DeveloperControllerTest {
 
         String result = controller.createStandardTask(
                 "Task", "desc",
-                List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
+                List.of("QUESTION"), List.of("Q"), List.of("TEXT"), null,
                 empty, null, session, redirect);
 
         assertEquals("redirect:/developer/standard-tasks", result);
@@ -480,10 +480,137 @@ class DeveloperControllerTest {
 
         String result = controller.createStandardTask(
                 "Task", "desc",
-                List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
+                List.of("QUESTION"), List.of("Q"), List.of("TEXT"), null,
                 null, null, session, redirect);
 
         assertEquals("redirect:/dashboard/home-dashboard", result);
         verify(taskRepo, never()).save(any(Task.class));
+    }
+
+    // --- edit standard task ---
+
+    private Task existingTask() {
+        Checklist checklist = new Checklist(10L, "AM Inspection", 1);
+        ChecklistItem header = new ChecklistItem();
+        header.setItemType(ChecklistItemType.HEADER);
+        header.setResponseType(ChecklistResponseType.NONE);
+        header.setText("Room 1");
+        header.setChecklist(checklist);
+        ChecklistItem question = new ChecklistItem();
+        question.setItemType(ChecklistItemType.QUESTION);
+        question.setResponseType(ChecklistResponseType.INTEGER);
+        question.setText("Temperature");
+        question.setChecklist(checklist);
+        checklist.addItem(header);
+        checklist.addItem(question);
+
+        Task task = new Task("AM Inspection", "Every morning", checklist);
+        task.setId(7L);
+        task.setSopFileName("old.pdf");
+        task.setSopData(new byte[]{'%', 'P', 'D', 'F'});
+        return task;
+    }
+
+    @Test
+    void editStandardTaskForm_developer_prefillsExistingItems() {
+        session.setAttribute("loggedInUser", developerUser);
+        when(taskRepo.findById(7L)).thenReturn(Optional.of(existingTask()));
+        Model model = new ConcurrentModel();
+
+        String view = controller.editStandardTaskForm(7L, session, model, null);
+
+        assertEquals("create-standard-task", view);
+        assertNotNull(model.getAttribute("task"));
+        List<?> items = (List<?>) model.getAttribute("existingItems");
+        assertEquals(2, items.size());
+        assertEquals("INTEGER", ((java.util.Map<?, ?>) items.get(1)).get("responseType"));
+    }
+
+    @Test
+    void editStandardTaskForm_userCreatedTask_redirectsToList() {
+        session.setAttribute("loggedInUser", developerUser);
+        Task userTask = existingTask();
+        userTask.setUserCreated(true);
+        when(taskRepo.findById(7L)).thenReturn(Optional.of(userTask));
+
+        assertEquals("redirect:/developer/standard-tasks",
+                controller.editStandardTaskForm(7L, session, new ConcurrentModel(), null));
+    }
+
+    @Test
+    void updateStandardTask_sameItems_keepsChecklistVersion() {
+        session.setAttribute("loggedInUser", developerUser);
+        Task task = existingTask();
+        Checklist original = task.getChecklist();
+        when(taskRepo.findById(7L)).thenReturn(Optional.of(task));
+
+        String result = controller.updateStandardTask(7L, "AM Inspection", "Updated description",
+                List.of("HEADER", "QUESTION"), List.of("Room 1", "Temperature"), List.of("NONE", "INTEGER"), null,
+                null, false, "NONE", session, new RedirectAttributesModelMap());
+
+        assertEquals("redirect:/developer/standard-tasks", result);
+        assertSame(original, task.getChecklist());
+        assertEquals("Updated description", task.getDescription());
+        verify(checklistRepo, never()).save(any());
+        verify(taskRepo).save(task);
+    }
+
+    @Test
+    void updateStandardTask_changedItems_savesNewChecklistVersion() {
+        session.setAttribute("loggedInUser", developerUser);
+        Task task = existingTask();
+        Checklist original = task.getChecklist();
+        when(taskRepo.findById(7L)).thenReturn(Optional.of(task));
+
+        controller.updateStandardTask(7L, "AM Inspection v2", null,
+                List.of("HEADER", "QUESTION", "QUESTION"),
+                List.of("Room 1", "Temperature", "Humidity"),
+                List.of("NONE", "INTEGER", "NUMBER"), null,
+                null, false, "NONE", session, new RedirectAttributesModelMap());
+
+        assertNotSame(original, task.getChecklist());
+        assertEquals(2, task.getChecklist().getVersion());
+        assertEquals(3, task.getChecklist().getItems().size());
+        assertEquals("AM Inspection v2", task.getTitle());
+        assertEquals(2, original.getItems().size()); // old version untouched for past runs
+        verify(checklistRepo).save(task.getChecklist());
+    }
+
+    @Test
+    void updateStandardTask_removeSop_clearsSop() {
+        session.setAttribute("loggedInUser", developerUser);
+        Task task = existingTask();
+        when(taskRepo.findById(7L)).thenReturn(Optional.of(task));
+
+        controller.updateStandardTask(7L, "AM Inspection", null,
+                List.of("HEADER", "QUESTION"), List.of("Room 1", "Temperature"), List.of("NONE", "INTEGER"), null,
+                null, true, "NONE", session, new RedirectAttributesModelMap());
+
+        assertNull(task.getSopFileName());
+        assertNull(task.getSopData());
+    }
+
+    @Test
+    void updateStandardTask_blankTitle_returnsToEditWithError() {
+        session.setAttribute("loggedInUser", developerUser);
+        when(taskRepo.findById(7L)).thenReturn(Optional.of(existingTask()));
+
+        String result = controller.updateStandardTask(7L, " ", null,
+                List.of("QUESTION"), List.of("Q"), List.of("TEXT"), null,
+                null, false, "NONE", session, new RedirectAttributesModelMap());
+
+        assertEquals("redirect:/developer/standard-tasks/7/edit", result);
+        verify(taskRepo, never()).save(any());
+    }
+
+    @Test
+    void updateStandardTask_nonDeveloper_redirectsToDashboard() {
+        session.setAttribute("loggedInUser", techUser);
+
+        String result = controller.updateStandardTask(7L, "x", null, null, null, null, null,
+                null, false, null, session, new RedirectAttributesModelMap());
+
+        assertEquals("redirect:/dashboard/home-dashboard", result);
+        verify(taskRepo, never()).save(any());
     }
 }

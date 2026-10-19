@@ -56,9 +56,11 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:each="task : ${standardTasks}">
+                            <tr th:each="task : ${standardTasks}" class="task-row" style="cursor: pointer;"
+                                th:attr="data-href=@{/developer/standard-tasks/{id}/edit(id=${task.getId()})}">
                                 <td>
-                                    <span th:text="${task.getTitle()}">Task Title</span>
+                                    <a th:href="@{/developer/standard-tasks/{id}/edit(id=${task.getId()})}"
+                                       class="fw-semibold text-decoration-none" th:text="${task.getTitle()}">Task Title</a>
                                     <span th:if="${task.isBatchTask()}" class="badge bg-success-subtle text-success-emphasis border ms-1"
                                           th:text="${'Batch: ' + task.getBatchAction().getDisplayName()}">Batch</span>
                                 </td>
@@ -100,5 +102,14 @@
 </main>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // Clicking a row opens the task's edit page; the Archive/Restore buttons keep their own behaviour.
+    document.querySelectorAll('tr.task-row').forEach(function (row) {
+        row.addEventListener('click', function (e) {
+            if (e.target.closest('form, button, a')) return;
+            window.location.href = row.dataset.href;
+        });
+    });
+</script>
 </body>
 </html>
