@@ -28,17 +28,20 @@ public class ChecklistRunController {
     private final ChecklistItemRepository itemRepo;
     private final ChecklistRunRepository runRepo;
     private final TaskPauseRepository taskPauseRepo;
+    private final BatchRecordService batchRecordService;
 
     public ChecklistRunController(ChecklistRunService runService,
                                   TaskRepository taskRepo,
                                   ChecklistItemRepository itemRepo,
                                   ChecklistRunRepository runRepo,
-                                  TaskPauseRepository taskPauseRepo) {
+                                  TaskPauseRepository taskPauseRepo,
+                                  BatchRecordService batchRecordService) {
         this.runService = runService;
         this.taskRepo = taskRepo;
         this.itemRepo = itemRepo;
         this.runRepo = runRepo;
         this.taskPauseRepo = taskPauseRepo;
+        this.batchRecordService = batchRecordService;
     }
 
     @PostMapping("/submit")
@@ -106,7 +109,22 @@ public class ChecklistRunController {
             responses.add(resp);
         }
 
-        runService.submitWithResponses(runId, responses);
+        if (task.isBatchTask()) {
+            ChecklistRun run = runRepo.findById(runId).orElseThrow();
+            batchRecordService.saveDraft(task, run, params);
+            try {
+                batchRecordService.submitRun(runId, responses);
+            } catch (BatchRecordException e) {
+                // Keep the checklist answers too, so the technician only fixes the batch field.
+                if (run.getStatus() == ChecklistRunStatus.IN_PROGRESS) {
+                    runService.pauseByUser(runId, responses);
+                }
+                redirectAttributes.addFlashAttribute("error", e.getMessage());
+                return "redirect:/tasks/" + taskId + "/resume/" + runId;
+            }
+        } else {
+            runService.submitWithResponses(runId, responses);
+        }
 
         // Close any open pause so timeline calc doesn't see it as still paused
         runRepo.findById(runId).ifPresent(run ->
@@ -179,6 +197,9 @@ public class ChecklistRunController {
         }
 
         runService.pauseByUser(runId, responses);
+        if (task.isBatchTask()) {
+            runRepo.findById(runId).ifPresent(run -> batchRecordService.saveDraft(task, run, params));
+        }
 
         // Record the pause — only if there isn't already one open (guard against double-submit)
         runRepo.findById(runId).ifPresent(run -> {
@@ -263,6 +284,7 @@ public class ChecklistRunController {
                 .toList()
         );
         model.addAttribute("openPause", openPause);
+        model.addAttribute("batchEntry", batchRecordService.entryForRun(runId).orElse(null));
         model.addAttribute("isInProgress", run.getStatus() == ChecklistRunStatus.IN_PROGRESS);
         model.addAttribute("hasAnyResponse", !responseMap.isEmpty());
 
@@ -273,11 +295,18 @@ public class ChecklistRunController {
     public String approveChecklistRun(
             @PathVariable Long runId,
             @RequestParam("managerComments") String managerComments,
-            HttpSession session) {
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
-        runService.authorizeByManager(runId, user, managerComments);
+        // Through the batch service so the batch record and the run approve together.
+        try {
+            batchRecordService.approveRun(runId, user, managerComments);
+        } catch (BatchRecordException e) {
+            redirectAttributes.addFlashAttribute("error", "Can't approve: " + e.getMessage());
+            return "redirect:/checklist-runs/runs/" + runId;
+        }
         return "redirect:/dashboard/task-dashboard";
     }
 
@@ -289,7 +318,7 @@ public class ChecklistRunController {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
-        runService.rejectByManager(runId, user, managerComments);
+        batchRecordService.rejectRun(runId, user, managerComments);
         return "redirect:/dashboard/task-dashboard";
     }
 

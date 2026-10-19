@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Batch record inputs for a standard task with a batch action. Rendered inside
+     the checklist form; every input is named br_* and read by BatchRecordService. -->
+<div th:fragment="batchFields" class="card border-success mb-4" id="batchFields"
+     th:with="act=${batchAction.name()}, creates=${batchAction.isCreatesBatch()}">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="bi bi-journal-text me-2"></i>Batch Record — <span th:text="${batchAction.getDisplayName()}">Action</span></h6>
+        <span class="badge bg-light text-dark border" th:text="${#temporals.format(batchEntryDate, 'MMM d, yyyy')}">Date</span>
+    </div>
+    <div class="card-body">
+        <p class="small text-muted mb-3">
+            Recorded for <strong th:text="${session.loggedInUser.getName()}">Tech</strong> on this date.
+            Weights are in kg (up to 3 decimals). Counts toward the batch once a manager approves this task.
+        </p>
+
+        <div class="row g-3">
+            <!-- Room -->
+            <div class="col-md-4">
+                <label class="form-label fw-semibold" for="br_room"
+                       th:text="${act == 'RECEIVE_SEEDS' or act == 'CLONING'} ? 'Destination room' : (${act == 'TRANSFER_TO_FLOWER'} ? 'Flowering room' : 'Room')">Room</label>
+                <select class="form-select" id="br_room" name="br_room" required>
+                    <option value="" th:selected="${batchEntry.room == null}">Choose room…</option>
+                    <option th:each="r : ${rooms}" th:value="${r.name()}" th:text="${r.getDisplayName()}"
+                            th:selected="${batchEntry.room != null and batchEntry.room.name() == r.name()}">B1</option>
+                </select>
+            </div>
+
+            <!-- New batch: variety + live batch number -->
+            <th:block th:if="${creates}">
+                <div class="col-md-8">
+                    <label class="form-label fw-semibold" for="br_varietyId">Variety / cultivar</label>
+                    <select class="form-select" id="br_varietyId" name="br_varietyId" required>
+                        <option value="">Choose variety…</option>
+                        <option th:each="v : ${varieties}" th:value="${v.id}" th:text="${v.name + ' (' + v.code + ')'}"
+                                th:selected="${batchEntry.variety != null and batchEntry.variety.id == v.id}">Variety</option>
+                        <option th:value="${newVarietyValue}"
+                                th:selected="${batchEntry.variety == null and batchEntry.newVarietyName != null}">+ Add a new variety…</option>
+                    </select>
+                </div>
+                <div class="col-md-8" id="newVarietyFields" style="display:none;">
+                    <div class="row g-2">
+                        <div class="col-8">
+                            <label class="form-label small" for="br_newVarietyName">New variety name</label>
+                            <input type="text" class="form-control" id="br_newVarietyName" name="br_newVarietyName"
+                                   th:value="${batchEntry.newVarietyName}" placeholder="e.g., Blue Dream">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small" for="br_newVarietyCode">Code (2–3 letters)</label>
+                            <input type="text" class="form-control text-uppercase" id="br_newVarietyCode" name="br_newVarietyCode"
+                                   th:value="${batchEntry.newVarietyCode}" maxlength="3" pattern="[A-Za-z]{2,3}" placeholder="BLD">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="alert alert-light border mb-0 py-2">
+                        Batch number: <strong id="batchCodePreview" class="font-monospace">—</strong>
+                        <span class="small text-muted ms-2">Same variety, room and day joins the same batch.</span>
+                    </div>
+                </div>
+            </th:block>
+
+            <!-- Existing batch, suggested from the room -->
+            <div class="col-md-8" th:unless="${creates}">
+                <label class="form-label fw-semibold" for="br_batchId">Batch</label>
+                <select class="form-select" id="br_batchId" name="br_batchId" required
+                        th:attr="data-selected=${batchEntry.batch != null ? batchEntry.batch.id : ''}">
+                    <option value="">Choose a room first…</option>
+                </select>
+                <div class="form-text" id="batchInfo">Suggested from the room — confirm or change.</div>
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="row g-3">
+            <!-- RECEIVE SEEDS -->
+            <th:block th:if="${act == 'RECEIVE_SEEDS'}">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="br_plantCount">Seed count</label>
+                    <input type="number" class="form-control" id="br_plantCount" name="br_plantCount" min="1" step="1" required th:value="${batchEntry.plantCount}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="br_source">Supplier or source</label>
+                    <input type="text" class="form-control" id="br_source" name="br_source" required th:value="${batchEntry.source}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="br_lotNumber">Lot number</label>
+                    <input type="text" class="form-control" id="br_lotNumber" name="br_lotNumber" required th:value="${batchEntry.lotNumber}">
+                </div>
+            </th:block>
+
+            <!-- CLONING -->
+            <th:block th:if="${act == 'CLONING'}">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="br_source">Mother plant or source batch</label>
+                    <input type="text" class="form-control" id="br_source" name="br_source" required th:value="${batchEntry.source}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="br_plantCount">Number of clones cut</label>
+                    <input type="number" class="form-control" id="br_plantCount" name="br_plantCount" min="1" step="1" required th:value="${batchEntry.plantCount}">
+                </div>
+            </th:block>
+
+            <!-- TRANSFER TO FLOWER -->
+            <th:block th:if="${act == 'TRANSFER_TO_FLOWER'}">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="br_plantCount">Number of plants you moved</label>
+                    <input type="number" class="form-control" id="br_plantCount" name="br_plantCount" min="1" step="1" required th:value="${batchEntry.plantCount}">
+                    <div class="form-text" id="actionHint"></div>
+                </div>
+            </th:block>
+
+            <!-- FILTER CHANGE -->
+            <th:block th:if="${act == 'FILTER_CHANGE'}">
+                <div class="col-12">
+                    <div class="alert py-2 mb-0" id="filterStatus">Choose a room to see its last filter change.</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="br_filterWork">Filters were</label>
+                    <select class="form-select" id="br_filterWork" name="br_filterWork" required>
+                        <option value="">Choose…</option>
+                        <option th:each="fw : ${filterWorkOptions}" th:value="${fw.name()}" th:text="${fw.getDisplayName()}"
+                                th:selected="${batchEntry.filterWork != null and batchEntry.filterWork.name() == fw.name()}">Changed</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="br_filterCount">Number of filters</label>
+                    <input type="number" class="form-control" id="br_filterCount" name="br_filterCount" min="1" step="1" required th:value="${batchEntry.filterCount}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="br_filterRating">Filter rating (MERV)</label>
+                    <input type="number" class="form-control" id="br_filterRating" name="br_filterRating" min="8" step="1" required th:value="${batchEntry.filterRating}">
+                    <div class="form-text">MERV 8 minimum.</div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold" for="br_notes">Notes <span class="text-muted fw-normal">(optional)</span></label>
+                    <textarea class="form-control" id="br_notes" name="br_notes" rows="2" th:text="${batchEntry.notes}"></textarea>
+                </div>
+            </th:block>
+
+            <!-- HARVEST -->
+            <th:block th:if="${act == 'HARVEST'}">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="br_plantCount">Plants cut down</label>
+                    <input type="number" class="form-control" id="br_plantCount" name="br_plantCount" min="1" step="1" required th:value="${batchEntry.plantCount}">
+                    <div class="form-text" id="actionHint"></div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="br_weightKg">Wet weight (kg)</label>
+                    <input type="number" class="form-control" id="br_weightKg" name="br_weightKg" min="0.001" step="0.001" required th:value="${batchEntry.weightKg}">
+                    <div class="form-text">Whole plant, before any leaves or stems come off.</div>
+                </div>
+            </th:block>
+
+            <!-- DEBUCK / DESTEM -->
+            <th:block th:if="${act == 'DEBUCK_DESTEM'}">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="br_plantCount">Plants processed</label>
+                    <input type="number" class="form-control" id="br_plantCount" name="br_plantCount" min="1" step="1" required th:value="${batchEntry.plantCount}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="br_fanLeafKg">Fan leaves (kg)</label>
+                    <input type="number" class="form-control" id="br_fanLeafKg" name="br_fanLeafKg" min="0" step="0.001" required th:value="${batchEntry.fanLeafKg}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="br_stemKg">Stems (kg)</label>
+                    <input type="number" class="form-control" id="br_stemKg" name="br_stemKg" min="0" step="0.001" required th:value="${batchEntry.stemKg}">
+                </div>
+                <div class="col-12 form-text mt-1">Leaves and stems are held as material awaiting destruction.</div>
+            </th:block>
+
+            <!-- TRIMMING -->
+            <th:block th:if="${act == 'TRIMMING'}">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="br_trimKg">Trim / sugar leaves (kg)</label>
+                    <input type="number" class="form-control" id="br_trimKg" name="br_trimKg" min="0" step="0.001" required th:value="${batchEntry.trimKg}">
+                    <div class="form-text">Weighed before it is declared waste; held for destruction.</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="br_flowerTrimmedKg">Flower trimmed (kg)</label>
+                    <input type="number" class="form-control" id="br_flowerTrimmedKg" name="br_flowerTrimmedKg" min="0" step="0.001" required th:value="${batchEntry.flowerTrimmedKg}">
+                </div>
+            </th:block>
+
+            <!-- DRY WEIGHT -->
+            <th:block th:if="${act == 'DRY_WEIGHT'}">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="br_weightKg">Final dried flower weight (kg)</label>
+                    <input type="number" class="form-control" id="br_weightKg" name="br_weightKg" min="0.001" step="0.001" required th:value="${batchEntry.weightKg}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Drying and processing loss</label>
+                    <div class="form-control-plaintext" id="lossPreview">Choose a batch and enter the dry weight.</div>
+                </div>
+            </th:block>
+
+            <!-- DESTRUCTION -->
+            <th:block th:if="${act == 'DESTRUCTION'}">
+                <div class="col-12">
+                    <div class="alert alert-light border py-2 mb-0 small" id="onHandInfo">Choose a batch to see material on hand.</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="br_material">Material type</label>
+                    <select class="form-select" id="br_material" name="br_material" required>
+                        <option value="">Choose…</option>
+                        <option th:each="m : ${materialOptions}" th:value="${m.name()}" th:text="${m.getDisplayName()}"
+                                th:selected="${batchEntry.material != null and batchEntry.material.name() == m.name()}">Stems</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold" for="br_weightKg">Weight destroyed (kg)</label>
+                    <input type="number" class="form-control" id="br_weightKg" name="br_weightKg" min="0.001" step="0.001" required th:value="${batchEntry.weightKg}">
+                </div>
+                <div class="col-md-4" id="plantCountGroup" style="display:none;">
+                    <label class="form-label fw-semibold" for="br_plantCount">Plant count</label>
+                    <input type="number" class="form-control" id="br_plantCount" name="br_plantCount" min="1" step="1" th:value="${batchEntry.plantCount}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="br_destructionMethod">Destruction method</label>
+                    <input type="text" class="form-control" id="br_destructionMethod" name="br_destructionMethod" required th:value="${batchEntry.destructionMethod}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold" for="br_witness">Witness</label>
+                    <input type="text" class="form-control" id="br_witness" name="br_witness" required th:value="${batchEntry.witness}">
+                </div>
+            </th:block>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+    (function () {
+        const ACTION = /*[[${act}]]*/ 'NONE';
+        const BATCHES = /*[[${batchesByRoom}]]*/ {};
+        const VARIETY_CODES = /*[[${varietyCodes}]]*/ {};
+        const FILTERS = /*[[${filterStatusByRoom}]]*/ {};
+        const CODE_DATE = /*[[${batchCodeDate}]]*/ '';
+        const NEW_VARIETY = /*[[${newVarietyValue}]]*/ '__new';
+
+        const room = document.getElementById('br_room');
+        const batchSel = document.getElementById('br_batchId');
+        const kg = v => (Math.round(v * 1000) / 1000).toFixed(3);
+        const num = id => { const el = document.getElementById(id); return el && el.value !== '' ? parseFloat(el.value) : null; };
+
+        function currentBatch() {
+            if (!batchSel || !room.value) return null;
+            return (BATCHES[room.value] || []).find(b => String(b.id) === batchSel.value) || null;
+        }
+
+        // ---- New batch number (seeds / cloning)
+        const varietySel = document.getElementById('br_varietyId');
+        function updateVariety() {
+            if (!varietySel) return;
+            const isNew = varietySel.value === NEW_VARIETY;
+            document.getElementById('newVarietyFields').style.display = isNew ? '' : 'none';
+            document.getElementById('br_newVarietyName').required = isNew;
+            document.getElementById('br_newVarietyCode').required = isNew;
+            let code = isNew ? document.getElementById('br_newVarietyCode').value.toUpperCase() : VARIETY_CODES[varietySel.value];
+            const ok = code && /^[A-Z]{2,3}$/.test(code) && room.value;
+            document.getElementById('batchCodePreview').textContent = ok ? CODE_DATE + '-' + code + '-' + room.value : '—';
+        }
+
+        // ---- Existing batch picker, suggested from the room
+        function fillBatches() {
+            if (!batchSel) return;
+            const keep = batchSel.value || batchSel.dataset.selected;
+            batchSel.dataset.selected = '';
+            batchSel.innerHTML = '';
+            const list = room.value ? (BATCHES[room.value] || []) : [];
+            if (!room.value) {
+                batchSel.add(new Option('Choose a room first…', ''));
+            } else if (list.length === 0) {
+                batchSel.add(new Option('No approved batches in ' + room.value, ''));
+            } else {
+                list.forEach(b => batchSel.add(new Option(b.code + ' — ' + b.variety + ' (' + b.stage + ')', b.id)));
+                const match = list.find(b => String(b.id) === String(keep));
+                batchSel.value = match ? match.id : list[0].id;
+            }
+            updateBatchInfo();
+        }
+
+        function updateBatchInfo() {
+            const b = currentBatch();
+            const info = document.getElementById('batchInfo');
+            if (info) info.textContent = b ? 'Stage: ' + b.stage + ' · ' + b.livePlants + ' live plants' : 'Suggested from the room — confirm or change.';
+            const hint = document.getElementById('actionHint');
+            if (hint && b) {
+                if (ACTION === 'TRANSFER_TO_FLOWER') hint.textContent = b.transferable + ' plants left to transfer. Records "X plants transferred to ' + room.value + ' for flowering".';
+                if (ACTION === 'HARVEST') hint.textContent = b.livePlants + ' live plants in this batch.';
+            }
+            const onHand = document.getElementById('onHandInfo');
+            if (onHand) onHand.textContent = b
+                ? 'On hand for ' + b.code + ': stems ' + kg(b.onHandStems) + ' kg · fan leaves ' + kg(b.onHandFan) + ' kg · trim ' + kg(b.onHandTrim) + ' kg · live plants ' + b.livePlants
+                : 'Choose a batch to see material on hand.';
+            updateLoss();
+        }
+
+        function updateFilter() {
+            const box = document.getElementById('filterStatus');
+            if (!box) return;
+            const f = room.value ? FILTERS[room.value] : null;
+            box.className = 'alert py-2 mb-0 ' + (!f ? 'alert-light border' : f.state === 'OVERDUE' ? 'alert-danger' : f.state === 'DUE' ? 'alert-warning' : 'alert-success');
+            box.textContent = f ? f.summary : 'Choose a room to see its last filter change.';
+        }
+
+        function updateLoss() {
+            const out = document.getElementById('lossPreview');
+            if (!out) return;
+            const b = currentBatch();
+            const dry = num('br_weightKg');
+            if (!b || dry === null) { out.textContent = 'Choose a batch and enter the dry weight.'; return; }
+            if (!b.wetKg) { out.textContent = 'No approved wet weight for this batch yet.'; return; }
+            const loss = b.wetKg - (b.fanKg + b.stemKg + b.trimKg + b.dryKg + dry);
+            out.textContent = kg(loss) + ' kg (' + (loss / b.wetKg * 100).toFixed(1) + '% of ' + kg(b.wetKg) + ' kg wet)';
+        }
+
+        function updateMaterial() {
+            const mat = document.getElementById('br_material');
+            if (!mat) return;
+            const whole = mat.value === 'WHOLE_PLANTS';
+            document.getElementById('plantCountGroup').style.display = whole ? '' : 'none';
+            document.getElementById('br_plantCount').required = whole;
+        }
+
+        room.addEventListener('change', () => { fillBatches(); updateVariety(); updateFilter(); });
+        if (batchSel) batchSel.addEventListener('change', updateBatchInfo);
+        if (varietySel) {
+            varietySel.addEventListener('change', updateVariety);
+            document.getElementById('br_newVarietyCode').addEventListener('input', updateVariety);
+        }
+        const w = document.getElementById('br_weightKg');
+        if (w) w.addEventListener('input', updateLoss);
+        const mat = document.getElementById('br_material');
+        if (mat) mat.addEventListener('change', updateMaterial);
+
+        fillBatches(); updateVariety(); updateFilter(); updateMaterial();
+    })();
+    </script>
+</div>
+
+</body>
+</html>

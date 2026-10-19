@@ -26,6 +26,7 @@ public class TaskViewController {
     private final ChecklistRepository checklistRepo;
     private final ChecklistResponseRepository responseRepo;
     private final TaskPauseRepository taskPauseRepo;
+    private final BatchRecordService batchRecordService;
 
     public TaskViewController(TaskRepository taskRepo,
                               ChecklistItemRepository itemRepo,
@@ -33,7 +34,8 @@ public class TaskViewController {
                               ChecklistRunService runService,
                               ChecklistRepository checklistRepo,
                               ChecklistResponseRepository responseRepo,
-                              TaskPauseRepository taskPauseRepo) {
+                              TaskPauseRepository taskPauseRepo,
+                              BatchRecordService batchRecordService) {
         this.taskRepo = taskRepo;
         this.itemRepo = itemRepo;
         this.runRepo = runRepo;
@@ -41,6 +43,7 @@ public class TaskViewController {
         this.checklistRepo = checklistRepo;
         this.responseRepo = responseRepo;
         this.taskPauseRepo = taskPauseRepo;
+        this.batchRecordService = batchRecordService;
     }
 
     /* ---------------- Create Task ---------------- */
@@ -305,6 +308,9 @@ public class TaskViewController {
         model.addAttribute("runId", run.getId());
         model.addAttribute("items", itemRepo.findByChecklistIdOrderByDisplayOrder(cl.getId()));
         model.addAttribute("responses", new HashMap<Long, ChecklistResponse>());
+        if (task.isBatchTask()) {
+            model.addAllAttributes(batchRecordService.formModel(task, run));
+        }
 
         return "checklist-view";
     }
@@ -355,6 +361,9 @@ public class TaskViewController {
         model.addAttribute("runId", run.getId());
         model.addAttribute("items", items);
         model.addAttribute("responses", responseMap);
+        if (task.isBatchTask()) {
+            model.addAllAttributes(batchRecordService.formModel(task, run));
+        }
 
         return "checklist-view";
     }

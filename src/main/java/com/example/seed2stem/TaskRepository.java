@@ -24,4 +24,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     /** Archived user-created tasks. */
     List<Task> findByUserCreatedTrueAndDeletedTrue();
+
+    /** Any task (archived included) that writes this batch action. */
+    boolean existsByBatchAction(BatchAction batchAction);
 }

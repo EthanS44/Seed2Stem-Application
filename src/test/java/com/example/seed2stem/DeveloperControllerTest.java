@@ -340,6 +340,7 @@ class DeveloperControllerTest {
                 List.of("Room 1", "Temperature"),
                 List.of("NONE", "NUMBER"),
                 null, // no file uploaded
+                null, // no batch action
                 session,
                 redirect);
 
@@ -347,6 +348,32 @@ class DeveloperControllerTest {
         verify(checklistRepo).save(any(Checklist.class));
         verify(taskRepo).save(argThat(t ->
                 t.getSopFileName() == null && t.getSopData() == null));
+    }
+
+    @Test
+    void createStandardTask_batchActionWithNoItems_savesBatchTask() {
+        session.setAttribute("loggedInUser", developerUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        String result = controller.createStandardTask(
+                "Harvest", "Log the harvest", null, null, null,
+                null, "HARVEST", session, redirect);
+
+        assertEquals("redirect:/developer/standard-tasks", result);
+        verify(taskRepo).save(argThat(t -> t.getBatchAction() == BatchAction.HARVEST));
+    }
+
+    @Test
+    void createStandardTask_noItemsAndNoBatchAction_isRejected() {
+        session.setAttribute("loggedInUser", developerUser);
+        RedirectAttributes redirect = new RedirectAttributesModelMap();
+
+        String result = controller.createStandardTask(
+                "Empty", "desc", null, null, null,
+                null, "NONE", session, redirect);
+
+        assertEquals("redirect:/developer/standard-tasks/new", result);
+        verify(taskRepo, never()).save(any(Task.class));
     }
 
     @Test
@@ -364,6 +391,7 @@ class DeveloperControllerTest {
                 List.of("Temp"),
                 List.of("NUMBER"),
                 pdf,
+                null, // no batch action
                 session,
                 redirect);
 
@@ -385,7 +413,7 @@ class DeveloperControllerTest {
         String result = controller.createStandardTask(
                 "Task", "desc",
                 List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
-                bogus, session, redirect);
+                bogus, null, session, redirect);
 
         assertEquals("redirect:/developer/standard-tasks/new", result);
         verify(taskRepo, never()).save(any(Task.class));
@@ -402,7 +430,7 @@ class DeveloperControllerTest {
         String result = controller.createStandardTask(
                 "Task", "desc",
                 List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
-                notPdf, session, redirect);
+                notPdf, null, session, redirect);
 
         assertEquals("redirect:/developer/standard-tasks/new", result);
         verify(taskRepo, never()).save(any(Task.class));
@@ -421,7 +449,7 @@ class DeveloperControllerTest {
         String result = controller.createStandardTask(
                 "Task", "desc",
                 List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
-                fake, session, redirect);
+                fake, null, session, redirect);
 
         assertEquals("redirect:/developer/standard-tasks/new", result);
         verify(taskRepo, never()).save(any(Task.class));
@@ -438,7 +466,7 @@ class DeveloperControllerTest {
         String result = controller.createStandardTask(
                 "Task", "desc",
                 List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
-                empty, session, redirect);
+                empty, null, session, redirect);
 
         assertEquals("redirect:/developer/standard-tasks", result);
         verify(taskRepo).save(argThat(t ->
@@ -453,7 +481,7 @@ class DeveloperControllerTest {
         String result = controller.createStandardTask(
                 "Task", "desc",
                 List.of("QUESTION"), List.of("Q"), List.of("TEXT"),
-                null, session, redirect);
+                null, null, session, redirect);
 
         assertEquals("redirect:/dashboard/home-dashboard", result);
         verify(taskRepo, never()).save(any(Task.class));

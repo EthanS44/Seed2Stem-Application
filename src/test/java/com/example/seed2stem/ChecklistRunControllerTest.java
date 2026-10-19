@@ -40,6 +40,9 @@ class ChecklistRunControllerTest {
     @Mock
     private TaskPauseRepository taskPauseRepo;
 
+    @Mock
+    private BatchRecordService batchRecordService;
+
     @InjectMocks
     private ChecklistRunController controller;
 
@@ -506,18 +509,31 @@ class ChecklistRunControllerTest {
 
     @Test
     void approveChecklistRun_noUser_redirectsToLogin() {
-        String result = controller.approveChecklistRun(1L, "Good", session);
+        String result = controller.approveChecklistRun(1L, "Good", session, new RedirectAttributesModelMap());
         assertEquals("redirect:/auth/login", result);
     }
 
     @Test
     void approveChecklistRun_manager_approvesAndRedirects() {
         session.setAttribute("loggedInUser", managerUser);
-        when(runService.authorizeByManager(1L, managerUser, "Approved")).thenReturn(run);
+        when(batchRecordService.approveRun(1L, managerUser, "Approved")).thenReturn(run);
 
-        String result = controller.approveChecklistRun(1L, "Approved", session);
+        String result = controller.approveChecklistRun(1L, "Approved", session, new RedirectAttributesModelMap());
         assertEquals("redirect:/dashboard/task-dashboard", result);
-        verify(runService).authorizeByManager(1L, managerUser, "Approved");
+        verify(batchRecordService).approveRun(1L, managerUser, "Approved");
+    }
+
+    @Test
+    void approveChecklistRun_batchRuleFails_returnsToReviewWithError() {
+        session.setAttribute("loggedInUser", managerUser);
+        when(batchRecordService.approveRun(1L, managerUser, "ok"))
+                .thenThrow(new BatchRecordException("Only 2.000 kg of stems is on hand for 261008-ABC-B1."));
+        RedirectAttributesModelMap redirect = new RedirectAttributesModelMap();
+
+        String result = controller.approveChecklistRun(1L, "ok", session, redirect);
+
+        assertEquals("redirect:/checklist-runs/runs/1", result);
+        assertTrue(String.valueOf(redirect.getFlashAttributes().get("error")).contains("stems is on hand"));
     }
 
     // --- rejectChecklistRun ---
@@ -531,11 +547,11 @@ class ChecklistRunControllerTest {
     @Test
     void rejectChecklistRun_manager_rejectsAndRedirects() {
         session.setAttribute("loggedInUser", managerUser);
-        when(runService.rejectByManager(1L, managerUser, "Redo section 3")).thenReturn(run);
+        when(batchRecordService.rejectRun(1L, managerUser, "Redo section 3")).thenReturn(run);
 
         String result = controller.rejectChecklistRun(1L, "Redo section 3", session);
         assertEquals("redirect:/dashboard/task-dashboard", result);
-        verify(runService).rejectByManager(1L, managerUser, "Redo section 3");
+        verify(batchRecordService).rejectRun(1L, managerUser, "Redo section 3");
     }
 
     // --- getPendingChecklists ---

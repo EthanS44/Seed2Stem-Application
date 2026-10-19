@@ -57,7 +57,11 @@
                         </thead>
                         <tbody>
                             <tr th:each="task : ${standardTasks}">
-                                <td th:text="${task.getTitle()}">Task Title</td>
+                                <td>
+                                    <span th:text="${task.getTitle()}">Task Title</span>
+                                    <span th:if="${task.isBatchTask()}" class="badge bg-success-subtle text-success-emphasis border ms-1"
+                                          th:text="${'Batch: ' + task.getBatchAction().getDisplayName()}">Batch</span>
+                                </td>
                                 <td th:text="${task.getDescription()}" class="text-muted">Description</td>
                                 <td th:text="${task.getChecklist() != null ? task.getChecklist().getName() : '—'}">Checklist Name</td>
                                 <td class="text-end" th:text="${task.getChecklist() != null ? task.getChecklist().getItems().size() : 0}">0</td>

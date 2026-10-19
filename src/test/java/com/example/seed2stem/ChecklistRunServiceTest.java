@@ -48,6 +48,31 @@ class ChecklistRunServiceTest {
         pendingRun.setCompletedBy(technician);
     }
 
+    // --- submitWithResponses: batch tasks ---
+
+    @Test
+    void submitWithResponses_batchTaskWithNoQuestions_submits() {
+        Task batchTask = new Task();
+        batchTask.setBatchAction(BatchAction.HARVEST);
+        inProgressRun.setTask(batchTask);
+        inProgressRun.setResponses(new java.util.ArrayList<>());
+        when(runRepo.findById(5L)).thenReturn(Optional.of(inProgressRun));
+        when(runRepo.save(any(ChecklistRun.class))).thenAnswer(i -> i.getArgument(0));
+
+        ChecklistRun result = runService.submitWithResponses(5L, new java.util.ArrayList<>());
+
+        assertEquals(ChecklistRunStatus.PENDING, result.getStatus());
+    }
+
+    @Test
+    void submitWithResponses_ordinaryTaskWithNoResponses_stillRejected() {
+        inProgressRun.setTask(new Task());
+        when(runRepo.findById(5L)).thenReturn(Optional.of(inProgressRun));
+
+        assertThrows(RuntimeException.class,
+                () -> runService.submitWithResponses(5L, new java.util.ArrayList<>()));
+    }
+
     // --- getChecklistById ---
 
     @Test

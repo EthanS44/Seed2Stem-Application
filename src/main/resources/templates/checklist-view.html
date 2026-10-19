@@ -22,6 +22,10 @@
                         <input type="hidden" name="runId" th:value="${runId}">
                         <input type="hidden" name="pauseReason" id="pauseReasonHidden">
 
+                        <th:block th:if="${batchAction != null}">
+                            <div th:replace="~{fragments/batch-fields :: batchFields}"></div>
+                        </th:block>
+
                         <div th:each="item : ${items}">
 
                             <!-- HEADER -->

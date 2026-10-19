@@ -278,6 +278,7 @@ public class DeveloperController {
         }
 
         model.addAttribute("responseTypes", ChecklistResponseType.selectableForBuilder());
+        model.addAttribute("batchActions", BatchAction.values());
         model.addAttribute("error", error);
         return "create-standard-task";
     }
@@ -289,6 +290,7 @@ public class DeveloperController {
                                      @RequestParam(required = false) List<String> itemText,
                                      @RequestParam(required = false) List<String> responseType,
                                      @RequestParam(value = "sopPdfFile", required = false) MultipartFile sopPdfFile,
+                                     @RequestParam(value = "batchAction", required = false) String batchAction,
                                      HttpSession session,
                                      RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("loggedInUser");
@@ -301,10 +303,21 @@ public class DeveloperController {
             redirectAttributes.addAttribute("error", "Task name is required");
             return "redirect:/developer/standard-tasks/new";
         }
-        if (itemType == null || itemType.isEmpty()) {
+        BatchAction action;
+        try {
+            action = (batchAction == null || batchAction.isBlank())
+                    ? BatchAction.NONE : BatchAction.valueOf(batchAction);
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addAttribute("error", "Unknown batch record action: " + batchAction);
+            return "redirect:/developer/standard-tasks/new";
+        }
+        // A batch task already has its inputs (room, batch, action fields), so checklist items are optional.
+        boolean needsItems = action == BatchAction.NONE;
+        if (needsItems && (itemType == null || itemType.isEmpty())) {
             redirectAttributes.addAttribute("error", "At least one checklist item is required");
             return "redirect:/developer/standard-tasks/new";
         }
+        if (itemType == null) itemType = List.of();
 
         // Validate uploaded SOP PDF (optional). Reject non-PDFs by extension,
         // content-type, and magic bytes to prevent disguised uploads.
@@ -364,7 +377,7 @@ public class DeveloperController {
                 checklist.addItem(item);
             }
 
-            if (checklist.getItems().isEmpty()) {
+            if (needsItems && checklist.getItems().isEmpty()) {
                 redirectAttributes.addAttribute("error", "At least one non-empty checklist item is required");
                 return "redirect:/developer/standard-tasks/new";
             }
@@ -375,6 +388,7 @@ public class DeveloperController {
             task.setChecklist(checklist);
             task.setUserCreated(false);
             task.setCreatedBy(user);
+            task.setBatchAction(action);
             if (sopBytes != null) {
                 task.setSopFileName(sopName);
                 task.setSopData(sopBytes);

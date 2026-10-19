@@ -14,6 +14,8 @@
 
                     <h3 class="mb-3" th:text="${task.getTitle()}">Checklist Name</h3>
 
+                    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <p class="mb-1"><strong>Completed by:</strong>
@@ -122,6 +124,43 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Batch record entry this run will add (or added) -->
+                    <div th:if="${batchEntry != null}" class="card border-success mb-3">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0"><i class="bi bi-journal-text me-2"></i>Batch Record —
+                                <span th:text="${batchEntry.action.getDisplayName()}">Action</span></h6>
+                            <span class="badge"
+                                  th:classappend="${batchEntry.status.name() == 'APPROVED'} ? 'bg-success' : (${batchEntry.status.name() == 'REJECTED'} ? 'bg-danger' : 'bg-warning text-dark')"
+                                  th:text="${batchEntry.status.name() == 'APPROVED'} ? 'On batch record' : (${batchEntry.status.name() == 'REJECTED'} ? 'Voided' : 'Added on approval')">Status</span>
+                        </div>
+                        <div class="card-body">
+                            <dl class="row mb-0 small">
+                                <dt class="col-sm-4">Batch</dt>
+                                <dd class="col-sm-8">
+                                    <a th:if="${batchEntry.batch != null}" th:href="@{/batch-records/{id}(id=${batchEntry.batch.id})}"
+                                       class="font-monospace" th:text="${batchEntry.batch.batchCode}">code</a>
+                                    <span th:if="${batchEntry.batch == null}" class="font-monospace"
+                                          th:text="${batchEntry.proposedBatchCode != null ? batchEntry.proposedBatchCode + ' (created on approval)' : '—'}">code</span>
+                                </dd>
+                                <th:block th:if="${batchEntry.room != null}"><dt class="col-sm-4">Room</dt><dd class="col-sm-8" th:text="${batchEntry.room.getDisplayName()}"></dd></th:block>
+                                <th:block th:if="${batchEntry.getVarietyLabel() != null and batchEntry.action.isCreatesBatch()}"><dt class="col-sm-4">Variety</dt><dd class="col-sm-8" th:text="${batchEntry.getVarietyLabel()}"></dd></th:block>
+                                <th:block th:if="${batchEntry.plantCount != null}"><dt class="col-sm-4">Plant count</dt><dd class="col-sm-8" th:text="${batchEntry.plantCount}"></dd></th:block>
+                                <th:block th:if="${batchEntry.weightKg != null}"><dt class="col-sm-4" th:text="${batchEntry.action.name() == 'HARVEST'} ? 'Wet weight' : (${batchEntry.action.name() == 'DRY_WEIGHT'} ? 'Dry flower weight' : 'Weight destroyed')">Weight</dt><dd class="col-sm-8" th:text="${#numbers.formatDecimal(batchEntry.weightKg, 1, 3) + ' kg'}"></dd></th:block>
+                                <th:block th:if="${batchEntry.fanLeafKg != null}"><dt class="col-sm-4">Fan leaves</dt><dd class="col-sm-8" th:text="${#numbers.formatDecimal(batchEntry.fanLeafKg, 1, 3) + ' kg'}"></dd></th:block>
+                                <th:block th:if="${batchEntry.stemKg != null}"><dt class="col-sm-4">Stems</dt><dd class="col-sm-8" th:text="${#numbers.formatDecimal(batchEntry.stemKg, 1, 3) + ' kg'}"></dd></th:block>
+                                <th:block th:if="${batchEntry.trimKg != null}"><dt class="col-sm-4">Trim</dt><dd class="col-sm-8" th:text="${#numbers.formatDecimal(batchEntry.trimKg, 1, 3) + ' kg'}"></dd></th:block>
+                                <th:block th:if="${batchEntry.flowerTrimmedKg != null}"><dt class="col-sm-4">Flower trimmed</dt><dd class="col-sm-8" th:text="${#numbers.formatDecimal(batchEntry.flowerTrimmedKg, 1, 3) + ' kg'}"></dd></th:block>
+                                <th:block th:if="${batchEntry.source != null}"><dt class="col-sm-4" th:text="${batchEntry.action.name() == 'CLONING'} ? 'Mother / source batch' : 'Supplier / source'">Source</dt><dd class="col-sm-8" th:text="${batchEntry.source}"></dd></th:block>
+                                <th:block th:if="${batchEntry.lotNumber != null}"><dt class="col-sm-4">Lot number</dt><dd class="col-sm-8" th:text="${batchEntry.lotNumber}"></dd></th:block>
+                                <th:block th:if="${batchEntry.filterWork != null}"><dt class="col-sm-4">Filters</dt><dd class="col-sm-8" th:text="${batchEntry.filterWork.getDisplayName() + (batchEntry.filterCount != null ? ', ' + batchEntry.filterCount + ' filters' : '') + (batchEntry.filterRating != null ? ', MERV ' + batchEntry.filterRating : '')}"></dd></th:block>
+                                <th:block th:if="${batchEntry.material != null}"><dt class="col-sm-4">Material</dt><dd class="col-sm-8" th:text="${batchEntry.material.getDisplayName()}"></dd></th:block>
+                                <th:block th:if="${batchEntry.destructionMethod != null}"><dt class="col-sm-4">Method</dt><dd class="col-sm-8" th:text="${batchEntry.destructionMethod}"></dd></th:block>
+                                <th:block th:if="${batchEntry.witness != null}"><dt class="col-sm-4">Witness</dt><dd class="col-sm-8" th:text="${batchEntry.witness}"></dd></th:block>
+                                <th:block th:if="${batchEntry.notes != null}"><dt class="col-sm-4">Notes</dt><dd class="col-sm-8" th:text="${batchEntry.notes}"></dd></th:block>
+                            </dl>
                         </div>
                     </div>
 

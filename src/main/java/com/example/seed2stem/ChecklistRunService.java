@@ -55,7 +55,7 @@ public class ChecklistRunService {
             throw new RuntimeException("Checklist run is not in a submittable state");
         }
 
-        validateResponses(run.getResponses());
+        validateResponses(run.getResponses(), isBatchTask(run));
 
         run.setEndTime(LocalDateTime.now());
         run.setStatus(ChecklistRunStatus.PENDING);
@@ -76,7 +76,7 @@ public class ChecklistRunService {
             throw new RuntimeException("Checklist run is not in a submittable state");
         }
 
-        validateResponses(newResponses);
+        validateResponses(newResponses, isBatchTask(run));
 
         // Clear old responses (from pause) and add new ones within the transaction
         if (run.getResponses() != null) {
@@ -160,8 +160,14 @@ public class ChecklistRunService {
         return runRepo.findByCompletedByAndTaskAndStatus(user, task, ChecklistRunStatus.IN_PROGRESS);
     }
 
-    private void validateResponses(List<ChecklistResponse> responses) {
+    /** Batch tasks carry their data in a BatchRecordEntry, so they may have no checklist questions. */
+    private static boolean isBatchTask(ChecklistRun run) {
+        return run.getTask() != null && run.getTask().isBatchTask();
+    }
+
+    private void validateResponses(List<ChecklistResponse> responses, boolean allowEmpty) {
         if (responses == null || responses.isEmpty()) {
+            if (allowEmpty) return;
             throw new RuntimeException("No responses provided");
         }
 

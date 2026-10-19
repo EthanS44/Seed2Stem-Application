@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Batch Records')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <h4 class="mb-1">Batch Records</h4>
+    <p class="text-muted mb-4">
+        Batches are created when a Receive Seeds or Cloning task is approved. Each approved task adds a line to the batch's record.
+    </p>
+
+    <!-- Filter status per flowering room -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-4" th:each="fs : ${filterStatuses}">
+            <div class="card h-100"
+                 th:classappend="${fs.state == 'OVERDUE'} ? 'border-danger' : (${fs.state == 'DUE'} ? 'border-warning' : '')">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-wind me-1"></i> <span th:text="${fs.room.getDisplayName()}">B1</span> filters</h6>
+                        <span class="badge"
+                              th:classappend="${fs.state == 'OVERDUE'} ? 'bg-danger' : (${fs.state == 'DUE'} ? 'bg-warning text-dark' : (${fs.state == 'OK'} ? 'bg-success' : 'bg-secondary'))"
+                              th:text="${fs.state == 'NONE'} ? 'No record' : (${fs.state == 'OVERDUE'} ? 'Overdue' : (${fs.state == 'DUE'} ? 'Due' : 'OK'))">OK</span>
+                    </div>
+                    <small class="text-muted" th:text="${fs.summary}">Last changed 3 days ago</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New batches waiting for a manager -->
+    <div th:if="${!pendingNewBatches.isEmpty()}" class="card border-warning shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h6 class="mb-0"><i class="bi bi-hourglass-split me-1"></i> New batches awaiting approval</h6>
+        </div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2"
+                th:each="pb : ${pendingNewBatches}">
+                <div>
+                    <span class="font-monospace fw-semibold" th:text="${pb.key}">261008-ABC-B1</span>
+                    <small class="text-muted ms-2" th:text="${pb.value[0].getVarietyLabel()}">Variety</small>
+                </div>
+                <div class="d-flex gap-1 flex-wrap">
+                    <a th:each="e : ${pb.value}" th:href="@{/checklist-runs/runs/{id}(id=${e.run.id})}"
+                       class="btn btn-sm btn-outline-warning"
+                       th:text="${e.technician.getName() + ': ' + e.plantCount + ' ' + (e.action.name() == 'CLONING' ? 'clones' : 'seeds')}">Review</a>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    <div th:if="${#lists.isEmpty(rows)}" class="card shadow-sm">
+        <div class="card-body text-muted text-center py-5">
+            <i class="bi bi-journal-text" style="font-size: 2rem;"></i>
+            <div class="mt-2">No batches yet. Approve a Receive Seeds or Cloning task to start one.</div>
+        </div>
+    </div>
+
+    <div th:if="${!#lists.isEmpty(rows)}" class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Batch</th>
+                        <th>Variety</th>
+                        <th>Room</th>
+                        <th>Started</th>
+                        <th>Stage</th>
+                        <th class="text-end">Plants</th>
+                        <th class="text-end">Transferred</th>
+                        <th class="text-end">Harvested</th>
+                        <th class="text-end">Wet (kg)</th>
+                        <th class="text-end">Dry (kg)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="row : ${rows}">
+                        <td><a th:href="@{/batch-records/{id}(id=${row.batch.id})}" class="font-monospace fw-semibold"
+                               th:text="${row.batch.batchCode}">261008-ABC-B1</a></td>
+                        <td th:text="${row.batch.variety.name}">Variety</td>
+                        <td th:text="${row.batch.room.getDisplayName()}">B1</td>
+                        <td th:text="${#temporals.format(row.batch.startDate, 'MMM d, yyyy')}">Oct 8, 2026</td>
+                        <td><span class="badge bg-light text-dark border" th:text="${row.totals.stage}">Vegetative</span></td>
+                        <td class="text-end" th:text="${row.totals.plantsStarted}">0</td>
+                        <td class="text-end" th:text="${row.totals.plantsTransferred}">0</td>
+                        <td class="text-end" th:text="${row.totals.plantsHarvested}">0</td>
+                        <td class="text-end" th:text="${#numbers.formatDecimal(row.totals.wetKg, 1, 3)}">0.000</td>
+                        <td class="text-end" th:text="${row.totals.hasDryWeight ? #numbers.formatDecimal(row.totals.dryKg, 1, 3) : '—'}">—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+</body>
+</html>

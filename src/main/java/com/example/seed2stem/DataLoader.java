@@ -45,6 +45,54 @@ public class DataLoader implements CommandLineRunner {
             createAMProductionAreaInspection();
             createPMProductionAreaInspection();
         }
+
+        // After the count check above, so a brand-new database still gets the inspections.
+        seedBatchTasks();
+    }
+
+    /**
+     * Seeds one standard task per batch record action (Receive Seeds through
+     * Destruction). Skips any action that already has a task, archived ones
+     * included, so archiving a seeded task keeps it gone. The batch inputs come
+     * from the action, so these checklists start with no extra questions.
+     */
+    private void seedBatchTasks() {
+        seedBatchTask(BatchAction.RECEIVE_SEEDS, "Receive Seeds",
+                "Log incoming seeds. Creates a new batch (YYMMDD-VVV-Room).");
+        seedBatchTask(BatchAction.CLONING, "Cloning",
+                "Log clones cut. The first entry of the day for a variety and room creates the batch; later entries that day join it.");
+        seedBatchTask(BatchAction.TRANSFER_TO_FLOWER, "Transfer to Flower",
+                "Log plants moved into a flowering room. Flowering starts here: lights 12 h on, 12 h off, nutrient cycle changes, about 3 months to harvest.");
+        seedBatchTask(BatchAction.FILTER_CHANGE, "Clean and Change Filters",
+                "Log filters cleaned or changed (MERV 8 minimum). Flowering rooms are due after 7 days and overdue after 14.");
+        seedBatchTask(BatchAction.HARVEST, "Harvest",
+                "Log plants cut down and their whole-plant wet weight, before any leaves or stems come off.");
+        seedBatchTask(BatchAction.DEBUCK_DESTEM, "Debucking and Destemming",
+                "Log plants processed and the weight of fan leaves and stems removed.");
+        seedBatchTask(BatchAction.TRIMMING, "Trimming",
+                "Log trim (sugar leaf) weight before it is declared waste, and the amount of flower trimmed.");
+        seedBatchTask(BatchAction.DRY_WEIGHT, "Weigh Dried Flower",
+                "Log the final dried flower weight. The app calculates drying and processing loss.");
+        seedBatchTask(BatchAction.DESTRUCTION, "Destruction",
+                "Log material destroyed, with method and witness. You can't destroy more than was recorded.");
+    }
+
+    private void seedBatchTask(BatchAction action, String title, String description) {
+        if (taskRepo.existsByBatchAction(action)) return;
+
+        Checklist checklist = new Checklist();
+        checklist.setName(title);
+        checklist.setVersion(1);
+
+        Task task = new Task();
+        task.setTitle(title);
+        task.setDescription(description);
+        task.setChecklist(checklist);
+        task.setBatchAction(action);
+
+        checklistRepo.save(checklist);
+        taskRepo.save(task);
+        log.info("Seeded batch task: {}", title);
     }
 
     /**

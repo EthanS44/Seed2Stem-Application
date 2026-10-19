@@ -39,6 +39,15 @@ public class Task {
     @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean deleted = false;
 
+    /**
+     * What this task writes to a batch record (seeds, cloning, harvest...).
+     * NONE for ordinary checklists. Nullable column so existing rows load;
+     * {@link #getBatchAction()} reads null as NONE.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "batch_action", columnDefinition = "varchar(40) default 'NONE'")
+    private BatchAction batchAction = BatchAction.NONE;
+
     /** Original filename of the uploaded SOP PDF; null when no SOP is attached. */
     @Column(name = "sop_file_name")
     private String sopFileName;
@@ -114,5 +123,17 @@ public class Task {
     }
     public void setDeleted(boolean deleted) {
         this.deleted = deleted;
+    }
+
+    public BatchAction getBatchAction() {
+        return batchAction != null ? batchAction : BatchAction.NONE;
+    }
+
+    public void setBatchAction(BatchAction batchAction) {
+        this.batchAction = batchAction;
+    }
+
+    public boolean isBatchTask() {
+        return getBatchAction() != BatchAction.NONE;
     }
 }
