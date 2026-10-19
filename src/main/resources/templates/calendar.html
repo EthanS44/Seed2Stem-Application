@@ -10,72 +10,162 @@
     <div class="page-head">
         <div>
             <h4>Calendar</h4>
-            <div class="sub">Task runs by day. Tap a day to see it hour by hour.</div>
+            <div class="sub" th:text="${isStaff} ? 'Task runs across the team, coloured by status.' : 'Your task runs, coloured by status.'">Task runs.</div>
+        </div>
+        <div th:if="${isStaff}" class="cal-person">
+            <label for="personFilter" class="visually-hidden">Show tasks for</label>
+            <select id="personFilter" class="form-select form-select-sm">
+                <option value="">Everyone</option>
+                <option th:each="p : ${people}" th:value="${p.id}" th:text="${p.getName()}">Name</option>
+            </select>
         </div>
     </div>
 
-    <div class="calendar-legend">
-        <span class="calendar-legend-item" data-event-type="checklist-run">
-            <span class="calendar-legend-dot" style="background:#0277bd"></span> Checklist Run
-        </span>
+    <!-- Status filters: tap to hide or show a status -->
+    <div class="cal-filters mb-3" role="group" aria-label="Filter by status">
+        <button type="button" class="cal-filter" data-status="APPROVED" aria-pressed="true">
+            <span class="cal-dot" style="background:#2e7d32"></span>Approved <span class="cal-count" data-count="APPROVED">0</span>
+        </button>
+        <button type="button" class="cal-filter" data-status="PENDING" aria-pressed="true">
+            <span class="cal-dot" style="background:#d98a00"></span>Awaiting approval <span class="cal-count" data-count="PENDING">0</span>
+        </button>
+        <button type="button" class="cal-filter" data-status="REJECTED" aria-pressed="true">
+            <span class="cal-dot" style="background:#c62828"></span>Rejected <span class="cal-count" data-count="REJECTED">0</span>
+        </button>
+        <button type="button" class="cal-filter" data-status="IN_PROGRESS" aria-pressed="true">
+            <span class="cal-dot" style="background:#1565c0"></span>In progress <span class="cal-count" data-count="IN_PROGRESS">0</span>
+        </button>
     </div>
 
-    <div id="calendar"></div>
+    <div class="cal-wrap">
+        <div class="cal-loading" id="calLoading" hidden>
+            <div class="spinner-border spinner-border-sm text-success me-2" role="status"></div>Loading…
+        </div>
+        <div id="calendar"></div>
+    </div>
 </main>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-<script>
+<script th:inline="javascript">
 document.addEventListener('DOMContentLoaded', function () {
-    var hiddenTypes = {};
-    var calendarEl = document.getElementById('calendar');
-    // Phones get a week list and a two-row toolbar; the month grid is too cramped there.
-    var narrow = window.matchMedia('(max-width: 575.98px)').matches;
-    var calendar = new FullCalendar.Calendar(calendarEl, {
+    const IS_STAFF = /*[[${isStaff}]]*/ false;
+    const narrow = window.matchMedia('(max-width: 575.98px)').matches;
+    const hidden = new Set();
+    const personSelect = document.getElementById('personFilter');
+    const loadingEl = document.getElementById('calLoading');
+
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
         initialView: narrow ? 'listWeek' : 'dayGridMonth',
         headerToolbar: narrow
             ? { left: 'prev,next', center: 'title', right: 'today' }
-            : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridDay,listWeek' },
+            : { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
         footerToolbar: narrow ? { center: 'dayGridMonth,listWeek' } : false,
-        dateClick: function (info) {
-            calendar.changeView('timeGridDay', info.dateStr);
+        buttonText: { today: 'Today', month: 'Month', week: 'Week', day: 'Day', list: 'List' },
+        height: 'auto',
+        views: {
+            dayGridMonth: { eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'narrow' } },
+            timeGridWeek: { height: 680 },
+            timeGridDay: { height: 680 }
         },
-        events: function (fetchInfo, successCallback, failureCallback) {
-            fetch('/api/calendar/events?start=' +
-                  fetchInfo.startStr + '&end=' + fetchInfo.endStr)
-                .then(function (resp) {
-                    if (!resp.ok) throw new Error('Unauthorized');
-                    return resp.json();
+        dayMaxEvents: narrow ? false : 3,
+        allDaySlot: false,
+        eventMinHeight: 36,
+        nowIndicator: true,
+        scrollTime: '07:00:00',
+        slotMinTime: '05:00:00',
+        eventTimeFormat: { hour: 'numeric', minute: '2-digit', meridiem: 'short' },
+        noEventsContent: 'No tasks in this period.',
+
+        events: function (info, success, failure) {
+            const params = new URLSearchParams({ start: info.startStr, end: info.endStr });
+            if (personSelect && personSelect.value) params.set('userId', personSelect.value);
+            fetch('/api/calendar/events?' + params)
+                .then(r => { if (!r.ok) throw new Error('Could not load events'); return r.json(); })
+                .then(data => {
+                    updateCounts(data);
+                    success(data.filter(e => !hidden.has(e.status)));
                 })
-                .then(function (data) {
-                    var filtered = data.filter(function (e) {
-                        return !hiddenTypes[e.eventType];
-                    });
-                    successCallback(filtered);
-                })
-                .catch(failureCallback);
+                .catch(failure);
         },
+
+        loading: function (isLoading) { loadingEl.hidden = !isLoading; },
+
+        // Compact row in month view, fuller card in week/day/list views.
+        eventContent: function (arg) {
+            const p = arg.event.extendedProps;
+            const color = arg.event.backgroundColor;
+            const who = IS_STAFF ? p.person : '';
+            if (arg.view.type === 'dayGridMonth' && narrow) {
+                // Phone month view: just a status dot per task; tap the day for details.
+                return { html: '<span class="cal-dot" style="background:' + color + '"></span>' };
+            }
+            if (arg.view.type === 'dayGridMonth') {
+                return { html:
+                    '<span class="cal-ev">' +
+                    '<span class="cal-dot" style="background:' + color + '"></span>' +
+                    '<span class="cal-title">' + esc(arg.event.title) + '</span>' +
+                    '<span class="cal-time">' + esc(arg.timeText) + (who ? ' · ' + esc(who.split(' ')[0]) : '') + '</span>' +
+                    '</span>' };
+            }
+            if (arg.view.type.startsWith('list')) {
+                return { html:
+                    '<span class="fw-semibold">' + esc(arg.event.title) + '</span>' +
+                    (who ? '<span class="text-muted"> · ' + esc(who) + '</span>' : '') +
+                    ' <span class="cal-status" style="--c:' + color + '">' + esc(p.statusLabel) + '</span>' };
+            }
+            return { html:
+                '<div class="cal-block">' +
+                '<div class="cal-block-title">' + esc(arg.event.title) + '</div>' +
+                '<div class="cal-block-meta">' + esc(arg.timeText) + (who ? ' · ' + esc(who) : '') + '</div>' +
+                '</div>' };
+        },
+
+        eventDidMount: function (info) {
+            const p = info.event.extendedProps;
+            const time = info.event.start ? info.event.start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+            info.el.title = info.event.title + (p.person ? ' — ' + p.person : '') + '\n' + p.statusLabel + (time ? ' · ' + time : '');
+        },
+
         eventClick: function (info) {
             info.jsEvent.preventDefault();
-            if (info.event.url) {
-                window.location.href = info.event.url;
+            if (narrow && info.view.type === 'dayGridMonth') {
+                calendar.changeView('listDay', info.event.start);
+                return;
             }
+            if (info.event.url) window.location.href = info.event.url;
         },
-        height: 'auto'
+
+        dateClick: function (info) {
+            if (info.view.type === 'dayGridMonth') calendar.changeView(narrow ? 'listDay' : 'timeGridDay', info.dateStr);
+        }
     });
+    if (narrow) document.getElementById('calendar').classList.add('cal-narrow');
     calendar.render();
 
-    document.querySelectorAll('.calendar-legend-item').forEach(function (btn) {
+    // The page scrollbar appears once events load and narrows the container;
+    // FullCalendar only re-measures on window resize, so watch the container itself.
+    new ResizeObserver(() => calendar.updateSize()).observe(document.querySelector('.cal-wrap'));
+
+    function updateCounts(data) {
+        const counts = { APPROVED: 0, PENDING: 0, REJECTED: 0, IN_PROGRESS: 0 };
+        data.forEach(e => { if (e.status in counts) counts[e.status]++; });
+        document.querySelectorAll('[data-count]').forEach(el => { el.textContent = counts[el.dataset.count]; });
+    }
+
+    document.querySelectorAll('.cal-filter').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            var type = this.dataset.eventType;
-            this.classList.toggle('legend-disabled');
-            hiddenTypes[type] = !hiddenTypes[type];
+            const status = btn.dataset.status;
+            if (hidden.has(status)) hidden.delete(status); else hidden.add(status);
+            btn.setAttribute('aria-pressed', String(!hidden.has(status)));
             calendar.refetchEvents();
         });
     });
+    if (personSelect) personSelect.addEventListener('change', () => calendar.refetchEvents());
 });
 </script>
-
 </body>
 </html>
