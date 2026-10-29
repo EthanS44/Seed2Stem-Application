@@ -31,8 +31,9 @@
                 <div th:if="${!isClockedIn}">
                     <span class="clock-icon"><i class="bi bi-clock"></i></span>
                     <h5 class="mt-3 mb-1">You're not clocked in</h5>
-                    <p class="text-muted small mb-3">Clock in when you start your shift.</p>
+                    <p class="text-muted small mb-3" th:text="${next != null} ? 'Clock in to start working on tasks. You\'ll go straight back to your task.' : 'Clock in when you start your shift. Tasks can only be started while you\'re on the clock.'">Clock in when you start your shift.</p>
                     <form method="post" th:action="@{/time-clock/clock-in}">
+                        <input th:if="${next != null}" type="hidden" name="next" th:value="${next}">
                         <button type="submit" class="btn btn-s2s btn-lg px-5 clock-btn">
                             <i class="bi bi-box-arrow-in-right me-2"></i>Clock In
                         </button>
@@ -46,7 +47,15 @@
                     <form method="post" th:action="@{/time-clock/clock-out}" class="text-start mx-auto" style="max-width: 360px;">
                         <label for="clockOutNotes" class="form-label small fw-semibold">Notes <span class="text-muted fw-normal">(optional)</span></label>
                         <textarea id="clockOutNotes" name="notes" class="form-control mb-3" rows="2" placeholder="Anything to note about this shift"></textarea>
-                        <button type="submit" class="btn btn-outline-danger btn-lg w-100">
+                        <div th:if="${!openRuns.isEmpty()}" class="clock-blocked mb-3">
+                            <div class="fw-semibold small mb-1"><i class="bi bi-exclamation-circle me-1"></i>Finish your open tasks before clocking out</div>
+                            <a th:each="run : ${openRuns}" class="clock-open-task"
+                               th:href="${run.task.isUserCreated()} ? @{/tasks/runs/{id}/in-progress(id=${run.id})} : @{/tasks/{taskId}/resume/{runId}(taskId=${run.task.id}, runId=${run.id})}">
+                                <span class="text-truncate" th:text="${run.task.title}">Task</span>
+                                <span class="small">Resume <i class="bi bi-chevron-right"></i></span>
+                            </a>
+                        </div>
+                        <button type="submit" class="btn btn-outline-danger btn-lg w-100" th:disabled="${!openRuns.isEmpty()}">
                             <i class="bi bi-box-arrow-right me-2"></i>Clock Out
                         </button>
                     </form>

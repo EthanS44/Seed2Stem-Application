@@ -179,6 +179,7 @@ public class DashboardController {
         model.addAttribute("pausedRunIds", new HashSet<>(taskPauseRepository.findRunIdsWithOpenPause()));
 
         model.addAttribute("isManager", isManager);
+        model.addAttribute("clockedIn", timeEntryService.isClockedIn(user));
         if (isManager) {
             model.addAttribute("pendingRuns", checklistRunService.getPendingChecklists());
         }

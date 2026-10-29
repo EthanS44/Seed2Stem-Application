@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Pay period picker: period type, previous/next, and a custom range. `base` is the page to link to. -->
+<div th:fragment="periodNav(base)" class="pay-nav mb-3">
+    <div class="pay-seg" role="tablist" aria-label="Pay period">
+        <a th:each="t : ${periodTypes}" th:unless="${t.name() == 'CUSTOM'}"
+           th:href="@{${base}(period=${t.param}, date=${period.type.name() == 'CUSTOM' ? period.end : period.start})}"
+           th:classappend="${t == period.type} ? 'on'" th:attr="aria-selected=${t == period.type}"
+           ><span class="d-none d-sm-inline" th:text="${t.displayName}">Weekly</span><span class="d-sm-none" th:text="${t.shortName}">Week</span></a>
+        <a th:href="@{${base}(period='custom', start=${period.start}, end=${period.end})}"
+           th:classappend="${period.type.name() == 'CUSTOM'} ? 'on'">Custom</a>
+    </div>
+
+    <div class="pay-step">
+        <a class="btn btn-outline-secondary btn-sm" aria-label="Previous period"
+           th:href="@{${base}(period=${period.type.param}, date=${prevPeriod.start}, start=${prevPeriod.start}, end=${prevPeriod.end})}">
+            <i class="bi bi-chevron-left"></i></a>
+        <div class="pay-label">
+            <span class="d-block fw-semibold" th:text="${period.label}">Oct 26 – Nov 1, 2026</span>
+            <span class="small text-muted" th:text="${period.days + ' days' + (period.current ? ' · current period' : '')}">7 days</span>
+        </div>
+        <a class="btn btn-outline-secondary btn-sm" aria-label="Next period"
+           th:href="@{${base}(period=${period.type.param}, date=${nextPeriod.start}, start=${nextPeriod.start}, end=${nextPeriod.end})}">
+            <i class="bi bi-chevron-right"></i></a>
+        <a th:unless="${period.current or period.type.name() == 'CUSTOM'}" class="btn btn-link btn-sm text-success"
+           th:href="@{${base}(period=${period.type.param})}">Today</a>
+    </div>
+
+    <form th:if="${period.type.name() == 'CUSTOM'}" method="get" th:action="@{${base}}" class="pay-custom">
+        <input type="hidden" name="period" value="custom">
+        <label class="visually-hidden" for="payStart">From</label>
+        <input id="payStart" type="date" name="start" class="form-control form-control-sm" th:value="${period.start}" required>
+        <span class="text-muted small">to</span>
+        <label class="visually-hidden" for="payEnd">To</label>
+        <input id="payEnd" type="date" name="end" class="form-control form-control-sm" th:value="${period.end}" required>
+        <button type="submit" class="btn btn-s2s btn-sm">Show</button>
+    </form>
+</div>
+
+</body>
+</html>

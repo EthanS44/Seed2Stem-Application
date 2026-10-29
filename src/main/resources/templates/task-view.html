@@ -60,7 +60,14 @@
 
                     <!-- Start button. The disabled state is enforced by JS when
                          an SOP is present and not yet scrolled through. -->
-                    <a th:if="${task.getChecklist() != null}"
+                    <div th:if="${task.getChecklist() != null and !clockedIn}" class="clock-required mt-3">
+                        <span><i class="bi bi-clock me-2"></i>You need to be clocked in to start this task.</span>
+                        <form method="post" th:action="@{/time-clock/clock-in}" class="m-0">
+                            <input type="hidden" name="next" th:value="@{/tasks/{id}(id=${task.getId()})}">
+                            <button type="submit" class="btn btn-s2s"><i class="bi bi-box-arrow-in-right me-1"></i>Clock in</button>
+                        </form>
+                    </div>
+                    <a th:if="${task.getChecklist() != null and clockedIn}"
                        th:href="@{/tasks/{id}/start(id=${task.getId()})}"
                        th:attr="data-sop-required=${task.getSopFileName() != null ? 'true' : 'false'}"
                        id="startTaskBtn"

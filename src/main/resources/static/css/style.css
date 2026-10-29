@@ -707,6 +707,25 @@ body { color: var(--s2s-ink); }
 }
 .clock-timer { font-size: 2.6rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; margin: 0.75rem 0 0.25rem; }
 @media (max-width: 575.98px) { .clock-btn { width: 100%; } }
+/* Clock rules: "clock in to start" prompt, and open tasks blocking clock-out */
+.clock-required {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;
+    padding: 0.75rem 1rem; border-radius: 10px;
+    background: #fff8e6; border: 1px solid #f3d58b; color: #6b4e00;
+}
+@media (max-width: 575.98px) { .clock-required form, .clock-required .btn { width: 100%; } }
+.clock-blocked {
+    padding: 0.65rem 0.75rem; border-radius: 10px;
+    background: #fff8e6; border: 1px solid #f3d58b; color: #6b4e00;
+}
+.clock-open-task {
+    display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;
+    padding: 0.45rem 0; border-top: 1px solid #f3d58b;
+    color: inherit; text-decoration: none; font-weight: 600;
+}
+.clock-open-task:first-of-type { border-top: 0; }
+.clock-open-task > .small { white-space: nowrap; flex-shrink: 0; }
+.clock-open-task:hover { color: #3d2c00; }
 .min-w-0 { min-width: 0; }
 
 /* Request rows: actions sit on the right on desktop, wrap to a full-width line on phones */
@@ -732,3 +751,72 @@ body { color: var(--s2s-ink); }
 .auth-card .btn-s2s { padding: 0.65rem; font-weight: 600; }
 .auth-card a:not(.btn) { color: var(--s2s-green); }
 @media (max-width: 575.98px) { .auth-card .card-body { padding: 1.5rem 1.25rem !important; } }
+
+/* Payroll */
+.pay-nav { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.pay-seg {
+    display: inline-flex; padding: 3px; gap: 2px;
+    background: #fff; border: 1px solid var(--s2s-line); border-radius: 10px;
+    overflow-x: auto; max-width: 100%;
+}
+.pay-seg a {
+    padding: 0.35rem 0.8rem; border-radius: 7px; white-space: nowrap;
+    font-size: 0.85rem; font-weight: 600; color: var(--s2s-muted); text-decoration: none;
+}
+.pay-seg a:hover { color: var(--s2s-ink); background: #f3f5f7; }
+.pay-seg a.on { background: var(--s2s-green); color: #fff; }
+.pay-step { display: flex; align-items: center; gap: 0.5rem; }
+.pay-label { text-align: center; min-width: 12rem; line-height: 1.2; }
+.pay-custom { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; width: 100%; }
+.pay-custom .form-control { width: auto; }
+@media (max-width: 575.98px) {
+    .pay-seg { width: 100%; }
+    .pay-seg a { flex: 1; text-align: center; padding: 0.4rem 0.4rem; font-size: 0.8rem; }
+    .pay-step { width: 100%; justify-content: space-between; }
+    .pay-label { min-width: 0; flex: 1; }
+    .pay-custom .form-control { flex: 1; min-width: 0; }
+}
+.pay-delta { margin-left: 0.25rem; font-weight: 700; }
+.pay-delta.up { color: var(--s2s-green); }
+.pay-delta.down { color: var(--s2s-red); }
+
+/* Team hours chart: one bar per day or week */
+.pay-bars { display: flex; align-items: stretch; gap: 0.35rem; padding: 1rem; overflow-x: auto; }
+.pay-bar { flex: 1 0 2.4rem; display: flex; flex-direction: column; align-items: center; gap: 0.2rem; text-align: center; }
+.pay-bar .val { font-size: 0.72rem; font-weight: 700; color: var(--s2s-ink); min-height: 1rem; }
+.pay-bar .track { position: relative; width: 100%; max-width: 2.6rem; height: 150px; background: #f1f4f6; border-radius: 6px; overflow: hidden; }
+.pay-bar .fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--s2s-green-light); border-radius: 6px 6px 0 0; }
+.pay-bar.today .fill { background: var(--s2s-green); }
+.pay-bar .lbl { font-size: 0.75rem; font-weight: 650; }
+.pay-bar.today .lbl { color: var(--s2s-green); }
+.pay-bar .sub { font-size: 0.68rem; color: var(--s2s-muted); white-space: nowrap; }
+
+/* Hours grid */
+.pay-grid th, .pay-grid td { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pay-grid .pay-name { min-width: 13rem; max-width: 16rem; position: sticky; left: 0; z-index: 1; background: #fff; box-shadow: inset -1px 0 0 var(--s2s-line); }
+.pay-grid tfoot .pay-name { background: #f8fafb; }
+.pay-grid .today { background: #f2f8f2; }
+.pay-grid .pay-cell { color: var(--s2s-ink); }
+.pay-grid .pay-ot { color: var(--s2s-amber); font-weight: 700; }
+.pay-grid tfoot th { border-top: 2px solid var(--s2s-line); background: #f8fafb; }
+.pay-idle { opacity: 0.6; }
+.pay-total { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 3.2rem; text-align: right; }
+
+/* Employee page */
+.avatar-lg { width: 48px; height: 48px; font-size: 1rem; }
+.pay-chips { display: flex; gap: 0.5rem; padding: 0.75rem 1rem; overflow-x: auto; }
+.pay-chip {
+    flex: 1 0 4.2rem; display: flex; flex-direction: column; align-items: center;
+    padding: 0.5rem 0.4rem; border: 1px solid var(--s2s-line); border-radius: 8px; line-height: 1.25;
+}
+.pay-chip .lbl { font-size: 0.75rem; font-weight: 650; }
+.pay-chip .sub { font-size: 0.68rem; color: var(--s2s-muted); white-space: nowrap; }
+.pay-chip .val { font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 0.15rem; }
+.pay-chip.zero .val { color: #b0bac3; font-weight: 500; }
+.pay-chip.today { border-color: var(--s2s-green); background: #f2f8f2; }
+.pay-shift .pay-day { width: 3.4rem; flex: none; line-height: 1.2; }
+.pay-shift.flagged { box-shadow: inset 3px 0 0 var(--s2s-red); }
+@media (max-width: 575.98px) {
+    .pay-shift .grow { flex-basis: calc(100% - 4.2rem); }
+    .pay-shift .pay-total { margin-left: 4.15rem; text-align: left; flex: 1; }
+}

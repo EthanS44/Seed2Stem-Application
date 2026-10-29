@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Seed2Stem - Payroll')}"></head>
+<body>
+
+<nav th:replace="~{fragments/layout :: topbar}"></nav>
+<nav th:replace="~{fragments/layout :: sidebar}"></nav>
+
+<main class="s2s-content">
+    <div class="page-head">
+        <div>
+            <h4>Payroll</h4>
+            <div class="sub" th:text="${'Hours from the time clock. Overtime is anything over ' + overtimeHours + ' h in a Monday–Sunday week.'}">Hours from the time clock.</div>
+        </div>
+        <a th:href="@{'/payroll/export.xlsx?' + ${period.query}}" class="btn btn-s2s btn-sm">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export to Excel
+        </a>
+    </div>
+
+    <div th:replace="~{fragments/payroll-nav :: periodNav('/payroll')}"></div>
+
+    <!-- Summary -->
+    <div class="row g-2 g-md-3 mb-3">
+        <div class="col-6 col-xl">
+            <div class="s2s-stat">
+                <span class="chip"><i class="bi bi-clock"></i></span>
+                <span class="min-w-0">
+                    <span class="num d-block" th:text="${@fmt.hours(report.totalMinutes)}">0.00</span>
+                    <span class="lbl d-block">Total hours
+                        <span th:if="${report.changePercent != null}" class="pay-delta"
+                              th:classappend="${report.changePercent >= 0} ? 'up' : 'down'"
+                              th:title="${(report.comparedToPartial ? 'Same point last period: ' : 'Previous period: ') + @fmt.hours(report.previousTotalMinutes) + ' h'}"
+                              th:text="${(report.changePercent >= 0 ? '+' : '') + report.changePercent + '%'}">+4%</span>
+                    </span>
+                </span>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="s2s-stat" th:classappend="${report.overtimeMinutes > 0} ? 'attn'">
+                <span class="chip"><i class="bi bi-alarm"></i></span>
+                <span class="min-w-0">
+                    <span class="num d-block" th:text="${@fmt.hours(report.overtimeMinutes)}">0.00</span>
+                    <span class="lbl d-block" th:text="${report.overtimeCount == 0 ? 'Overtime hours' : 'Overtime · ' + report.overtimeCount + (report.overtimeCount == 1 ? ' person' : ' people')}">Overtime hours</span>
+                </span>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <div class="s2s-stat info">
+                <span class="chip"><i class="bi bi-people"></i></span>
+                <span class="min-w-0">
+                    <span class="num d-block" th:text="${report.employeesWorked + ' / ' + report.employees.size()}">0 / 0</span>
+                    <span class="lbl d-block" th:text="${'Worked · ' + report.shiftCount + (report.shiftCount == 1 ? ' shift' : ' shifts')}">Worked</span>
+                </span>
+            </div>
+        </div>
+        <div class="col-6 col-xl">
+            <a href="#to-check" class="s2s-stat" th:classappend="${report.flaggedCount > 0} ? 'alert'">
+                <span class="chip"><i class="bi bi-exclamation-triangle"></i></span>
+                <span class="min-w-0">
+                    <span class="num d-block" th:text="${report.flaggedCount}">0</span>
+                    <span class="lbl d-block">Shifts to check</span>
+                </span>
+            </a>
+        </div>
+        <div class="col-12 col-xl" th:if="${period.current}">
+            <div class="s2s-stat">
+                <span class="chip"><i class="bi bi-person-check"></i></span>
+                <span class="min-w-0">
+                    <span class="num d-block" th:text="${report.clockedInCount}">0</span>
+                    <span class="lbl d-block">On the clock now</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Team hours by day / week -->
+        <div class="col-lg-7">
+            <div class="s2s-panel h-100">
+                <div class="panel-head">
+                    <h6><i class="bi bi-bar-chart me-2"></i>Team hours by <span th:text="${period.days <= 16 ? 'day' : 'week'}">day</span></h6>
+                </div>
+                <div class="pay-bars" th:with="max=${report.maxBucketTotal}">
+                    <div th:each="b, it : ${report.buckets}" class="pay-bar" th:classappend="${b.today} ? 'today'"
+                         th:with="mins=${report.bucketTotal(it.index)}"
+                         th:title="${b.label + ' ' + b.subLabel + ': ' + @fmt.hours(mins) + ' h'}">
+                        <span class="val" th:text="${mins > 0 ? @fmt.hours(mins) : ''}">7.50</span>
+                        <span class="track"><span class="fill" th:style="${'height:' + (max > 0 ? mins * 100 / max : 0) + '%'}"></span></span>
+                        <span class="lbl" th:text="${b.label}">Mon</span>
+                        <span class="sub" th:text="${b.subLabel}">Oct 26</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shifts that need a look before payroll -->
+        <div class="col-lg-5" id="to-check">
+            <div class="s2s-panel h-100">
+                <div class="panel-head">
+                    <h6><i class="bi bi-exclamation-triangle me-2"></i>Shifts to check</h6>
+                    <span th:if="${!flagged.isEmpty()}" class="pill bad" th:text="${flagged.size()}">2</span>
+                </div>
+                <div th:if="${flagged.isEmpty()}" class="s2s-empty">
+                    <i class="bi bi-check2-circle d-block fs-3 mb-1 text-success"></i>
+                    Nothing to fix. Every shift has a clean clock-in and clock-out.
+                </div>
+                <a th:each="f : ${flagged}" class="s2s-row"
+                   th:href="@{'/payroll/employees/' + ${f.user.id} + '?' + ${period.query}}">
+                    <span class="avatar" th:text="${@fmt.initials(f.user)}">TT</span>
+                    <span class="grow">
+                        <span class="title d-block" th:text="${f.user.getName()}">Name</span>
+                        <span class="meta d-block" th:text="${#temporals.format(f.shift.clockIn, 'EEE MMM d, h:mm a')}">Mon Oct 26</span>
+                        <span class="d-flex flex-wrap gap-1 mt-1">
+                            <span th:each="fl : ${f.shift.flags}" th:if="${fl.problem}" class="pill" th:classappend="${fl.tone}" th:text="${fl.label}">No clock-out</span>
+                        </span>
+                    </span>
+                    <i class="bi bi-chevron-right chev"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hours per employee -->
+    <div class="s2s-panel mt-3">
+        <div class="panel-head">
+            <h6><i class="bi bi-table me-2"></i>Hours by employee</h6>
+            <span class="small text-muted" th:text="${report.employees.size() + (report.employees.size() == 1 ? ' person' : ' people')}">0 people</span>
+        </div>
+        <div th:if="${report.employees.isEmpty()}" class="s2s-empty">No technicians or managers yet.</div>
+
+        <!-- Phones: one row per person -->
+        <div class="d-md-none">
+            <a th:each="e : ${report.employees}" class="s2s-row"
+               th:classappend="${e.totalMinutes == 0} ? 'pay-idle'"
+               th:href="@{'/payroll/employees/' + ${e.user.id} + '?' + ${period.query}}">
+                <span class="avatar" th:text="${@fmt.initials(e.user)}">TT</span>
+                <span class="grow">
+                    <span class="title d-block" th:text="${e.user.getName()}">Name</span>
+                    <span class="meta d-block"
+                          th:text="${e.totalMinutes == 0 ? 'No hours' : @fmt.hours(e.regularMinutes) + ' reg' + (e.overtimeMinutes > 0 ? ' · ' + @fmt.hours(e.overtimeMinutes) + ' OT' : '') + ' · ' + e.shifts.size() + (e.shifts.size() == 1 ? ' shift' : ' shifts')}">reg</span>
+                </span>
+                <span th:if="${e.flaggedCount > 0}" class="pill bad" th:text="${e.flaggedCount}"><i class="bi bi-exclamation-triangle"></i></span>
+                <span class="pay-total" th:text="${@fmt.hours(e.totalMinutes)}">0.00</span>
+                <i class="bi bi-chevron-right chev"></i>
+            </a>
+        </div>
+
+        <!-- Desktop: hours grid -->
+        <div th:if="${!report.employees.isEmpty()}" class="table-responsive d-none d-md-block">
+            <table class="table align-middle mb-0 pay-grid">
+                <thead>
+                    <tr>
+                        <th class="pay-name">Employee</th>
+                        <th th:each="b : ${report.buckets}" class="text-end" th:classappend="${b.today} ? 'today'">
+                            <span class="d-block" th:text="${b.label}">Mon</span>
+                            <span class="d-block fw-normal text-muted small" th:text="${b.subLabel}">Oct 26</span>
+                        </th>
+                        <th class="text-end">Regular</th>
+                        <th class="text-end">Overtime</th>
+                        <th class="text-end">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="e : ${report.employees}" class="task-row" style="cursor:pointer"
+                        th:classappend="${e.totalMinutes == 0} ? 'pay-idle'"
+                        th:attr="data-href=@{'/payroll/employees/' + ${e.user.id} + '?' + ${period.query}}">
+                        <td class="pay-name">
+                            <a th:href="@{'/payroll/employees/' + ${e.user.id} + '?' + ${period.query}}" class="d-flex align-items-center gap-2 text-decoration-none text-reset">
+                                <span class="avatar" th:text="${@fmt.initials(e.user)}">TT</span>
+                                <span class="min-w-0">
+                                    <span class="d-block fw-semibold text-truncate" th:text="${e.user.getName()}">Name</span>
+                                    <span class="d-block small text-muted">
+                                        <span th:text="${e.user.accountType.name() == 'MANAGER' ? 'Manager' : (e.user.accountType.name() == 'TECHNICIAN' ? 'Technician' : 'Staff')}">Technician</span>
+                                        <span th:if="${e.clockedIn}" class="text-success">· on the clock</span>
+                                        <span th:if="${e.flaggedCount > 0}" class="text-danger" th:text="${'· ' + e.flaggedCount + ' to check'}">· 1 to check</span>
+                                    </span>
+                                </span>
+                            </a>
+                        </td>
+                        <td th:each="b, it : ${report.buckets}" class="text-end pay-cell" th:classappend="${b.today} ? 'today'"
+                            th:text="${e.bucket(it.index) > 0 ? @fmt.hours(e.bucket(it.index)) : '–'}">7.50</td>
+                        <td class="text-end" th:text="${@fmt.hours(e.regularMinutes)}">0.00</td>
+                        <td class="text-end" th:classappend="${e.overtimeMinutes > 0} ? 'pay-ot'" th:text="${@fmt.hours(e.overtimeMinutes)}">0.00</td>
+                        <td class="text-end fw-bold" th:text="${@fmt.hours(e.totalMinutes)}">0.00</td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th class="pay-name">Team</th>
+                        <th th:each="b, it : ${report.buckets}" class="text-end" th:classappend="${b.today} ? 'today'"
+                            th:text="${report.bucketTotal(it.index) > 0 ? @fmt.hours(report.bucketTotal(it.index)) : '–'}">0.00</th>
+                        <th class="text-end" th:text="${@fmt.hours(report.regularMinutes)}">0.00</th>
+                        <th class="text-end" th:text="${@fmt.hours(report.overtimeMinutes)}">0.00</th>
+                        <th class="text-end" th:text="${@fmt.hours(report.totalMinutes)}">0.00</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    document.querySelectorAll('tr.task-row').forEach(function (row) {
+        row.addEventListener('click', function (e) {
+            if (e.target.closest('a, button, form')) return;
+            window.location.href = row.dataset.href;
+        });
+    });
+</script>
+</body>
+</html>

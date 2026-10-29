@@ -16,19 +16,26 @@ import java.util.Optional;
 public class TimeClockController {
 
     private final TimeEntryService timeEntryService;
+    private final ChecklistRunService checklistRunService;
 
-    public TimeClockController(TimeEntryService timeEntryService) {
+    public TimeClockController(TimeEntryService timeEntryService, ChecklistRunService checklistRunService) {
         this.timeEntryService = timeEntryService;
+        this.checklistRunService = checklistRunService;
     }
 
     @GetMapping
-    public String timeClockPage(HttpSession session, Model model) {
+    public String timeClockPage(@RequestParam(required = false) String next,
+                                HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
         Optional<TimeEntry> activeEntry = timeEntryService.getActiveEntry(user);
         model.addAttribute("isClockedIn", activeEntry.isPresent());
         activeEntry.ifPresent(e -> model.addAttribute("activeEntry", e));
+        // Open tasks block clocking out, so list them on the page.
+        model.addAttribute("openRuns", checklistRunService.getActiveRunsForUser(user));
+        // Set when a task page sent the user here to clock in first.
+        if (isSafeRedirect(next)) model.addAttribute("next", next);
 
         model.addAttribute("todayEntries", timeEntryService.getTodayEntries(user));
 
@@ -40,13 +47,15 @@ public class TimeClockController {
     }
 
     @PostMapping("/clock-in")
-    public String clockIn(HttpSession session, RedirectAttributes redirectAttributes) {
+    public String clockIn(@RequestParam(required = false) String next,
+                          HttpSession session, RedirectAttributes redirectAttributes) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
 
         try {
             timeEntryService.clockIn(user);
             redirectAttributes.addFlashAttribute("success", "Clocked in successfully!");
+            if (isSafeRedirect(next)) return "redirect:" + next;
         } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("error", e.getMessage());
         }
@@ -91,5 +100,10 @@ public class TimeClockController {
         model.addAttribute("totalHours", Math.round(totalHours * 100.0) / 100.0);
 
         return "time-clock-history";
+    }
+
+    /** Only same-site paths, so the clock-in form can't be used as an open redirect. */
+    static boolean isSafeRedirect(String next) {
+        return next != null && next.startsWith("/") && !next.startsWith("//") && !next.contains("\\");
     }
 }

@@ -55,6 +55,11 @@ public class Fmt {
         return m == 0 ? h + " h" : h + " h " + m + " min";
     }
 
+    /** Decimal hours for payroll: 450 → "7.50". */
+    public String hours(Long totalMinutes) {
+        return totalMinutes == null ? "" : PayrollReport.hours(totalMinutes);
+    }
+
     public String initials(User u) {
         if (u == null) return "?";
         String f = u.getFirstName() != null && !u.getFirstName().isBlank() ? u.getFirstName().substring(0, 1) : "";

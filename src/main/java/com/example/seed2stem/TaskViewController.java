@@ -27,6 +27,7 @@ public class TaskViewController {
     private final ChecklistResponseRepository responseRepo;
     private final TaskPauseRepository taskPauseRepo;
     private final BatchRecordService batchRecordService;
+    private final TimeEntryService timeEntryService;
 
     public TaskViewController(TaskRepository taskRepo,
                               ChecklistItemRepository itemRepo,
@@ -35,7 +36,8 @@ public class TaskViewController {
                               ChecklistRepository checklistRepo,
                               ChecklistResponseRepository responseRepo,
                               TaskPauseRepository taskPauseRepo,
-                              BatchRecordService batchRecordService) {
+                              BatchRecordService batchRecordService,
+                              TimeEntryService timeEntryService) {
         this.taskRepo = taskRepo;
         this.itemRepo = itemRepo;
         this.runRepo = runRepo;
@@ -44,6 +46,13 @@ public class TaskViewController {
         this.responseRepo = responseRepo;
         this.taskPauseRepo = taskPauseRepo;
         this.batchRecordService = batchRecordService;
+        this.timeEntryService = timeEntryService;
+    }
+
+    /** Tasks can only be started or worked on while clocked in; sends the user to clock in first. */
+    private String requireClockedIn(User user, String returnTo) {
+        if (timeEntryService.isClockedIn(user)) return null;
+        return "redirect:/time-clock?next=" + returnTo;
     }
 
     /* ---------------- Create Task ---------------- */
@@ -52,6 +61,8 @@ public class TaskViewController {
     public String createTaskForm(HttpSession session, Model model) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
+        String clockIn = requireClockedIn(user, "/tasks/create");
+        if (clockIn != null) return clockIn;
         return "create-task";
     }
 
@@ -61,6 +72,8 @@ public class TaskViewController {
                              HttpSession session) {
         User user = (User) session.getAttribute("loggedInUser");
         if (user == null) return "redirect:/auth/login";
+        String clockIn = requireClockedIn(user, "/tasks/create");
+        if (clockIn != null) return clockIn;
 
         // Build a Checklist with a header and a text question
         Checklist checklist = new Checklist();
@@ -122,6 +135,8 @@ public class TaskViewController {
         if (!run.getCompletedBy().getId().equals(user.getId())) {
             return "redirect:/dashboard/task-dashboard";
         }
+        String clockIn = requireClockedIn(user, "/tasks/runs/" + runId + "/in-progress");
+        if (clockIn != null) return clockIn;
 
         // If there's an open pause (user is resuming), close it now.
         taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run)
@@ -248,6 +263,7 @@ public class TaskViewController {
                 .orElseThrow(() -> new RuntimeException("Task not found"));
 
         model.addAttribute("task", task);
+        model.addAttribute("clockedIn", timeEntryService.isClockedIn(user));
         return "task-view";
     }
 
@@ -283,6 +299,8 @@ public class TaskViewController {
 
         Task task = taskRepo.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
+        String clockIn = requireClockedIn(user, "/tasks/" + taskId);
+        if (clockIn != null) return clockIn;
 
         // Check for existing in-progress run — redirect to resume if found
         Optional<ChecklistRun> existingRun = runService.findExistingInProgressRun(user, task);
@@ -332,6 +350,8 @@ public class TaskViewController {
         if (!run.getCompletedBy().getId().equals(user.getId())) {
             return "redirect:/dashboard/task-dashboard";
         }
+        String clockIn = requireClockedIn(user, "/tasks/" + taskId + "/resume/" + runId);
+        if (clockIn != null) return clockIn;
 
         // User-created tasks use the in-progress page, not the standard checklist view
         if (task.isUserCreated()) {

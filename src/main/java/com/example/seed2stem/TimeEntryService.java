@@ -9,14 +9,17 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class TimeEntryService {
 
     private final TimeEntryRepository timeEntryRepo;
+    private final ChecklistRunRepository runRepo;
 
-    public TimeEntryService(TimeEntryRepository timeEntryRepo) {
+    public TimeEntryService(TimeEntryRepository timeEntryRepo, ChecklistRunRepository runRepo) {
         this.timeEntryRepo = timeEntryRepo;
+        this.runRepo = runRepo;
     }
 
     @Transactional
@@ -37,6 +40,13 @@ public class TimeEntryService {
     public TimeEntry clockOut(User user, String notes) {
         TimeEntry entry = timeEntryRepo.findByUserAndClockOutTimeIsNull(user)
                 .orElseThrow(() -> new RuntimeException("You are not currently clocked in"));
+
+        // Every task (paused ones included) has to be submitted before the shift can end.
+        List<ChecklistRun> open = runRepo.findByCompletedByAndStatus(user, ChecklistRunStatus.IN_PROGRESS);
+        if (!open.isEmpty()) {
+            throw new RuntimeException("Finish your open tasks before clocking out: "
+                    + open.stream().map(ChecklistRun::getChecklistName).collect(Collectors.joining(", ")));
+        }
 
         entry.setClockOutTime(LocalDateTime.now());
         entry.setTotalHours(computeHours(entry.getClockInTime(), entry.getClockOutTime()));

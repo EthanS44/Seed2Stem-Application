@@ -41,6 +41,9 @@ class TaskViewControllerTest {
     @Mock
     private TaskPauseRepository taskPauseRepo;
 
+    @Mock
+    private TimeEntryService timeEntryService;
+
     @InjectMocks
     private TaskViewController controller;
 
@@ -61,6 +64,49 @@ class TaskViewControllerTest {
         task.setId(1L);
         task.setTitle("Morning Check");
         task.setChecklist(checklist);
+
+        // Most tests run on the clock; the clock-rule tests below override this.
+        lenient().when(timeEntryService.isClockedIn(any())).thenReturn(true);
+    }
+
+    // --- clock rule: tasks need an open shift ---
+
+    @Test
+    void startTask_notClockedIn_sendsToTimeClock() {
+        session.setAttribute("loggedInUser", techUser);
+        when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
+        when(timeEntryService.isClockedIn(techUser)).thenReturn(false);
+
+        String result = controller.startTask(1L, new ConcurrentModel(), session);
+
+        assertEquals("redirect:/time-clock?next=/tasks/1", result);
+        verify(runRepo, never()).save(any());
+    }
+
+    @Test
+    void createTask_notClockedIn_sendsToTimeClock() {
+        session.setAttribute("loggedInUser", techUser);
+        when(timeEntryService.isClockedIn(techUser)).thenReturn(false);
+
+        assertEquals("redirect:/time-clock?next=/tasks/create", controller.createTask("T", "D", session));
+        assertEquals("redirect:/time-clock?next=/tasks/create", controller.createTaskForm(session, new ConcurrentModel()));
+        verify(taskRepo, never()).save(any());
+        verify(runRepo, never()).save(any());
+    }
+
+    @Test
+    void resumeTask_notClockedIn_sendsToTimeClock() {
+        session.setAttribute("loggedInUser", techUser);
+        ChecklistRun run = new ChecklistRun();
+        run.setCompletedBy(techUser);
+        when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
+        when(runRepo.findById(7L)).thenReturn(Optional.of(run));
+        when(timeEntryService.isClockedIn(techUser)).thenReturn(false);
+
+        String result = controller.resumeTask(1L, 7L, new ConcurrentModel(), session);
+
+        assertEquals("redirect:/time-clock?next=/tasks/1/resume/7", result);
+        verify(taskPauseRepo, never()).findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(any());
     }
 
     // --- createTaskForm ---
