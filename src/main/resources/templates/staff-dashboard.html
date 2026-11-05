@@ -18,10 +18,8 @@
         </a>
     </div>
 
-    <div th:replace="~{fragments/alerts :: alerts(${notifications})}"></div>
-
     <!-- Stat tiles -->
-    <div class="row g-2 g-md-3 mb-4">
+    <div class="row g-2 g-md-3 mb-3">
         <div class="col-4">
             <a href="#approvals" class="s2s-stat" th:classappend="${pendingCount > 0} ? 'attn'">
                 <span class="chip d-none d-sm-grid"><i class="bi bi-clipboard-check"></i></span>
@@ -41,6 +39,8 @@
             </a>
         </div>
     </div>
+
+    <div th:replace="~{fragments/alerts :: alerts(${notifications})}"></div>
 
     <div class="row g-3">
         <!-- Approvals -->
