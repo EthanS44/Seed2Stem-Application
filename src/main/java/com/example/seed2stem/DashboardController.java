@@ -23,6 +23,9 @@ import java.util.Set;
 @RequestMapping("/dashboard")
 public class DashboardController {
 
+    /** How many of a user's submitted tasks the Tasks page lists. */
+    static final int SUBMITTED_SHOWN = 50;
+
     private final TaskRepository taskRepo;
     private final ChecklistRunService checklistRunService;
     private final UserRepository userRepo;
@@ -33,6 +36,7 @@ public class DashboardController {
     private final RegistrationRequestRepository registrationRequestRepo;
     private final PasswordResetRequestRepository passwordResetRequestRepo;
     private final TicketRepository ticketRepo;
+    private final NotificationService notificationService;
 
     public DashboardController(TaskRepository taskRepo,
                                ChecklistRunService checklistRunService,
@@ -43,7 +47,8 @@ public class DashboardController {
                                BatchRecordService batchRecordService,
                                RegistrationRequestRepository registrationRequestRepo,
                                PasswordResetRequestRepository passwordResetRequestRepo,
-                               TicketRepository ticketRepo) {
+                               TicketRepository ticketRepo,
+                               NotificationService notificationService) {
         this.taskRepo = taskRepo;
         this.checklistRunService = checklistRunService;
         this.userRepo = userRepo;
@@ -54,6 +59,7 @@ public class DashboardController {
         this.registrationRequestRepo = registrationRequestRepo;
         this.passwordResetRequestRepo = passwordResetRequestRepo;
         this.ticketRepo = ticketRepo;
+        this.notificationService = notificationService;
     }
 
     @GetMapping("/home-dashboard")
@@ -83,6 +89,7 @@ public class DashboardController {
         model.addAttribute("pausedRunIds", new HashSet<>(taskPauseRepository.findRunIdsWithOpenPause()));
         model.addAttribute("awaitingCount", runRepo.countByCompletedByAndStatus(user, ChecklistRunStatus.PENDING));
         model.addAttribute("recentRuns", runRepo.findRecentSubmittedByUser(user, PageRequest.of(0, 5)));
+        model.addAttribute("notifications", notificationService.forUser(user));
         model.addAttribute("availableTasks", taskRepo.findByUserCreatedFalseAndDeletedFalseOrderByTitleAsc());
         model.addAttribute("clockedIn", shift.isPresent());
         model.addAttribute("shiftStart", shift.map(TimeEntry::getClockInTime).orElse(null));
@@ -125,6 +132,7 @@ public class DashboardController {
                 .toList();
 
         addGreeting(model, user);
+        model.addAttribute("notifications", notificationService.forUser(user));
         model.addAttribute("isDeveloper", user.getAccountType() == AccountType.DEVELOPER);
         model.addAttribute("pendingRuns", pending);
         model.addAttribute("pendingCount", pending.size());
@@ -177,6 +185,13 @@ public class DashboardController {
 
         // Mark which runs are currently paused so the row can show a "Paused" pill.
         model.addAttribute("pausedRunIds", new HashSet<>(taskPauseRepository.findRunIdsWithOpenPause()));
+
+        // The user's own submitted tasks with their approval status.
+        List<ChecklistRun> submitted = runRepo.findRecentSubmittedByUser(user, PageRequest.of(0, SUBMITTED_SHOWN));
+        model.addAttribute("submittedRuns", submitted);
+        model.addAttribute("submittedPending", submitted.stream().filter(r -> r.getStatus() == ChecklistRunStatus.PENDING).count());
+        model.addAttribute("submittedApproved", submitted.stream().filter(r -> r.getStatus() == ChecklistRunStatus.APPROVED).count());
+        model.addAttribute("submittedRejected", submitted.stream().filter(r -> r.getStatus() == ChecklistRunStatus.REJECTED).count());
 
         model.addAttribute("isManager", isManager);
         model.addAttribute("clockedIn", timeEntryService.isClockedIn(user));

@@ -133,6 +133,61 @@ class BatchRecordServiceTest {
     }
 
     @Test
+    void totals_plantsAreHarvestedOnlyOnceBottomsAreIn() {
+        BatchRecordEntry tops = approved(BatchAction.HARVEST, 10, 6.0);
+        tops.setHarvestPart(HarvestPart.TOPS);
+        BatchRecordEntry bottoms = approved(BatchAction.HARVEST, 4, 3.5);
+        bottoms.setHarvestPart(HarvestPart.BOTTOMS);
+
+        BatchTotals topsOnly = BatchTotals.of(List.of(approved(BatchAction.CLONING, 12, null), tops));
+        assertEquals(0, topsOnly.getPlantsHarvested());
+        assertEquals(12, topsOnly.getLivePlants());
+        assertEquals(10, topsOnly.getPlantsAwaitingBottoms());
+        assertEquals(2, topsOnly.getPlantsReadyForTops());
+        assertEquals(6.0, topsOnly.getWetKg(), 1e-9);
+        assertEquals("Harvesting", topsOnly.getStage());
+
+        BatchTotals t = BatchTotals.of(List.of(approved(BatchAction.CLONING, 12, null), tops, bottoms));
+        assertEquals(4, t.getPlantsHarvested());
+        assertEquals(8, t.getLivePlants());
+        assertEquals(6, t.getPlantsAwaitingBottoms());
+        assertEquals(9.5, t.getWetKg(), 1e-9);
+        assertEquals(6.0, t.getTopsKg(), 1e-9);
+        assertEquals(3.5, t.getBottomsKg(), 1e-9);
+    }
+
+    @Test
+    void submit_bottomsBeforeTops_isRejected() {
+        Batch b = batch(BatchSource.CLONES);
+        BatchRecordEntry e = entry(BatchAction.HARVEST);
+        e.setBatch(b);
+        e.setHarvestPart(HarvestPart.BOTTOMS);
+        e.setPlantCount(5);
+        e.setWeightKg(2.0);
+        when(runRepo.findById(10L)).thenReturn(Optional.of(run));
+        when(entryRepo.findByRun(run)).thenReturn(Optional.of(e));
+        when(entryRepo.findByBatchAndStatus(b, BatchEntryStatus.APPROVED))
+                .thenReturn(List.of(approved(BatchAction.CLONING, 10, null)));
+        when(entryRepo.findByBatchAndStatus(b, BatchEntryStatus.PENDING)).thenReturn(List.of(e));
+
+        BatchRecordException ex = assertThrows(BatchRecordException.class, () -> service.submitRun(10L, List.of()));
+        assertTrue(ex.getMessage().startsWith("Harvest the tops first"));
+    }
+
+    @Test
+    void submit_harvestWithoutPart_isRejected() {
+        BatchRecordEntry e = entry(BatchAction.HARVEST);
+        e.setBatch(batch(BatchSource.CLONES));
+        e.setPlantCount(5);
+        e.setWeightKg(2.0);
+        when(runRepo.findById(10L)).thenReturn(Optional.of(run));
+        when(entryRepo.findByRun(run)).thenReturn(Optional.of(e));
+
+        BatchRecordException ex = assertThrows(BatchRecordException.class, () -> service.submitRun(10L, List.of()));
+        assertEquals("Choose whether you're harvesting the tops or the bottoms.", ex.getMessage());
+    }
+
+    @Test
     void totals_wholePlantsAreCountedNotWeighed() {
         BatchRecordEntry stems = approved(BatchAction.DESTRUCTION, null, 1.5);
         stems.setMaterial(DestructionMaterial.STEMS);

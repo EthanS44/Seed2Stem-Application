@@ -23,6 +23,8 @@
         </div>
     </div>
 
+    <div th:replace="~{fragments/alerts :: alerts(${notifications})}"></div>
+
     <!-- Stat tiles -->
     <div class="row g-2 g-md-3 mb-4">
         <div class="col-4">
@@ -64,7 +66,8 @@
 
             <!-- Recent submissions -->
             <div class="s2s-panel mb-3" id="recent">
-                <div class="panel-head"><h6><i class="bi bi-send-check me-2"></i>Recently submitted</h6></div>
+                <div class="panel-head"><h6><i class="bi bi-send-check me-2"></i>Recently submitted</h6>
+                    <a th:href="@{/dashboard/task-dashboard#completed}">All</a></div>
                 <div th:if="${recentRuns.isEmpty()}" class="s2s-empty">Tasks you submit will show up here with their approval status.</div>
                 <a th:each="run : ${recentRuns}" class="s2s-row" th:href="@{/checklist-runs/runs/{id}(id=${run.id})}">
                     <span class="grow">
@@ -93,9 +96,6 @@
                 <a th:each="task : ${availableTasks}" class="s2s-row" th:href="@{/tasks/{id}(id=${task.id})}">
                     <span class="grow">
                         <span class="title d-block" th:text="${task.title}">Task</span>
-                        <span th:if="${task.isBatchTask()}" class="meta d-block">
-                            <i class="bi bi-journal-text me-1"></i>Adds to a batch record
-                        </span>
                     </span>
                     <i class="bi bi-chevron-right chev"></i>
                 </a>

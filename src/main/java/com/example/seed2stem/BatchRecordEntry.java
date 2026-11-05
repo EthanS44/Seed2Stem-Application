@@ -77,6 +77,11 @@ public class BatchRecordEntry {
     private Integer filterCount;
     private Integer filterRating;
 
+    /** Harvest only: tops (first pass) or bottoms (second pass). Null on harvests logged before the split. */
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(20)")
+    private HarvestPart harvestPart;
+
     @Enumerated(EnumType.STRING)
     @Column(columnDefinition = "varchar(30)")
     private DestructionMaterial material;
@@ -134,6 +139,8 @@ public class BatchRecordEntry {
     public void setFilterCount(Integer filterCount) { this.filterCount = filterCount; }
     public Integer getFilterRating() { return filterRating; }
     public void setFilterRating(Integer filterRating) { this.filterRating = filterRating; }
+    public HarvestPart getHarvestPart() { return harvestPart; }
+    public void setHarvestPart(HarvestPart harvestPart) { this.harvestPart = harvestPart; }
     public DestructionMaterial getMaterial() { return material; }
     public void setMaterial(DestructionMaterial material) { this.material = material; }
     public String getDestructionMethod() { return destructionMethod; }
@@ -172,7 +179,9 @@ public class BatchRecordEntry {
             case FILTER_CHANGE -> join(filterWork != null ? "Filters " + filterWork.getDisplayName().toLowerCase() : null,
                     filterCount != null ? filterCount + " filters" : null,
                     filterRating != null ? "MERV " + filterRating : null, notes);
-            case HARVEST -> "Wet weight (whole plant)";
+            case HARVEST -> harvestPart == null ? "Wet weight (whole plant)"
+                    : harvestPart == HarvestPart.TOPS ? "Tops harvested, wet weight"
+                    : "Bottoms harvested, wet weight — plants harvested";
             case DEBUCK_DESTEM -> join(fanLeafKg != null ? "Fan leaves " + String.format(kg, fanLeafKg) : null,
                     stemKg != null ? "stems " + String.format(kg, stemKg) : null);
             case TRIMMING -> join("Trim (sugar leaves)",

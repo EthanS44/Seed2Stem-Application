@@ -144,6 +144,17 @@
 
             <!-- HARVEST -->
             <th:block th:if="${act == 'HARVEST'}">
+                <div class="col-12">
+                    <span class="form-label fw-semibold d-block">What are you harvesting?</span>
+                    <div class="btn-group" role="group" aria-label="Harvest part">
+                        <th:block th:each="p : ${harvestParts}">
+                            <input type="radio" class="btn-check" name="br_harvestPart" th:id="'br_part_' + ${p.name()}" th:value="${p.name()}" required
+                                   th:checked="${batchEntry.harvestPart != null and batchEntry.harvestPart.name() == p.name()}">
+                            <label class="btn btn-outline-success" th:for="'br_part_' + ${p.name()}" th:text="${p.getDisplayName()}">Tops</label>
+                        </th:block>
+                    </div>
+                    <div class="form-text">Tops are harvested first. Plants count as harvested once their bottoms are in.</div>
+                </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold" for="br_plantCount">Plants cut down</label>
                     <input type="number" class="form-control" id="br_plantCount" name="br_plantCount" min="1" step="1" required th:value="${batchEntry.plantCount}">
@@ -152,7 +163,7 @@
                 <div class="col-md-6">
                     <label class="form-label fw-semibold" for="br_weightKg">Wet weight (kg)</label>
                     <input type="number" class="form-control" id="br_weightKg" name="br_weightKg" min="0.001" step="0.001" required th:value="${batchEntry.weightKg}">
-                    <div class="form-text">Whole plant, before any leaves or stems come off.</div>
+                    <div class="form-text" id="harvestWeightHint">Before any leaves or stems come off.</div>
                 </div>
             </th:block>
 
@@ -290,7 +301,12 @@
             const hint = document.getElementById('actionHint');
             if (hint && b) {
                 if (ACTION === 'TRANSFER_TO_FLOWER') hint.textContent = b.transferable + ' plants left to transfer. Records "X plants transferred to ' + room.value + ' for flowering".';
-                if (ACTION === 'HARVEST') hint.textContent = b.livePlants + ' live plants in this batch.';
+                if (ACTION === 'HARVEST') {
+                    const part = document.querySelector('input[name=br_harvestPart]:checked');
+                    hint.textContent = !part ? 'Choose tops or bottoms. ' + b.readyForTops + ' plants still need tops; ' + b.awaitingBottoms + ' are waiting for bottoms.'
+                        : part.value === 'TOPS' ? b.readyForTops + ' plants still need their tops harvested.'
+                        : b.awaitingBottoms + ' plants have their tops off and are waiting for bottoms.';
+                }
             }
             const onHand = document.getElementById('onHandInfo');
             if (onHand) onHand.textContent = b
@@ -375,6 +391,13 @@
             });
             field.insertAdjacentElement('afterend', box);
         });
+
+        document.querySelectorAll('input[name=br_harvestPart]').forEach(r => r.addEventListener('change', () => {
+            updateBatchInfo();
+            document.getElementById('harvestWeightHint').textContent = r.value === 'TOPS'
+                ? 'Tops only, before any leaves or stems come off.'
+                : 'Bottoms only, before any leaves or stems come off. These plants now count as harvested.';
+        }));
 
         room.addEventListener('change', () => { fillBatches(); updateVariety(); updateFilter(); });
         if (batchSel) batchSel.addEventListener('change', updateBatchInfo);

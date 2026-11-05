@@ -18,6 +18,8 @@
         </a>
     </div>
 
+    <div th:replace="~{fragments/alerts :: alerts(${notifications})}"></div>
+
     <!-- Stat tiles -->
     <div class="row g-2 g-md-3 mb-4">
         <div class="col-6 col-lg-3">
@@ -137,18 +139,6 @@
                 </div>
             </div>
 
-            <div th:if="${!filterAlerts.isEmpty()}" class="s2s-panel mb-3">
-                <div class="panel-head"><h6><i class="bi bi-wind me-2"></i>Filter changes</h6></div>
-                <a th:each="fs : ${filterAlerts}" class="s2s-row" th:href="@{/batch-records}">
-                    <span class="grow">
-                        <span class="title d-block" th:text="${'Room ' + fs.room.getDisplayName()}">Room B1</span>
-                        <span class="meta d-block" th:text="${fs.summary}">Last changed 9 days ago</span>
-                    </span>
-                    <span class="pill" th:classappend="${fs.state == 'OVERDUE'} ? 'bad' : 'warn'"
-                          th:text="${fs.state == 'OVERDUE'} ? 'Overdue' : 'Due'">Due</span>
-                    <i class="bi bi-chevron-right chev"></i>
-                </a>
-            </div>
         </div>
     </div>
 

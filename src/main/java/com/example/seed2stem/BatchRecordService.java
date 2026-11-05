@@ -135,6 +135,8 @@ public class BatchRecordService {
                 o.put("variety", b.getVariety().getName());
                 o.put("stage", t.getStage());
                 o.put("livePlants", t.getLivePlants());
+                o.put("readyForTops", t.getPlantsReadyForTops());
+                o.put("awaitingBottoms", t.getPlantsAwaitingBottoms());
                 o.put("transferable", Math.max(0, t.getPlantsStarted() - t.getPlantsDestroyed() - t.getPlantsTransferred()));
                 o.put("onHandStems", t.getOnHandKg(DestructionMaterial.STEMS));
                 o.put("onHandFan", t.getOnHandKg(DestructionMaterial.FAN_LEAVES));
@@ -171,6 +173,7 @@ public class BatchRecordService {
         model.put("varieties", varieties);
         model.put("filterWorkOptions", FilterWork.values());
         model.put("materialOptions", DestructionMaterial.values());
+        model.put("harvestParts", HarvestPart.values());
         model.put("batchEntryDate", entryDate);
         model.put("batchCodeDate", entryDate.format(CODE_DATE));
         model.put("batchesByRoom", batchesByRoom);
@@ -227,6 +230,7 @@ public class BatchRecordService {
         e.setFilterWork(parseEnum(FilterWork.class, params.getFirst("br_filterWork")));
         e.setFilterCount(parseInt(params.getFirst("br_filterCount")));
         e.setFilterRating(parseInt(params.getFirst("br_filterRating")));
+        e.setHarvestPart(parseEnum(HarvestPart.class, params.getFirst("br_harvestPart")));
         e.setMaterial(parseEnum(DestructionMaterial.class, params.getFirst("br_material")));
         e.setDestructionMethod(text(params.getFirst("br_destructionMethod")));
         e.setWitness(text(params.getFirst("br_witness")));
@@ -323,6 +327,7 @@ public class BatchRecordService {
                         "Filter rating must be MERV " + MIN_MERV + " or higher.");
             }
             case HARVEST -> {
+                require(e.getHarvestPart() != null, "Choose whether you're harvesting the tops or the bottoms.");
                 require(positive(e.getPlantCount()), "Enter the number of plants cut down.");
                 require(positive(e.getWeightKg()), "Enter the wet weight in kg.");
             }
@@ -405,8 +410,20 @@ public class BatchRecordService {
                 require(plants <= left, "Only " + Math.max(0, left) + " plants in " + code + " are left to transfer.");
             }
             case HARVEST -> {
-                int left = approved.getLivePlants() - pendingPlants(pending, BatchAction.HARVEST);
-                require(plants <= left, "Only " + Math.max(0, left) + " plants in " + code + " are left to harvest.");
+                // Tops come off first; bottoms only on plants whose tops are already in.
+                HarvestPart part = e.getHarvestPart();
+                int pendingSame = pending.stream()
+                        .filter(p -> p.getAction() == BatchAction.HARVEST && p.getHarvestPart() == part)
+                        .mapToInt(p -> p.getPlantCount() != null ? p.getPlantCount() : 0).sum();
+                if (part == HarvestPart.TOPS) {
+                    int left = approved.getPlantsReadyForTops() - pendingSame;
+                    require(plants <= left, "Only " + Math.max(0, left) + " plants in " + code + " still need their tops harvested.");
+                } else {
+                    int left = approved.getPlantsAwaitingBottoms() - pendingSame;
+                    require(plants <= left, left <= 0
+                            ? "Harvest the tops first. No plants in " + code + " are waiting for their bottoms."
+                            : "Only " + left + " plants in " + code + " have their tops off and are waiting for bottoms.");
+                }
             }
             case DESTRUCTION -> {
                 DestructionMaterial m = e.getMaterial();

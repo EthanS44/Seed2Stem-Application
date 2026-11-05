@@ -48,6 +48,9 @@ class DashboardControllerTest {
     @Mock
     private TicketRepository ticketRepo;
 
+    @Mock
+    private NotificationService notificationService;
+
     @InjectMocks
     private DashboardController controller;
 

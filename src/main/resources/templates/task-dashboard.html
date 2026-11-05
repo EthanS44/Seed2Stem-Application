@@ -49,6 +49,36 @@
                 </a>
             </div>
 
+            <!-- My submitted tasks and what happened to them -->
+            <div class="s2s-panel mb-3" id="completed">
+                <div class="panel-head">
+                    <h6><i class="bi bi-send-check me-2"></i>My completed tasks</h6>
+                    <span class="small text-muted" th:if="${submittedRuns.size() >= 50}">Latest 50</span>
+                </div>
+                <div th:if="${submittedRuns.isEmpty()}" class="s2s-empty">Tasks you submit show up here with their approval status.</div>
+                <div th:if="${!submittedRuns.isEmpty()}" class="done-filters" role="group" aria-label="Filter by status">
+                    <button type="button" class="done-filter on" data-status="ALL" th:text="${'All · ' + submittedRuns.size()}">All</button>
+                    <button type="button" class="done-filter" data-status="PENDING" th:text="${'Awaiting approval · ' + submittedPending}">Awaiting approval</button>
+                    <button type="button" class="done-filter" data-status="APPROVED" th:text="${'Approved · ' + submittedApproved}">Approved</button>
+                    <button type="button" class="done-filter" data-status="REJECTED" th:text="${'Rejected · ' + submittedRejected}">Rejected</button>
+                </div>
+                <a th:each="run : ${submittedRuns}" class="s2s-row done-row" th:attr="data-status=${run.status.name()}"
+                   th:href="@{/checklist-runs/runs/{id}(id=${run.id})}">
+                    <span class="grow min-w-0">
+                        <span class="title d-block" th:text="${run.task.title}">Task</span>
+                        <span class="meta d-block text-truncate"
+                              th:text="${run.status.name() != 'PENDING' and run.managerComments != null and !run.managerComments.isBlank()}
+                                        ? ${'“' + run.managerComments + '”'}
+                                        : ${'Submitted ' + @fmt.when(run.endTime)}">Submitted 9:40 AM</span>
+                    </span>
+                    <span th:if="${run.status.name() == 'PENDING'}" class="pill warn">Awaiting approval</span>
+                    <span th:if="${run.status.name() == 'APPROVED'}" class="pill ok"><i class="bi bi-check2"></i>Approved</span>
+                    <span th:if="${run.status.name() == 'REJECTED'}" class="pill bad">Rejected</span>
+                    <i class="bi bi-chevron-right chev"></i>
+                </a>
+                <div class="s2s-empty done-none" hidden>No tasks with this status.</div>
+            </div>
+
             <!-- Pending approval (managers and developers) -->
             <div th:if="${isManager}" class="s2s-panel mb-3">
                 <div class="panel-head">
@@ -79,7 +109,6 @@
                 <a th:each="task : ${availableTasks}" class="s2s-row" th:href="@{/tasks/{id}(id=${task.id})}">
                     <span class="grow">
                         <span class="title d-block" th:text="${task.title}">Task</span>
-                        <span th:if="${task.isBatchTask()}" class="meta d-block"><i class="bi bi-journal-text me-1"></i>Adds to a batch record</span>
                         <span th:if="${!task.isBatchTask() and task.description != null and !task.description.isBlank()}"
                               class="meta d-block" th:text="${task.description}">Description</span>
                     </span>
@@ -91,5 +120,23 @@
 </main>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // Completed tasks: filter by approval status.
+    (function () {
+        const buttons = document.querySelectorAll('.done-filter');
+        const rows = document.querySelectorAll('.done-row');
+        const none = document.querySelector('.done-none');
+        buttons.forEach(btn => btn.addEventListener('click', () => {
+            buttons.forEach(b => b.classList.toggle('on', b === btn));
+            let shown = 0;
+            rows.forEach(r => {
+                const show = btn.dataset.status === 'ALL' || r.dataset.status === btn.dataset.status;
+                r.classList.toggle('d-none', !show);
+                if (show) shown++;
+            });
+            if (none) none.hidden = shown > 0;
+        }));
+    })();
+</script>
 </body>
 </html>

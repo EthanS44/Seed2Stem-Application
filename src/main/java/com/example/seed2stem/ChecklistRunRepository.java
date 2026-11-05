@@ -30,6 +30,10 @@ public interface ChecklistRunRepository
 
     long countByCompletedByAndStatus(User completedBy, ChecklistRunStatus status);
 
+    /** A user's rejected runs, newest decision first, for the dashboard alert. */
+    @Query("SELECT r FROM ChecklistRun r JOIN FETCH r.task WHERE r.completedBy = :user AND r.status = 'REJECTED' ORDER BY r.authorizedAt DESC")
+    List<ChecklistRun> findRejectedByUser(@Param("user") User user);
+
     Optional<ChecklistRun> findFirstByTask(Task task);
 
     @Query("SELECT r FROM ChecklistRun r JOIN FETCH r.completedBy JOIN FETCH r.task WHERE r.status = :status ORDER BY r.startTime ASC")

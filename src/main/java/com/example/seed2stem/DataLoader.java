@@ -66,7 +66,7 @@ public class DataLoader implements CommandLineRunner {
         seedBatchTask(BatchAction.FILTER_CHANGE, "Clean and Change Filters",
                 "Log filters cleaned or changed (MERV 8 minimum). Flowering rooms are due after 7 days and overdue after 14.");
         seedBatchTask(BatchAction.HARVEST, "Harvest",
-                "Log plants cut down and their whole-plant wet weight, before any leaves or stems come off.");
+                "Harvest is done in two passes: tops first, then bottoms. Choose which, then log plants cut and the wet weight, before any leaves or stems come off. Plants count as harvested once their bottoms are in.");
         seedBatchTask(BatchAction.DEBUCK_DESTEM, "Debucking and Destemming",
                 "Log plants processed and the weight of fan leaves and stems removed.");
         seedBatchTask(BatchAction.TRIMMING, "Trimming",

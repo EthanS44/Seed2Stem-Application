@@ -83,9 +83,13 @@ public class BatchRecordExportService {
                     ? t.getPlantsTransferred() + " plants transferred to " + batch.getRoom().getDisplayName() + " for flowering"
                     : null);
 
+            // Plants are harvested when their bottoms come in; wet weight is tops plus bottoms.
             List<BatchRecordEntry> harvests = of(approved, e -> e.getAction() == BatchAction.HARVEST);
-            fill(sheet, ROW_HARVESTED, harvests, t.getPlantsHarvested(), null);
-            fillKg(sheet, ROW_HARVEST_WEIGHT, harvests, t.getWetKg(), null);
+            List<BatchRecordEntry> bottoms = of(harvests, e -> e.getHarvestPart() != HarvestPart.TOPS);
+            fill(sheet, ROW_HARVESTED, bottoms, t.getPlantsHarvested(), t.getPlantsAwaitingBottoms() > 0
+                    ? t.getPlantsAwaitingBottoms() + " plants have tops harvested, bottoms still to come" : null);
+            fillKg(sheet, ROW_HARVEST_WEIGHT, harvests, t.getWetKg(), t.getTopsKg() > 0 || t.getBottomsKg() > 0
+                    ? String.format("Tops %.3f kg, bottoms %.3f kg", t.getTopsKg(), t.getBottomsKg()) : null);
 
             List<BatchRecordEntry> dry = of(approved, e -> e.getAction() == BatchAction.DRY_WEIGHT);
             fillKg(sheet, ROW_DRY_WEIGHT, dry, t.getDryKg(), null);

@@ -827,3 +827,22 @@ body { color: var(--s2s-ink); }
 .kg-adder { margin-top: .4rem; }
 .kg-adder .input-group { max-width: 14rem; }
 .kg-adder-log { margin-top: .25rem; font-size: .8rem; color: var(--bs-secondary-color, #6c757d); }
+
+/* Tasks page: my completed tasks, filtered by approval status */
+.done-filters { display: flex; flex-wrap: wrap; gap: .35rem; padding: .6rem .9rem; border-bottom: 1px solid var(--bs-border-color, #e5e9ee); }
+.done-filter { border: 1px solid #d9e0e6; background: #fff; color: inherit; border-radius: 999px; padding: .2rem .65rem; font-size: .8rem; }
+.done-filter.on { background: var(--s2s-green); border-color: var(--s2s-green); color: #fff; }
+
+/* Dashboard Alerts */
+.alert-item { border-left: 3px solid transparent; }
+.alert-item.bad { border-left-color: var(--s2s-red, #c62828); }
+.alert-item.warn { border-left-color: #e0a100; }
+.alert-item.info { border-left-color: #1565c0; }
+.alert-item.ok { border-left-color: var(--s2s-green); }
+.alert-icon { width: 2rem; height: 2rem; flex: none; display: grid; place-items: center; border-radius: 50%; background: #f1f4f6; }
+.alert-item.bad .alert-icon { background: #fdecec; color: #c62828; }
+.alert-item.warn .alert-icon { background: #fff4d6; color: #8a6100; }
+.alert-item.info .alert-icon { background: #e7f0fb; color: #1565c0; }
+.alert-item.ok .alert-icon { background: #e8f5e9; color: var(--s2s-green); }
+.alert-action { flex: none; font-size: .8rem; font-weight: 600; color: var(--s2s-green); white-space: nowrap; }
+.flex-none { flex: none; }

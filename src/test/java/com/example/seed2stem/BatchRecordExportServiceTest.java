@@ -47,6 +47,10 @@ class BatchRecordExportServiceTest {
         batch.setSource(BatchSource.CLONES);
         batch.setStartDate(LocalDate.of(2026, 10, 8));
 
+        BatchRecordEntry tops = approved(BatchAction.HARVEST, 50, 15.5);
+        tops.setHarvestPart(HarvestPart.TOPS);
+        BatchRecordEntry bottoms = approved(BatchAction.HARVEST, 50, 10.0);
+        bottoms.setHarvestPart(HarvestPart.BOTTOMS);
         BatchRecordEntry debuck = approved(BatchAction.DEBUCK_DESTEM, 50, null);
         debuck.setFanLeafKg(3.2);
         debuck.setStemKg(2.1);
@@ -64,7 +68,7 @@ class BatchRecordExportServiceTest {
         List<BatchRecordEntry> log = new ArrayList<>(List.of(
                 approved(BatchAction.CLONING, 52, null),
                 approved(BatchAction.TRANSFER_TO_FLOWER, 50, null),
-                approved(BatchAction.HARVEST, 50, 25.5),
+                tops, bottoms,
                 debuck, trim,
                 approved(BatchAction.DRY_WEIGHT, null, 4.8),
                 destroy, destroyPlants));
@@ -82,7 +86,9 @@ class BatchRecordExportServiceTest {
             assertEquals("Tess Tech", text(s, 9, 8));
             assertEquals(50.0, num(s, 11, 7));                  // flowering transfer
             assertEquals("50 plants transferred to B1 for flowering", text(s, 11, 10));
-            assertEquals(25.5, num(s, 13, 7), 1e-9);            // harvest (wet) weight
+            assertEquals(50.0, num(s, 12, 7));                  // plants harvested (bottoms)
+            assertEquals(25.5, num(s, 13, 7), 1e-9);            // harvest (wet) weight, tops + bottoms
+            assertEquals("Tops 15.500 kg, bottoms 10.000 kg", text(s, 13, 10));
             assertEquals(4.8, num(s, 14, 7), 1e-9);             // dry weight
             assertEquals(6.0, num(s, 15, 7), 1e-9);             // flower weight (trimmed)
             assertEquals(6.7, num(s, 16, 7), 1e-9);             // trim incl. fan leaves + stems

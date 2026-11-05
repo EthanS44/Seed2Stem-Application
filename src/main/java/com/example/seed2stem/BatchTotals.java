@@ -16,9 +16,13 @@ public class BatchTotals {
     private int clonesCut;
     private int plantsTransferred;
     private int plantsHarvested;
+    private int plantsTopped;
+    private int plantsBottomed;
     private int plantsProcessed;
     private int plantsDestroyed;
     private double wetKg;
+    private double topsKg;
+    private double bottomsKg;
     private double fanLeafKg;
     private double stemKg;
     private double trimKg;
@@ -49,7 +53,18 @@ public class BatchTotals {
                 firstTransferDate = earliest(firstTransferDate, e.getEntryDate());
             }
             case HARVEST -> {
-                plantsHarvested += plants;
+                // Tops first, then bottoms: both add wet weight, but a plant is only
+                // harvested once its bottoms are in. Older entries (no part) were whole plants.
+                if (e.getHarvestPart() == HarvestPart.TOPS) {
+                    plantsTopped += plants;
+                    topsKg += kg(e.getWeightKg());
+                } else {
+                    plantsHarvested += plants;
+                    if (e.getHarvestPart() == HarvestPart.BOTTOMS) {
+                        plantsBottomed += plants;
+                        bottomsKg += kg(e.getWeightKg());
+                    }
+                }
                 wetKg += kg(e.getWeightKg());
                 firstHarvestDate = earliest(firstHarvestDate, e.getEntryDate());
             }
@@ -94,6 +109,12 @@ public class BatchTotals {
     /** Plants still alive in the batch: started, minus harvested, minus whole plants destroyed. */
     public int getLivePlants() { return Math.max(0, getPlantsStarted() - plantsHarvested - plantsDestroyed); }
 
+    /** Plants with their tops off, waiting for the bottoms harvest. */
+    public int getPlantsAwaitingBottoms() { return Math.max(0, plantsTopped - plantsBottomed); }
+
+    /** Live plants that haven't had their tops harvested yet. */
+    public int getPlantsReadyForTops() { return Math.max(0, getLivePlants() - getPlantsAwaitingBottoms()); }
+
     public double getDestroyedKg(DestructionMaterial m) { return destroyedKgByMaterial.getOrDefault(m, 0.0); }
 
     /** kg recorded but not yet destroyed, for the material types that are weighed beforehand. */
@@ -132,6 +153,9 @@ public class BatchTotals {
     public int getClonesCut() { return clonesCut; }
     public int getPlantsTransferred() { return plantsTransferred; }
     public int getPlantsHarvested() { return plantsHarvested; }
+    public int getPlantsTopped() { return plantsTopped; }
+    public double getTopsKg() { return round3(topsKg); }
+    public double getBottomsKg() { return round3(bottomsKg); }
     public int getPlantsProcessed() { return plantsProcessed; }
     public int getPlantsDestroyed() { return plantsDestroyed; }
     public double getWetKg() { return round3(wetKg); }
@@ -149,6 +173,7 @@ public class BatchTotals {
     /** Derived growth stage, from the furthest step recorded. */
     public String getStage() {
         if (hasDryWeight) return "Dried";
+        if (getPlantsAwaitingBottoms() > 0) return "Harvesting";
         if (plantsHarvested > 0) return "Harvested";
         if (plantsTransferred > 0) return "Flowering";
         if (getPlantsStarted() > 0) return "Vegetative";

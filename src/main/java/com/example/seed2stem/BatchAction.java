@@ -16,7 +16,7 @@ public enum BatchAction {
     FILTER_CHANGE("Clean and change filters",
             "Asks for filters cleaned or changed, number of filters, MERV rating (8 minimum) and notes. Shows days since the room's last change; due after 7 days, overdue after 14."),
     HARVEST("Harvest",
-            "Asks for plants cut down and their whole-plant wet weight (kg)."),
+            "Asks whether the tops or the bottoms are being harvested, plants cut and wet weight (kg). Tops come first; plants count as harvested once their bottoms are in."),
     DEBUCK_DESTEM("Debucking and destemming",
             "Asks for plants processed, fan leaf weight and stem weight (kg). Weights are held as material awaiting destruction."),
     TRIMMING("Trimming",
