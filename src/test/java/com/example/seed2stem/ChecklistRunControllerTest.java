@@ -43,6 +43,9 @@ class ChecklistRunControllerTest {
     @Mock
     private BatchRecordService batchRecordService;
 
+    @Mock
+    private TimeEntryService timeEntryService;
+
     @InjectMocks
     private ChecklistRunController controller;
 
@@ -73,6 +76,33 @@ class ChecklistRunControllerTest {
         run.setCompletedBy(techUser);
         run.setTask(task);
         run.setStartTime(LocalDateTime.now());
+
+        // Most tests run on the clock; the clock-rule test below overrides this.
+        lenient().when(timeEntryService.isClockedIn(any())).thenReturn(true);
+    }
+
+    @Test
+    void submitChecklist_notClockedIn_savesAnswersAndSendsToTimeClock() {
+        session.setAttribute("loggedInUser", techUser);
+        ChecklistItem item = new ChecklistItem();
+        item.setId(10L);
+        item.setItemType(ChecklistItemType.QUESTION);
+        item.setResponseType(ChecklistResponseType.TEXT);
+        when(taskRepo.findById(1L)).thenReturn(Optional.of(task));
+        when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(item));
+        when(runRepo.findById(1L)).thenReturn(Optional.of(run));
+        when(timeEntryService.isClockedIn(techUser)).thenReturn(false);
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("text_10", "Looks good");
+        var redirect = new RedirectAttributesModelMap();
+
+        String result = controller.submitChecklist(1L, 1L, params, session, redirect);
+
+        assertEquals("redirect:/time-clock?next=/tasks/1/resume/1", result);
+        verify(runService).pauseByUser(eq(1L), anyList());
+        verify(runService, never()).submitWithResponses(any(), anyList());
+        assertNotNull(redirect.getFlashAttributes().get("error"));
     }
 
     // --- submitChecklist ---

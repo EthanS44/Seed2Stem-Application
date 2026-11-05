@@ -44,6 +44,10 @@
                     <span class="pill ok"><i class="bi bi-circle-fill" style="font-size:.5rem"></i>On the clock</span>
                     <div id="elapsed-time" class="clock-timer" th:attr="data-clock-in-time=${activeEntry.clockInTime}">--:--:--</div>
                     <p class="text-muted small mb-3" th:text="${'Since ' + @fmt.when(activeEntry.clockInTime)}">Since 9:00 AM</p>
+                    <div th:if="${activeEntry.date.isBefore(#temporals.createToday())}" class="clock-blocked text-start mx-auto mb-3" style="max-width: 360px;">
+                        <div class="fw-semibold small mb-1"><i class="bi bi-exclamation-circle me-1"></i>Still clocked in from an earlier day</div>
+                        <div class="small">If you forgot to clock out, clock out now and tell your manager when you really left so they can fix your hours.</div>
+                    </div>
                     <form method="post" th:action="@{/time-clock/clock-out}" class="text-start mx-auto" style="max-width: 360px;">
                         <label for="clockOutNotes" class="form-label small fw-semibold">Notes <span class="text-muted fw-normal">(optional)</span></label>
                         <textarea id="clockOutNotes" name="notes" class="form-control mb-3" rows="2" placeholder="Anything to note about this shift"></textarea>

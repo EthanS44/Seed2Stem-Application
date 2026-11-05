@@ -24,15 +24,18 @@ public class PayrollController {
     private final PayrollExportService exportService;
     private final TimeEntryService timeEntryService;
     private final TimeEntryRepository timeEntryRepo;
+    private final UserRepository userRepo;
 
     public PayrollController(PayrollService payrollService,
                              PayrollExportService exportService,
                              TimeEntryService timeEntryService,
-                             TimeEntryRepository timeEntryRepo) {
+                             TimeEntryRepository timeEntryRepo,
+                             UserRepository userRepo) {
         this.payrollService = payrollService;
         this.exportService = exportService;
         this.timeEntryService = timeEntryService;
         this.timeEntryRepo = timeEntryRepo;
+        this.userRepo = userRepo;
     }
 
     @GetMapping
@@ -95,8 +98,7 @@ public class PayrollController {
 
         TimeEntry entry = timeEntryRepo.findById(entryId).orElse(null);
         if (entry == null) return "redirect:/payroll";
-        String back = "redirect:/payroll/employees/" + entry.getUser().getId()
-                + (returnQuery != null && returnQuery.matches("[A-Za-z0-9=&\\-]*") ? "?" + returnQuery : "");
+        String back = backTo(entry.getUser().getId(), returnQuery);
 
         if (entry.getUser().getId().equals(viewer.getId())) {
             redirectAttributes.addFlashAttribute("error", "You can't edit your own hours. Ask another manager.");
@@ -109,6 +111,56 @@ public class PayrollController {
             redirectAttributes.addFlashAttribute("success", "Shift updated.");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Couldn't update the shift: " + e.getMessage());
+        }
+        return back;
+    }
+
+    @PostMapping("/entries/{entryId}/delete")
+    public String deleteEntry(@PathVariable Long entryId,
+                              @RequestParam(required = false) String returnQuery,
+                              HttpSession session, RedirectAttributes redirectAttributes) {
+        if (!canView(session)) return redirectFor(session);
+        User viewer = (User) session.getAttribute("loggedInUser");
+
+        TimeEntry entry = timeEntryRepo.findById(entryId).orElse(null);
+        if (entry == null) return "redirect:/payroll";
+        String back = backTo(entry.getUser().getId(), returnQuery);
+
+        if (entry.getUser().getId().equals(viewer.getId())) {
+            redirectAttributes.addFlashAttribute("error", "You can't change your own hours. Ask another manager.");
+            return back;
+        }
+        timeEntryRepo.delete(entry);
+        redirectAttributes.addFlashAttribute("success", "Shift deleted.");
+        return back;
+    }
+
+    @PostMapping("/employees/{userId}/entries")
+    public String addEntry(@PathVariable Long userId,
+                           @RequestParam String clockInTime,
+                           @RequestParam String clockOutTime,
+                           @RequestParam(required = false) String notes,
+                           @RequestParam(required = false) String returnQuery,
+                           HttpSession session, RedirectAttributes redirectAttributes) {
+        if (!canView(session)) return redirectFor(session);
+        User viewer = (User) session.getAttribute("loggedInUser");
+
+        User employee = userRepo.findById(userId).orElse(null);
+        if (employee == null) return "redirect:/payroll";
+        String back = backTo(userId, returnQuery);
+
+        if (employee.getId().equals(viewer.getId())) {
+            redirectAttributes.addFlashAttribute("error", "You can't add hours for yourself. Ask another manager.");
+            return back;
+        }
+        try {
+            String note = notes != null && !notes.isBlank()
+                    ? notes.trim() + " (added by " + viewer.getName() + ")"
+                    : "Added by " + viewer.getName();
+            timeEntryService.addEntry(employee, LocalDateTime.parse(clockInTime), LocalDateTime.parse(clockOutTime), note);
+            redirectAttributes.addFlashAttribute("success", "Shift added.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Couldn't add the shift: " + e.getMessage());
         }
         return back;
     }
@@ -137,6 +189,11 @@ public class PayrollController {
         model.addAttribute("nextPeriod", payrollService.next(p));
         model.addAttribute("periodTypes", PayPeriod.Type.values());
         model.addAttribute("overtimeHours", payrollService.getOvertimeHoursPerWeek());
+    }
+
+    private static String backTo(Long userId, String returnQuery) {
+        return "redirect:/payroll/employees/" + userId
+                + (returnQuery != null && returnQuery.matches("[A-Za-z0-9=&\\-]*") ? "?" + returnQuery : "");
     }
 
     /** Where the existing shift breakdown page lives for this person, if the viewer may open it. */

@@ -109,6 +109,28 @@ class TaskViewControllerTest {
         verify(taskPauseRepo, never()).findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(any());
     }
 
+    @Test
+    void submitUserTask_notClockedIn_keepsWorkLogAndSendsToTimeClock() {
+        session.setAttribute("loggedInUser", techUser);
+        ChecklistRun run = new ChecklistRun();
+        run.setCompletedBy(techUser);
+        run.setTask(task);
+        run.setStatus(ChecklistRunStatus.IN_PROGRESS);
+        ChecklistItem log = new ChecklistItem();
+        log.setId(5L);
+        log.setItemType(ChecklistItemType.QUESTION);
+        when(runRepo.findById(7L)).thenReturn(Optional.of(run));
+        when(itemRepo.findByChecklistIdOrderByDisplayOrder(1L)).thenReturn(List.of(log));
+        when(timeEntryService.isClockedIn(techUser)).thenReturn(false);
+
+        String result = controller.submitUserTask(7L, "Watered row 4", session);
+
+        assertEquals("redirect:/time-clock?next=/tasks/runs/7/in-progress", result);
+        verify(responseRepo).save(any());
+        assertEquals(ChecklistRunStatus.IN_PROGRESS, run.getStatus());
+        verify(runRepo, never()).save(any());
+    }
+
     // --- createTaskForm ---
 
     @Test

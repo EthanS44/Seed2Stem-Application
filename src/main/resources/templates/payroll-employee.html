@@ -77,10 +77,13 @@
         <div class="panel-head">
             <h6><i class="bi bi-list-ul me-2"></i>Shifts</h6>
             <span th:unless="${canEdit}" class="small text-muted">You can't edit your own hours</span>
+            <button th:if="${canEdit}" type="button" class="btn btn-sm btn-outline-secondary"
+                    data-bs-toggle="modal" data-bs-target="#addShift"><i class="bi bi-plus-lg me-1"></i>Add shift</button>
         </div>
         <div th:if="${emp.shifts.isEmpty()}" class="s2s-empty">No shifts in this period.</div>
 
-        <div th:each="s : ${emp.shifts}" class="s2s-row pay-shift flex-wrap" th:classappend="${s.flagged} ? 'flagged'">
+        <div th:each="s : ${emp.shifts}" class="s2s-row pay-shift flex-wrap" th:id="'shift-' + ${s.entry.id}"
+             th:classappend="${s.flagged} ? 'flagged'" th:attr="data-edit=${canEdit and s.flagged ? '#edit' + s.entry.id : null}">
             <span class="pay-day">
                 <span class="d-block fw-semibold" th:text="${#temporals.format(s.date, 'EEE')}">Mon</span>
                 <span class="d-block small text-muted" th:text="${#temporals.format(s.date, 'MMM d')}">Oct 26</span>
@@ -95,12 +98,15 @@
                     <span th:each="fl : ${s.flags}" class="pill" th:classappend="${fl.tone}" th:text="${fl.label}">No clock-out</span>
                     <span th:if="${s.overtimeMinutes > 0}" class="pill warn" th:text="${@fmt.hours(s.overtimeMinutes) + ' h overtime'}">1.50 h OT</span>
                 </span>
+                <span th:if="${s.missingClockOut}" class="meta d-block mt-1">Not counted until a clock-out time is added.</span>
             </span>
             <span class="pay-total" th:text="${@fmt.hours(s.minutes)}">8.00</span>
             <span class="d-flex gap-1">
                 <a th:if="${breakdownBase != null}" th:href="@{${breakdownBase + s.entry.id}}" class="btn btn-sm btn-outline-secondary"
                    title="Shift breakdown" aria-label="Shift breakdown"><i class="bi bi-bar-chart-steps"></i></a>
-                <button th:if="${canEdit}" type="button" class="btn btn-sm btn-outline-secondary"
+                <button th:if="${canEdit and s.flagged}" type="button" class="btn btn-sm btn-s2s"
+                        data-bs-toggle="modal" th:attr="data-bs-target='#edit' + ${s.entry.id}">Fix</button>
+                <button th:if="${canEdit and !s.flagged}" type="button" class="btn btn-sm btn-outline-secondary"
                         data-bs-toggle="modal" th:attr="data-bs-target='#edit' + ${s.entry.id}"
                         title="Edit shift" aria-label="Edit shift"><i class="bi bi-pencil"></i></button>
             </span>
@@ -126,7 +132,10 @@
                         <div class="mb-3">
                             <label class="form-label" th:for="'out' + ${s.entry.id}">Clock out</label>
                             <input type="datetime-local" name="clockOutTime" class="form-control" th:id="'out' + ${s.entry.id}"
-                                   th:value="${s.clockOut != null ? #temporals.format(s.clockOut, 'yyyy-MM-dd''T''HH:mm') : ''}">
+                                   th:value="${s.clockOut != null ? #temporals.format(s.clockOut, 'yyyy-MM-dd''T''HH:mm') : ''}"
+                                   th:required="${!s.active}">
+                            <div th:if="${s.missingClockOut}" class="form-text">They never clocked out. Enter when they actually left.</div>
+                            <div th:if="${s.active}" class="form-text">Leave blank to keep them on the clock.</div>
                         </div>
                         <div>
                             <label class="form-label" th:for="'notes' + ${s.entry.id}">Notes</label>
@@ -135,8 +144,45 @@
                         </div>
                     </div>
                     <div class="modal-footer">
+                        <button type="submit" class="btn btn-link text-danger me-auto px-0" th:form="'del' + ${s.entry.id}">Delete shift</button>
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-s2s">Save shift</button>
+                    </div>
+                </form>
+                <form method="post" th:id="'del' + ${s.entry.id}" th:action="@{/payroll/entries/{id}/delete(id=${s.entry.id})}"
+                      onsubmit="return confirm('Delete this shift? Its hours will be removed from payroll.');">
+                    <input type="hidden" name="returnQuery" th:value="${period.query}">
+                </form>
+            </div>
+        </div>
+
+        <!-- Add a shift someone forgot to clock -->
+        <div class="modal fade" id="addShift" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <form class="modal-content" method="post" th:action="@{/payroll/employees/{id}/entries(id=${emp.user.id})}">
+                    <input type="hidden" name="returnQuery" th:value="${period.query}">
+                    <div class="modal-header">
+                        <h5 class="modal-title" th:text="${'Add shift · ' + emp.user.getName()}">Add shift</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small text-muted">For a shift they worked but didn't clock. It's saved with your name on it.</p>
+                        <div class="mb-3">
+                            <label class="form-label" for="addIn">Clock in</label>
+                            <input type="datetime-local" name="clockInTime" id="addIn" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="addOut">Clock out</label>
+                            <input type="datetime-local" name="clockOutTime" id="addOut" class="form-control" required>
+                        </div>
+                        <div>
+                            <label class="form-label" for="addNotes">Reason</label>
+                            <textarea name="notes" id="addNotes" class="form-control" rows="2" placeholder="e.g. forgot to clock in"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-s2s">Add shift</button>
                     </div>
                 </form>
             </div>
@@ -145,5 +191,17 @@
 </main>
 
 <div th:replace="~{fragments/layout :: scripts}"></div>
+<script>
+    // Arriving from "Shifts to check": point at the shift and open its fix form.
+    (function () {
+        var m = /^#shift-(\d+)$/.exec(window.location.hash);
+        var row = m && document.getElementById('shift-' + m[1]);
+        if (!row) return;
+        row.classList.add('pay-target');
+        row.scrollIntoView({ block: 'center' });
+        var modal = row.dataset.edit && document.querySelector(row.dataset.edit);
+        if (modal) bootstrap.Modal.getOrCreateInstance(modal).show();
+    })();
+</script>
 </body>
 </html>

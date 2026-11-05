@@ -7,7 +7,9 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -92,7 +94,9 @@ public class TimeEntryService {
         if (clockOut != null && clockOut.isBefore(clockIn)) {
             throw new RuntimeException("Clock out time cannot be before clock in time");
         }
+        checkNoOverlap(entry.getUser(), entryId, clockIn, clockOut);
 
+        entry.setDate(clockIn.toLocalDate());
         entry.setClockInTime(clockIn);
         entry.setClockOutTime(clockOut);
         if (clockOut != null) {
@@ -102,6 +106,52 @@ public class TimeEntryService {
             entry.setNotes(notes);
         }
         return timeEntryRepo.save(entry);
+    }
+
+    /** A finished shift entered by a manager, e.g. when someone forgot to clock in. */
+    @Transactional
+    public TimeEntry addEntry(User user, LocalDateTime clockIn, LocalDateTime clockOut, String notes) {
+        if (clockOut == null) {
+            throw new RuntimeException("Enter a clock out time");
+        }
+        if (!clockOut.isAfter(clockIn)) {
+            throw new RuntimeException("Clock out time must be after clock in time");
+        }
+        if (clockOut.isAfter(LocalDateTime.now())) {
+            throw new RuntimeException("Shifts can't end in the future");
+        }
+        checkNoOverlap(user, null, clockIn, clockOut);
+
+        TimeEntry entry = new TimeEntry();
+        entry.setUser(user);
+        entry.setDate(clockIn.toLocalDate());
+        entry.setClockInTime(clockIn);
+        entry.setClockOutTime(clockOut);
+        entry.setTotalHours(computeHours(clockIn, clockOut));
+        entry.setNotes(notes);
+        return timeEntryRepo.save(entry);
+    }
+
+    /** Shifts can't overlap, and only one can be open at a time. */
+    private void checkNoOverlap(User user, Long ignoreId, LocalDateTime in, LocalDateTime out) {
+        LocalDateTime end = out != null ? out : LocalDateTime.now();
+        List<TimeEntry> nearby = timeEntryRepo.findByUserAndDateBetweenOrderByDateDescClockInTimeDesc(
+                user, in.toLocalDate().minusDays(1), end.toLocalDate());
+        for (TimeEntry other : nearby) {
+            if (ignoreId != null && ignoreId.equals(other.getId())) continue;
+            if (out == null && other.getClockOutTime() == null) {
+                throw new RuntimeException("They already have an open shift. Add a clock out time");
+            }
+            LocalDateTime otherEnd = other.getClockOutTime() != null ? other.getClockOutTime() : LocalDateTime.now();
+            if (in.isBefore(otherEnd) && other.getClockInTime().isBefore(end)) {
+                DateTimeFormatter time = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
+                throw new RuntimeException("It overlaps their "
+                        + other.getClockInTime().format(time) + " – "
+                        + (other.getClockOutTime() != null ? other.getClockOutTime().format(time) : "now")
+                        + " shift on " + other.getDate().format(DateTimeFormatter.ofPattern("EEE MMM d", Locale.ENGLISH))
+                        + ". Fix or delete that one first.");
+            }
+        }
     }
 
     @Transactional

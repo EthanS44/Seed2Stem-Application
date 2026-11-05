@@ -21,7 +21,7 @@
 
     <!-- Summary -->
     <div class="row g-2 g-md-3 mb-3">
-        <div class="col-6 col-xl">
+        <div class="col-6 col-xl-3">
             <div class="s2s-stat">
                 <span class="chip"><i class="bi bi-clock"></i></span>
                 <span class="min-w-0">
@@ -35,7 +35,7 @@
                 </span>
             </div>
         </div>
-        <div class="col-6 col-xl">
+        <div class="col-6 col-xl-3">
             <div class="s2s-stat" th:classappend="${report.overtimeMinutes > 0} ? 'attn'">
                 <span class="chip"><i class="bi bi-alarm"></i></span>
                 <span class="min-w-0">
@@ -44,16 +44,18 @@
                 </span>
             </div>
         </div>
-        <div class="col-6 col-xl">
+        <div class="col-6 col-xl-3">
             <div class="s2s-stat info">
                 <span class="chip"><i class="bi bi-people"></i></span>
                 <span class="min-w-0">
                     <span class="num d-block" th:text="${report.employeesWorked + ' / ' + report.employees.size()}">0 / 0</span>
                     <span class="lbl d-block" th:text="${'Worked · ' + report.shiftCount + (report.shiftCount == 1 ? ' shift' : ' shifts')}">Worked</span>
+                    <span th:if="${period.current and report.clockedInCount > 0}" class="lbl d-block text-success"
+                          th:text="${report.clockedInCount + ' clocked in'}">1 clocked in</span>
                 </span>
             </div>
         </div>
-        <div class="col-6 col-xl">
+        <div class="col-6 col-xl-3">
             <a href="#to-check" class="s2s-stat" th:classappend="${report.flaggedCount > 0} ? 'alert'">
                 <span class="chip"><i class="bi bi-exclamation-triangle"></i></span>
                 <span class="min-w-0">
@@ -61,15 +63,6 @@
                     <span class="lbl d-block">Shifts to check</span>
                 </span>
             </a>
-        </div>
-        <div class="col-12 col-xl" th:if="${period.current}">
-            <div class="s2s-stat">
-                <span class="chip"><i class="bi bi-person-check"></i></span>
-                <span class="min-w-0">
-                    <span class="num d-block" th:text="${report.clockedInCount}">0</span>
-                    <span class="lbl d-block">On the clock now</span>
-                </span>
-            </div>
         </div>
     </div>
 
@@ -105,7 +98,7 @@
                     Nothing to fix. Every shift has a clean clock-in and clock-out.
                 </div>
                 <a th:each="f : ${flagged}" class="s2s-row"
-                   th:href="@{'/payroll/employees/' + ${f.user.id} + '?' + ${period.query}}">
+                   th:href="@{'/payroll/employees/' + ${f.user.id} + '?' + ${period.query} + '#shift-' + ${f.shift.entry.id}}">
                     <span class="avatar" th:text="${@fmt.initials(f.user)}">TT</span>
                     <span class="grow">
                         <span class="title d-block" th:text="${f.user.getName()}">Name</span>
@@ -114,7 +107,7 @@
                             <span th:each="fl : ${f.shift.flags}" th:if="${fl.problem}" class="pill" th:classappend="${fl.tone}" th:text="${fl.label}">No clock-out</span>
                         </span>
                     </span>
-                    <i class="bi bi-chevron-right chev"></i>
+                    <span class="pay-fix">Fix <i class="bi bi-chevron-right"></i></span>
                 </a>
             </div>
         </div>

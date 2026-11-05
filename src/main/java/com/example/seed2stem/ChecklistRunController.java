@@ -29,19 +29,22 @@ public class ChecklistRunController {
     private final ChecklistRunRepository runRepo;
     private final TaskPauseRepository taskPauseRepo;
     private final BatchRecordService batchRecordService;
+    private final TimeEntryService timeEntryService;
 
     public ChecklistRunController(ChecklistRunService runService,
                                   TaskRepository taskRepo,
                                   ChecklistItemRepository itemRepo,
                                   ChecklistRunRepository runRepo,
                                   TaskPauseRepository taskPauseRepo,
-                                  BatchRecordService batchRecordService) {
+                                  BatchRecordService batchRecordService,
+                                  TimeEntryService timeEntryService) {
         this.runService = runService;
         this.taskRepo = taskRepo;
         this.itemRepo = itemRepo;
         this.runRepo = runRepo;
         this.taskPauseRepo = taskPauseRepo;
         this.batchRecordService = batchRecordService;
+        this.timeEntryService = timeEntryService;
     }
 
     @PostMapping("/submit")
@@ -107,6 +110,19 @@ public class ChecklistRunController {
             }
 
             responses.add(resp);
+        }
+
+        // Work is only turned in on the clock. Keep the answers so nothing is lost,
+        // then send them to clock in and come straight back to the task.
+        if (!timeEntryService.isClockedIn(user)) {
+            ChecklistRun run = runRepo.findById(runId).orElseThrow();
+            if (run.getStatus() == ChecklistRunStatus.IN_PROGRESS) {
+                runService.pauseByUser(runId, responses);
+                if (task.isBatchTask()) batchRecordService.saveDraft(task, run, params);
+            }
+            redirectAttributes.addFlashAttribute("error",
+                    "You're not clocked in. Your answers are saved; clock in to submit this task.");
+            return "redirect:/time-clock?next=/tasks/" + taskId + "/resume/" + runId;
         }
 
         if (task.isBatchTask()) {

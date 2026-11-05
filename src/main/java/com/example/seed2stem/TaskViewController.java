@@ -209,6 +209,10 @@ public class TaskViewController {
 
         saveWorkLogResponse(run, workLog);
 
+        // The work log is saved above; turning the task in waits until they're on the clock.
+        String clockIn = requireClockedIn(user, "/tasks/runs/" + runId + "/in-progress");
+        if (clockIn != null) return clockIn;
+
         // Close any open pause so timeline calc doesn't see it as still paused
         taskPauseRepo.findFirstByChecklistRunAndEndTimeIsNullOrderByStartTimeDesc(run)
                 .ifPresent(p -> {

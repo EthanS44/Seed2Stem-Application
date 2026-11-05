@@ -157,6 +157,7 @@ public class PayrollReport {
         public long getRegularMinutes() { return minutes - overtimeMinutes; }
         public List<Flag> getFlags() { return flags; }
         public boolean isActive() { return flags.contains(Flag.ACTIVE); }
+        public boolean isMissingClockOut() { return flags.contains(Flag.MISSING_CLOCK_OUT); }
         public boolean isFlagged() { return flags.stream().anyMatch(Flag::isProblem); }
     }
 }

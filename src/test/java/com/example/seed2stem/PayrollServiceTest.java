@@ -207,7 +207,7 @@ class PayrollServiceTest {
     @Test
     void controller_onlyManagersAndDevelopers() {
         PayrollController controller = new PayrollController(service, new PayrollExportService(),
-                mock(TimeEntryService.class), timeEntryRepo);
+                mock(TimeEntryService.class), timeEntryRepo, userRepo);
         MockHttpSession session = new MockHttpSession();
         assertEquals("redirect:/auth/login", controller.dashboard(null, null, null, null, session, new ConcurrentModel()));
 
@@ -224,7 +224,7 @@ class PayrollServiceTest {
     @Test
     void controller_managerCantEditOwnHours() {
         TimeEntryService tes = mock(TimeEntryService.class);
-        PayrollController controller = new PayrollController(service, new PayrollExportService(), tes, timeEntryRepo);
+        PayrollController controller = new PayrollController(service, new PayrollExportService(), tes, timeEntryRepo, userRepo);
         User mgr = new User("m", "h", "Max", "Manager", AccountType.MANAGER);
         mgr.setId(2L);
         TimeEntry own = new TimeEntry();
@@ -239,5 +239,85 @@ class PayrollServiceTest {
 
         assertEquals("redirect:/payroll/employees/2?period=week&date=2026-10-26", result);
         verify(tes, never()).updateEntry(any(), any(), any(), any());
+    }
+
+    @Test
+    void controller_addsAShiftWithWhoAddedIt() {
+        TimeEntryService tes = mock(TimeEntryService.class);
+        PayrollController controller = new PayrollController(service, new PayrollExportService(), tes, timeEntryRepo, userRepo);
+        User mgr = new User("m", "h", "Max", "Manager", AccountType.MANAGER);
+        mgr.setId(2L);
+        when(userRepo.findById(1L)).thenReturn(java.util.Optional.of(tech));
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("loggedInUser", mgr);
+
+        String result = controller.addEntry(1L, "2026-10-26T08:00", "2026-10-26T16:00", "Forgot to clock in",
+                "period=week&date=2026-10-26", session, new org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap());
+
+        assertEquals("redirect:/payroll/employees/1?period=week&date=2026-10-26", result);
+        verify(tes).addEntry(eq(tech), eq(LocalDateTime.of(2026, 10, 26, 8, 0)), eq(LocalDateTime.of(2026, 10, 26, 16, 0)),
+                contains("added by Max Manager"));
+    }
+
+    @Test
+    void controller_managerCantAddOwnHours() {
+        TimeEntryService tes = mock(TimeEntryService.class);
+        PayrollController controller = new PayrollController(service, new PayrollExportService(), tes, timeEntryRepo, userRepo);
+        User mgr = new User("m", "h", "Max", "Manager", AccountType.MANAGER);
+        mgr.setId(2L);
+        when(userRepo.findById(2L)).thenReturn(java.util.Optional.of(mgr));
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("loggedInUser", mgr);
+
+        controller.addEntry(2L, "2026-10-26T08:00", "2026-10-26T16:00", null, null,
+                session, new org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap());
+
+        verify(tes, never()).addEntry(any(), any(), any(), any());
+    }
+
+    @Test
+    void addEntry_rejectsOverlapsAndBadTimes() {
+        TimeEntryService tes = new TimeEntryService(timeEntryRepo, mock(ChecklistRunRepository.class));
+        TimeEntry existing = new TimeEntry();
+        existing.setId(5L);
+        existing.setUser(tech);
+        existing.setDate(LocalDate.of(2026, 10, 26));
+        existing.setClockInTime(LocalDateTime.of(2026, 10, 26, 8, 0));
+        existing.setClockOutTime(LocalDateTime.of(2026, 10, 26, 12, 0));
+        lenient().when(timeEntryRepo.findByUserAndDateBetweenOrderByDateDescClockInTimeDesc(any(), any(), any()))
+                .thenReturn(List.of(existing));
+
+        assertThrows(RuntimeException.class, () -> tes.addEntry(tech,
+                LocalDateTime.of(2026, 10, 26, 11, 0), LocalDateTime.of(2026, 10, 26, 15, 0), null));
+        assertThrows(RuntimeException.class, () -> tes.addEntry(tech,
+                LocalDateTime.of(2026, 10, 26, 15, 0), LocalDateTime.of(2026, 10, 26, 13, 0), null));
+        assertThrows(RuntimeException.class, () -> tes.addEntry(tech,
+                LocalDateTime.of(2026, 10, 26, 13, 0), null, null));
+
+        when(timeEntryRepo.save(any())).thenAnswer(i -> i.getArgument(0));
+        TimeEntry added = tes.addEntry(tech, LocalDateTime.of(2026, 10, 26, 12, 30), LocalDateTime.of(2026, 10, 26, 16, 30), "x");
+        assertEquals(4.0, added.getTotalHours());
+        assertEquals(LocalDate.of(2026, 10, 26), added.getDate());
+    }
+
+    @Test
+    void controller_deletesOthersShiftsButNotOwn() {
+        PayrollController controller = new PayrollController(service, new PayrollExportService(),
+                mock(TimeEntryService.class), timeEntryRepo, userRepo);
+        User mgr = new User("m", "h", "Max", "Manager", AccountType.MANAGER);
+        mgr.setId(2L);
+        TimeEntry theirs = new TimeEntry();
+        theirs.setUser(tech);
+        TimeEntry own = new TimeEntry();
+        own.setUser(mgr);
+        when(timeEntryRepo.findById(8L)).thenReturn(java.util.Optional.of(theirs));
+        when(timeEntryRepo.findById(9L)).thenReturn(java.util.Optional.of(own));
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("loggedInUser", mgr);
+
+        controller.deleteEntry(9L, null, session, new org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap());
+        verify(timeEntryRepo, never()).delete(any());
+        controller.deleteEntry(8L, null, session, new org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap());
+        verify(timeEntryRepo).delete(theirs);
     }
 }

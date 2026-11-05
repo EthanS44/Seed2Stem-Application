@@ -816,6 +816,8 @@ body { color: var(--s2s-ink); }
 .pay-chip.today { border-color: var(--s2s-green); background: #f2f8f2; }
 .pay-shift .pay-day { width: 3.4rem; flex: none; line-height: 1.2; }
 .pay-shift.flagged { box-shadow: inset 3px 0 0 var(--s2s-red); }
+.pay-shift.pay-target { background: rgba(198, 40, 40, .05); }
+.pay-fix { flex: none; font-size: .8rem; font-weight: 600; color: var(--s2s-green, #2e7d32); white-space: nowrap; }
 @media (max-width: 575.98px) {
     .pay-shift .grow { flex-basis: calc(100% - 4.2rem); }
     .pay-shift .pay-total { margin-left: 4.15rem; text-align: left; flex: 1; }

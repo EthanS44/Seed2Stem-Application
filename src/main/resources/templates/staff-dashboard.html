@@ -124,12 +124,16 @@
                     <a th:href="@{/technicians}">Technicians</a>
                 </div>
                 <div th:if="${onTheClock.isEmpty()}" class="s2s-empty">Nobody is clocked in.</div>
-                <div th:each="entry : ${onTheClock}" class="s2s-row">
+                <div th:each="entry : ${onTheClock}" class="s2s-row"
+                     th:with="stale=${entry.date.isBefore(#temporals.createToday())}">
                     <span class="avatar" th:text="${@fmt.initials(entry.user)}">TT</span>
                     <span class="grow">
                         <span class="title d-block" th:text="${entry.user.getName()}">Name</span>
                         <span class="meta d-block" th:text="${'Since ' + @fmt.when(entry.clockInTime)}">Since 8:00 AM</span>
                     </span>
+                    <a th:if="${stale}" class="pill bad text-decoration-none"
+                       th:href="@{'/payroll/employees/' + ${entry.user.id} + '?period=week&date=' + ${entry.date} + '#shift-' + ${entry.id}}"
+                       title="Open in Payroll to fix">Didn't clock out</a>
                 </div>
             </div>
 
@@ -155,6 +159,7 @@
         <a th:href="@{/batch-records}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-journal-text me-1"></i>Batch Records</a>
         <a th:href="@{/technicians}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-people me-1"></i>Technicians</a>
         <a th:href="@{/time-clock}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clock me-1"></i>Time Clock</a>
+        <a th:href="@{/payroll}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-cash-stack me-1"></i>Payroll</a>
         <a th:if="${isDeveloper}" th:href="@{/managers}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-person-badge me-1"></i>Managers</a>
         <a th:if="${isDeveloper}" th:href="@{/developer/standard-tasks}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-clipboard-check me-1"></i>Standard Tasks</a>
         <a th:if="${isDeveloper}" th:href="@{/developer/user-created-tasks}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil-square me-1"></i>User Created Tasks</a>
