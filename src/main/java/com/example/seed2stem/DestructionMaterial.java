@@ -15,4 +15,9 @@ public enum DestructionMaterial {
     public String getDisplayName() {
         return displayName;
     }
+
+    /** Whole plants are destroyed by count; everything else by weight. */
+    public boolean isCountedByPlants() {
+        return this == WHOLE_PLANTS;
+    }
 }

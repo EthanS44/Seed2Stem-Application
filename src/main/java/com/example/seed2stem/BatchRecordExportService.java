@@ -100,13 +100,19 @@ public class BatchRecordExportService {
                     ? String.format("Fan leaves %.3f, stems %.3f, sugar leaves %.3f kg", t.getFanLeafKg(), t.getStemKg(), t.getTrimKg())
                     : null);
 
-            // Row 17 is labelled "Veg. Destroyed" in the template; used here for all destroyed material by mass.
+            // Row 17 is labelled "Veg. Destroyed" in the template; used here for destroyed material by mass.
+            // Whole plants are counted, not weighed: the quantity is kg only, and the notes list every
+            // destruction so plants destroyed after flowering started are on the record too.
             List<BatchRecordEntry> destroyed = of(approved, e -> e.getAction() == BatchAction.DESTRUCTION);
             set(sheet, ROW_DESTROYED, COL_TYPE, "Destroyed");
             set(sheet, ROW_DESTROYED, COL_MATERIAL, "Mass (kg)");
-            fillKg(sheet, ROW_DESTROYED, destroyed, t.getDestroyedKg(), destroyed.isEmpty() ? null
-                    : destroyed.stream().map(e -> e.getMaterial().getDisplayName() + " " + String.format("%.3f", e.getWeightKg())
-                            + " kg (" + e.getDestructionMethod() + ")").collect(Collectors.joining("; ")));
+            if (!destroyed.isEmpty()) {
+                set(sheet, ROW_DESTROYED, COL_DATE, destroyed.get(0).getEntryDate());
+                if (t.getDestroyedKg() > 0) set(sheet, ROW_DESTROYED, COL_QTY, t.getDestroyedKg());
+                set(sheet, ROW_DESTROYED, COL_STAFF, staff(destroyed));
+                set(sheet, ROW_DESTROYED, COL_NOTES, destroyed.stream().map(BatchRecordExportService::destroyedNote)
+                        .collect(Collectors.joining("; ")));
+            }
             set(sheet, ROW_DESTROYED, COL_WITNESS, join(destroyed.stream().map(BatchRecordEntry::getWitness).toList()));
 
             set(sheet, ROW_LOSS, COL_TYPE, "Drying/Processing Loss");
@@ -144,6 +150,14 @@ public class BatchRecordExportService {
         set(sheet, row, COL_QTY, kg);
         set(sheet, row, COL_STAFF, staff(entries));
         if (notes != null) set(sheet, row, COL_NOTES, notes);
+    }
+
+    /** "Stems 1.200 kg (compost)" or "Whole plants 5 plants (compost)". */
+    private static String destroyedNote(BatchRecordEntry e) {
+        String amount = e.getMaterial().isCountedByPlants()
+                ? e.getPlantCount() + (e.getPlantCount() != null && e.getPlantCount() == 1 ? " plant" : " plants")
+                : String.format("%.3f kg", e.getWeightKg());
+        return e.getMaterial().getDisplayName() + " " + amount + " (" + e.getDestructionMethod() + ")";
     }
 
     private static String staff(List<BatchRecordEntry> entries) {

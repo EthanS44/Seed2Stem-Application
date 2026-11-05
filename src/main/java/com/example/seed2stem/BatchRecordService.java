@@ -230,6 +230,11 @@ public class BatchRecordService {
         e.setMaterial(parseEnum(DestructionMaterial.class, params.getFirst("br_material")));
         e.setDestructionMethod(text(params.getFirst("br_destructionMethod")));
         e.setWitness(text(params.getFirst("br_witness")));
+        // Destruction records either a plant count (whole plants) or a weight, never both.
+        if (e.getAction() == BatchAction.DESTRUCTION && e.getMaterial() != null) {
+            if (e.getMaterial().isCountedByPlants()) e.setWeightKg(null);
+            else e.setPlantCount(null);
+        }
         e.setNotes(text(params.getFirst("br_notes")));
         return entryRepo.save(e);
     }
@@ -333,9 +338,10 @@ public class BatchRecordService {
             case DRY_WEIGHT -> require(positive(e.getWeightKg()), "Enter the dried flower weight in kg.");
             case DESTRUCTION -> {
                 require(e.getMaterial() != null, "Choose the material type.");
-                require(positive(e.getWeightKg()), "Enter the weight destroyed in kg.");
-                if (e.getMaterial() == DestructionMaterial.WHOLE_PLANTS) {
+                if (e.getMaterial().isCountedByPlants()) {
                     require(positive(e.getPlantCount()), "Enter the number of plants destroyed.");
+                } else {
+                    require(positive(e.getWeightKg()), "Enter the weight destroyed in kg.");
                 }
                 require(e.getDestructionMethod() != null, "Enter the destruction method.");
                 require(e.getWitness() != null, "Enter the witness.");

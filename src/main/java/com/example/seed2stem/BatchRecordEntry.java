@@ -150,11 +150,12 @@ public class BatchRecordEntry {
         return batch != null ? batch.getVariety().getName() : null;
     }
 
-    /** The weight column of the batch record log, in kg. */
+    /** The weight column of the batch record log, in kg (none for whole plants, which are counted). */
     public Double getLogWeightKg() {
         return switch (action) {
             case DEBUCK_DESTEM -> sum(fanLeafKg, stemKg);
             case TRIMMING -> trimKg;
+            case DESTRUCTION -> material != null && material.isCountedByPlants() ? null : weightKg;
             default -> weightKg;
         };
     }
@@ -177,7 +178,9 @@ public class BatchRecordEntry {
             case TRIMMING -> join("Trim (sugar leaves)",
                     flowerTrimmedKg != null ? "flower trimmed " + String.format(kg, flowerTrimmedKg) : null);
             case DRY_WEIGHT -> "Final dried flower";
-            case DESTRUCTION -> join(material != null ? material.getDisplayName() + " destroyed" : "Destroyed",
+            case DESTRUCTION -> join(material == null ? "Destroyed"
+                            : material.isCountedByPlants() ? (plantCount != null ? plantCount + " whole plants destroyed" : "Whole plants destroyed")
+                            : material.getDisplayName() + " destroyed",
                     destructionMethod != null ? "by " + destructionMethod : null,
                     witness != null ? "witness " + witness : null);
             default -> notes;

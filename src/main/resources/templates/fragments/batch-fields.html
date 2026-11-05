@@ -13,7 +13,8 @@
     <div class="card-body">
         <p class="small text-muted mb-3">
             Recorded for <strong th:text="${session.loggedInUser.getName()}">Tech</strong> on this date.
-            Weights are in kg (up to 3 decimals). Counts toward the batch once a manager approves this task.
+            Weights are in kg (up to 3 decimals). Weighing in batches? Use <strong>+ Add</strong> under a weight to add each bin to the total.
+            Counts toward the batch once a manager approves this task.
         </p>
 
         <div class="row g-3">
@@ -210,13 +211,14 @@
                                 th:selected="${batchEntry.material != null and batchEntry.material.name() == m.name()}">Stems</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-4" id="weightGroup">
                     <label class="form-label fw-semibold" for="br_weightKg">Weight destroyed (kg)</label>
                     <input type="number" class="form-control" id="br_weightKg" name="br_weightKg" min="0.001" step="0.001" required th:value="${batchEntry.weightKg}">
                 </div>
                 <div class="col-md-4" id="plantCountGroup" style="display:none;">
-                    <label class="form-label fw-semibold" for="br_plantCount">Plant count</label>
+                    <label class="form-label fw-semibold" for="br_plantCount">Plants destroyed</label>
                     <input type="number" class="form-control" id="br_plantCount" name="br_plantCount" min="1" step="1" th:value="${batchEntry.plantCount}">
+                    <div class="form-text">Whole plants are counted, not weighed.</div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold" for="br_destructionMethod">Destruction method</label>
@@ -320,9 +322,59 @@
             const mat = document.getElementById('br_material');
             if (!mat) return;
             const whole = mat.value === 'WHOLE_PLANTS';
+            // Whole plants are destroyed by count; stems, fan leaves and trim by weight.
             document.getElementById('plantCountGroup').style.display = whole ? '' : 'none';
             document.getElementById('br_plantCount').required = whole;
+            document.getElementById('br_plantCount').disabled = !whole;
+            document.getElementById('weightGroup').style.display = whole ? 'none' : '';
+            document.getElementById('br_weightKg').required = !whole;
+            document.getElementById('br_weightKg').disabled = whole;
         }
+
+        // ---- Weigh in parts: every kg box gets a "+ kg" adder, so a harvest weighed one bin
+        // at a time doesn't need a running total kept by hand. The main box stays the total
+        // (and can still be typed over); a paused task keeps that total and adds on from it.
+        document.querySelectorAll('#batchFields input[type=number][name^="br_"][name$="Kg"]').forEach(field => {
+            const adds = [];
+            const box = document.createElement('div');
+            box.className = 'kg-adder';
+            box.innerHTML =
+                '<div class="input-group input-group-sm">' +
+                '<span class="input-group-text">+</span>' +
+                '<input type="number" class="form-control" min="0.001" step="0.001" placeholder="kg" aria-label="Add a weighing in kg">' +
+                '<button type="button" class="btn btn-outline-success">Add</button>' +
+                '</div>' +
+                '<div class="kg-adder-log" hidden><span></span> <button type="button" class="btn btn-link btn-sm p-0 align-baseline">Undo last</button></div>';
+            const part = box.querySelector('input');
+            const log = box.querySelector('.kg-adder-log');
+            const total = () => field.value !== '' ? parseFloat(field.value) || 0 : 0;
+            const set = v => {
+                field.value = kg(Math.max(0, v));
+                field.dispatchEvent(new Event('input', { bubbles: true }));
+            };
+            const render = () => {
+                log.hidden = adds.length === 0;
+                log.querySelector('span').textContent = adds.length + (adds.length === 1 ? ' weighing: ' : ' weighings: ')
+                    + adds.map(kg).join(' + ') + ' kg';
+            };
+            const add = () => {
+                const v = parseFloat(part.value);
+                if (!(v > 0)) { part.focus(); return; }
+                set(total() + v);
+                adds.push(v);
+                part.value = '';
+                part.focus();
+                render();
+            };
+            box.querySelector('.input-group button').addEventListener('click', add);
+            // Enter adds the weighing instead of submitting the checklist.
+            part.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+            log.querySelector('button').addEventListener('click', () => {
+                set(total() - adds.pop());
+                render();
+            });
+            field.insertAdjacentElement('afterend', box);
+        });
 
         room.addEventListener('change', () => { fillBatches(); updateVariety(); updateFilter(); });
         if (batchSel) batchSel.addEventListener('change', updateBatchInfo);

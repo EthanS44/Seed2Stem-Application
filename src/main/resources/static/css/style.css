@@ -822,3 +822,8 @@ body { color: var(--s2s-ink); }
     .pay-shift .grow { flex-basis: calc(100% - 4.2rem); }
     .pay-shift .pay-total { margin-left: 4.15rem; text-align: left; flex: 1; }
 }
+
+/* Batch tasks: add weighings one bin at a time under a kg field */
+.kg-adder { margin-top: .4rem; }
+.kg-adder .input-group { max-width: 14rem; }
+.kg-adder-log { margin-top: .25rem; font-size: .8rem; color: var(--bs-secondary-color, #6c757d); }

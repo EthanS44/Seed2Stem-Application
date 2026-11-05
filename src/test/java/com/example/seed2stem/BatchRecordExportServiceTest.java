@@ -57,13 +57,17 @@ class BatchRecordExportServiceTest {
         destroy.setMaterial(DestructionMaterial.STEMS);
         destroy.setDestructionMethod("Ground");
         destroy.setWitness("Pat Lee");
+        BatchRecordEntry destroyPlants = approved(BatchAction.DESTRUCTION, 2, null);
+        destroyPlants.setMaterial(DestructionMaterial.WHOLE_PLANTS);
+        destroyPlants.setDestructionMethod("Compost");
+        destroyPlants.setWitness("Pat Lee");
         List<BatchRecordEntry> log = new ArrayList<>(List.of(
                 approved(BatchAction.CLONING, 52, null),
                 approved(BatchAction.TRANSFER_TO_FLOWER, 50, null),
                 approved(BatchAction.HARVEST, 50, 25.5),
                 debuck, trim,
                 approved(BatchAction.DRY_WEIGHT, null, 4.8),
-                destroy));
+                destroy, destroyPlants));
         when(batchRecordService.logFor(batch)).thenReturn(log);
         when(batchRecordService.totalsFor(batch)).thenReturn(BatchTotals.of(log));
 
@@ -82,7 +86,8 @@ class BatchRecordExportServiceTest {
             assertEquals(4.8, num(s, 14, 7), 1e-9);             // dry weight
             assertEquals(6.0, num(s, 15, 7), 1e-9);             // flower weight (trimmed)
             assertEquals(6.7, num(s, 16, 7), 1e-9);             // trim incl. fan leaves + stems
-            assertEquals(2.1, num(s, 17, 7), 1e-9);             // destroyed
+            assertEquals(2.1, num(s, 17, 7), 1e-9);             // destroyed by weight only
+            assertEquals("Stems 2.100 kg (Ground); Whole plants 2 plants (Compost)", text(s, 17, 10));
             assertEquals("Pat Lee", text(s, 17, 9));
             assertEquals(14.0, num(s, 18, 7), 1e-9);            // drying/processing loss
             assertEquals("54.9% of wet weight", text(s, 18, 10));

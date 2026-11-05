@@ -25,6 +25,7 @@ public class BatchTotals {
     private double flowerTrimmedKg;
     private double dryKg;
     private boolean hasDryWeight;
+    /** Stems, fan leaves and trim destroyed; whole plants are in {@link #plantsDestroyed}. */
     private double destroyedKg;
     private final Map<DestructionMaterial, Double> destroyedKgByMaterial = new EnumMap<>(DestructionMaterial.class);
     private final Map<Room, Integer> transferredByRoom = new EnumMap<>(Room.class);
@@ -66,10 +67,12 @@ public class BatchTotals {
                 hasDryWeight = true;
             }
             case DESTRUCTION -> {
-                destroyedKg += kg(e.getWeightKg());
-                if (e.getMaterial() != null) {
-                    destroyedKgByMaterial.merge(e.getMaterial(), kg(e.getWeightKg()), Double::sum);
-                    if (e.getMaterial() == DestructionMaterial.WHOLE_PLANTS) plantsDestroyed += plants;
+                // Whole plants are counted, not weighed; the rest is tracked by weight.
+                if (e.getMaterial() != null && e.getMaterial().isCountedByPlants()) {
+                    plantsDestroyed += plants;
+                } else {
+                    destroyedKg += kg(e.getWeightKg());
+                    if (e.getMaterial() != null) destroyedKgByMaterial.merge(e.getMaterial(), kg(e.getWeightKg()), Double::sum);
                 }
             }
             default -> { }

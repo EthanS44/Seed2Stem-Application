@@ -132,6 +132,31 @@ class BatchRecordServiceTest {
         assertEquals(1.0, t.getOnHandKg(DestructionMaterial.FAN_LEAVES), 1e-9);
     }
 
+    @Test
+    void totals_wholePlantsAreCountedNotWeighed() {
+        BatchRecordEntry stems = approved(BatchAction.DESTRUCTION, null, 1.5);
+        stems.setMaterial(DestructionMaterial.STEMS);
+        // An older entry may still carry a weight; whole plants never count toward kg destroyed.
+        BatchRecordEntry plants = approved(BatchAction.DESTRUCTION, 4, 9.0);
+        plants.setMaterial(DestructionMaterial.WHOLE_PLANTS);
+
+        BatchTotals t = BatchTotals.of(List.of(approved(BatchAction.CLONING, 20, null), stems, plants));
+
+        assertEquals(4, t.getPlantsDestroyed());
+        assertEquals(1.5, t.getDestroyedKg(), 1e-9);
+        assertEquals(16, t.getLivePlants());
+    }
+
+    @Test
+    void entry_wholePlantDestructionShowsCountAndNoWeight() {
+        BatchRecordEntry e = approved(BatchAction.DESTRUCTION, 3, null);
+        e.setMaterial(DestructionMaterial.WHOLE_PLANTS);
+        e.setDestructionMethod("Compost");
+
+        assertNull(e.getLogWeightKg());
+        assertEquals("3 whole plants destroyed, by Compost", e.getDetails());
+    }
+
     // --- filter status ---
 
     @Test
@@ -298,6 +323,20 @@ class BatchRecordServiceTest {
 
         BatchRecordException ex = assertThrows(BatchRecordException.class, () -> service.submitRun(10L, List.of()));
         assertEquals("Enter the witness.", ex.getMessage());
+    }
+
+    @Test
+    void submit_wholePlantsNeedACountNotAWeight() {
+        BatchRecordEntry e = entry(BatchAction.DESTRUCTION);
+        e.setBatch(batch(BatchSource.CLONES));
+        e.setMaterial(DestructionMaterial.WHOLE_PLANTS);
+        e.setDestructionMethod("Compost");
+        e.setWitness("Pat Lee");
+        when(runRepo.findById(10L)).thenReturn(Optional.of(run));
+        when(entryRepo.findByRun(run)).thenReturn(Optional.of(e));
+
+        BatchRecordException ex = assertThrows(BatchRecordException.class, () -> service.submitRun(10L, List.of()));
+        assertEquals("Enter the number of plants destroyed.", ex.getMessage());
     }
 
     // --- approval ---

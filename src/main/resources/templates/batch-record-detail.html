@@ -84,9 +84,16 @@
         </div>
         <div class="col-6 col-md-4 col-lg-2">
             <div class="card h-100"><div class="card-body py-2">
-                <small class="text-muted">Destroyed</small>
+                <small class="text-muted">Material destroyed</small>
                 <h5 class="mb-0" th:text="${#numbers.formatDecimal(totals.destroyedKg, 1, 3) + ' kg'}">0</h5>
-                <small class="text-muted" th:if="${totals.plantsDestroyed > 0}" th:text="${totals.plantsDestroyed + ' whole plants'}"></small>
+                <small class="text-muted">Stems, leaves, trim</small>
+            </div></div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card h-100"><div class="card-body py-2">
+                <small class="text-muted">Plants destroyed</small>
+                <h5 class="mb-0" th:text="${totals.plantsDestroyed}">0</h5>
+                <small class="text-muted">Whole plants</small>
             </div></div>
         </div>
         <div class="col-6 col-md-4 col-lg-2">
@@ -104,7 +111,7 @@
                 <small class="text-muted">Trim</small><h5 class="mb-0" th:text="${#numbers.formatDecimal(totals.trimKg, 1, 3) + ' kg'}">0</h5>
             </div></div>
         </div>
-        <div class="col-12 col-md-8 col-lg-6">
+        <div class="col-12 col-md-8 col-lg-4">
             <div class="card h-100" th:classappend="${totals.lossKg != null} ? 'border-primary' : ''"><div class="card-body py-2">
                 <small class="text-muted">Drying and processing loss</small>
                 <h5 class="mb-0" th:if="${totals.lossKg != null}">
@@ -149,6 +156,8 @@
                         <span th:text="${totals.plantsHarvested}">0</span></li>
                     <li class="list-group-item d-flex justify-content-between">Flowering material — total production (kg)
                         <span th:text="${#numbers.formatDecimal(totals.wetKg, 1, 3)}">0</span></li>
+                    <li class="list-group-item d-flex justify-content-between">Whole plants destroyed (plants)
+                        <span th:text="${totals.plantsDestroyed}">0</span></li>
                     <li class="list-group-item d-flex justify-content-between">Quantity destroyed (kg)
                         <span th:text="${#numbers.formatDecimal(totals.destroyedKg, 1, 3)}">0</span></li>
                     <li class="list-group-item d-flex justify-content-between">Quantity incurred as drying or processing loss (kg)

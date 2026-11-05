@@ -24,7 +24,7 @@ public enum BatchAction {
     DRY_WEIGHT("Weigh dried flower",
             "Asks for final dried flower weight (kg). Calculates drying and processing loss."),
     DESTRUCTION("Destruction",
-            "Asks for material type, weight, plant count for whole plants, method and witness. Can't exceed material on hand.");
+            "Asks for material type, then the number of plants for whole plants or the weight (kg) for stems, fan leaves and trim, plus method and witness. Can't exceed material on hand.");
 
     private final String displayName;
     private final String description;
