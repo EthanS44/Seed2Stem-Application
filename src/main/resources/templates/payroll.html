@@ -10,7 +10,7 @@
     <div class="page-head">
         <div>
             <h4>Payroll</h4>
-            <div class="sub" th:text="${'Hours from the time clock. Overtime is anything over ' + overtimeHours + ' h in a Monday–Sunday week.'}">Hours from the time clock.</div>
+            <div class="sub">Hours from the time clock.</div>
         </div>
         <a th:href="@{'/payroll/export.xlsx?' + ${period.query}}" class="btn btn-s2s btn-sm">
             <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export to Excel

@@ -24,22 +24,22 @@
     </div>
 
     <!-- Stat tiles -->
-    <div class="row g-2 g-md-3 mb-3">
+    <div class="row g-2 g-md-3 mb-3 dash-stats">
         <div class="col-4">
             <a href="#continue" class="s2s-stat info">
-                <span class="chip d-none d-sm-grid"><i class="bi bi-play-circle"></i></span>
+                <span class="chip"><i class="bi bi-play-circle"></i></span>
                 <span><span class="num d-block" th:text="${activeTaskCount}">0</span><span class="lbl">In progress</span></span>
             </a>
         </div>
         <div class="col-4">
             <a href="#recent" class="s2s-stat" th:classappend="${awaitingCount > 0} ? 'attn'">
-                <span class="chip d-none d-sm-grid"><i class="bi bi-hourglass-split"></i></span>
+                <span class="chip"><i class="bi bi-hourglass-split"></i></span>
                 <span><span class="num d-block" th:text="${awaitingCount}">0</span><span class="lbl">Pending</span></span>
             </a>
         </div>
         <div class="col-4">
             <a th:href="@{/time-clock/history}" class="s2s-stat">
-                <span class="chip d-none d-sm-grid"><i class="bi bi-stopwatch"></i></span>
+                <span class="chip"><i class="bi bi-stopwatch"></i></span>
                 <span><span class="num d-block" th:text="${hoursThisWeek + ' h'}">0 h</span><span class="lbl">This week</span></span>
             </a>
         </div>

@@ -188,7 +188,6 @@ public class PayrollController {
         model.addAttribute("prevPeriod", payrollService.previous(p));
         model.addAttribute("nextPeriod", payrollService.next(p));
         model.addAttribute("periodTypes", PayPeriod.Type.values());
-        model.addAttribute("overtimeHours", payrollService.getOvertimeHoursPerWeek());
     }
 
     private static String backTo(Long userId, String returnQuery) {

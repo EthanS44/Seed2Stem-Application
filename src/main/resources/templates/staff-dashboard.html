@@ -19,22 +19,22 @@
     </div>
 
     <!-- Stat tiles -->
-    <div class="row g-2 g-md-3 mb-3">
+    <div class="row g-2 g-md-3 mb-3 dash-stats">
         <div class="col-4">
             <a href="#approvals" class="s2s-stat" th:classappend="${pendingCount > 0} ? 'attn'">
-                <span class="chip d-none d-sm-grid"><i class="bi bi-clipboard-check"></i></span>
+                <span class="chip"><i class="bi bi-clipboard-check"></i></span>
                 <span><span class="num d-block" th:text="${pendingCount}">0</span><span class="lbl">Needs approval</span></span>
             </a>
         </div>
         <div class="col-4">
             <a th:href="@{/dashboard/task-dashboard}" class="s2s-stat info">
-                <span class="chip d-none d-sm-grid"><i class="bi bi-play-circle"></i></span>
+                <span class="chip"><i class="bi bi-play-circle"></i></span>
                 <span><span class="num d-block" th:text="${allActiveTaskCount}">0</span><span class="lbl">In progress</span></span>
             </a>
         </div>
         <div class="col-4">
             <a th:href="@{/technicians}" class="s2s-stat">
-                <span class="chip d-none d-sm-grid"><i class="bi bi-person-check"></i></span>
+                <span class="chip"><i class="bi bi-person-check"></i></span>
                 <span><span class="num d-block" th:text="${clockedInCount}">0</span><span class="lbl">On the clock</span></span>
             </a>
         </div>

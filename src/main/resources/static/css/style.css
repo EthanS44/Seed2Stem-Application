@@ -852,3 +852,12 @@ body { color: var(--s2s-ink); }
 .list-search .bi-search { position: absolute; left: 1.55rem; top: 50%; transform: translateY(-50%); color: #8a96a1; font-size: .85rem; pointer-events: none; }
 .list-search input { padding-left: 2rem; }
 .alert-item .title, .alert-item .meta { white-space: normal; overflow: visible; text-overflow: clip; }
+
+/* Dashboard tiles on phones: three across, each stacked (icon, number, label) and
+   centred, so the numbers line up even when a label wraps. */
+@media (max-width: 575.98px) {
+    .dash-stats .s2s-stat { flex-direction: column; justify-content: flex-start; text-align: center; gap: 0.4rem; padding: 0.75rem 0.4rem; }
+    .dash-stats .s2s-stat .chip { width: 30px; height: 30px; font-size: 0.9rem; border-radius: 8px; }
+    .dash-stats .s2s-stat .num { font-size: 1.3rem; }
+    .dash-stats .s2s-stat .lbl { display: block; font-size: 0.74rem; line-height: 1.25; margin-top: 0.15rem; }
+}

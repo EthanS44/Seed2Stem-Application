@@ -56,7 +56,6 @@ public class PayrollService {
 
     public PayPeriod previous(PayPeriod p) { return p.previous(biweeklyAnchor); }
     public PayPeriod next(PayPeriod p) { return p.next(biweeklyAnchor); }
-    public long getOvertimeHoursPerWeek() { return overtimeMinutesPerWeek / 60; }
 
     @Transactional(readOnly = true)
     public PayrollReport report(PayPeriod period) {
