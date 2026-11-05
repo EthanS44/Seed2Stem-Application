@@ -32,7 +32,6 @@ public class DashboardController {
     private final TimeEntryService timeEntryService;
     private final TaskPauseRepository taskPauseRepository;
     private final ChecklistRunRepository runRepo;
-    private final BatchRecordService batchRecordService;
     private final RegistrationRequestRepository registrationRequestRepo;
     private final PasswordResetRequestRepository passwordResetRequestRepo;
     private final TicketRepository ticketRepo;
@@ -44,7 +43,6 @@ public class DashboardController {
                                TimeEntryService timeEntryService,
                                TaskPauseRepository taskPauseRepository,
                                ChecklistRunRepository runRepo,
-                               BatchRecordService batchRecordService,
                                RegistrationRequestRepository registrationRequestRepo,
                                PasswordResetRequestRepository passwordResetRequestRepo,
                                TicketRepository ticketRepo,
@@ -55,7 +53,6 @@ public class DashboardController {
         this.timeEntryService = timeEntryService;
         this.taskPauseRepository = taskPauseRepository;
         this.runRepo = runRepo;
-        this.batchRecordService = batchRecordService;
         this.registrationRequestRepo = registrationRequestRepo;
         this.passwordResetRequestRepo = passwordResetRequestRepo;
         this.ticketRepo = ticketRepo;
@@ -127,9 +124,6 @@ public class DashboardController {
                 .toList();
         List<ChecklistRun> active = checklistRunService.getAllActiveRuns();
         List<TimeEntry> onTheClock = timeEntryService.getAllActiveEntries();
-        List<FilterStatus> filterAlerts = batchRecordService.filterStatuses().values().stream()
-                .filter(f -> "DUE".equals(f.getState()) || "OVERDUE".equals(f.getState()))
-                .toList();
 
         addGreeting(model, user);
         model.addAttribute("notifications", notificationService.forUser(user));
@@ -141,7 +135,6 @@ public class DashboardController {
         model.addAttribute("pausedRunIds", new HashSet<>(taskPauseRepository.findRunIdsWithOpenPause()));
         model.addAttribute("onTheClock", onTheClock);
         model.addAttribute("clockedInCount", (long) onTheClock.size());
-        model.addAttribute("filterAlerts", filterAlerts);
     }
 
     private static void addGreeting(Model model, User user) {

@@ -87,18 +87,25 @@
 
         <!-- Start a task -->
         <div class="col-lg-5">
-            <div class="s2s-panel mb-3">
+            <div class="s2s-panel mb-3" id="availableTaskList">
                 <div class="panel-head">
                     <h6><i class="bi bi-list-task me-2"></i>Start a task</h6>
                     <a th:href="@{/dashboard/task-dashboard}">All tasks</a>
                 </div>
                 <div th:if="${availableTasks.isEmpty()}" class="s2s-empty">No tasks available.</div>
-                <a th:each="task : ${availableTasks}" class="s2s-row" th:href="@{/tasks/{id}(id=${task.id})}">
+                <div th:if="${!availableTasks.isEmpty()}" class="list-search">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <input type="search" class="form-control form-control-sm" placeholder="Search tasks"
+                           aria-label="Search tasks" data-filter="#availableTaskList" autocomplete="off">
+                </div>
+                <a th:each="task : ${availableTasks}" class="s2s-row" th:href="@{/tasks/{id}(id=${task.id})}"
+                   th:attr="data-filter-item=${task.title + ' ' + (task.description != null ? task.description : '')}">
                     <span class="grow">
                         <span class="title d-block" th:text="${task.title}">Task</span>
                     </span>
                     <i class="bi bi-chevron-right chev"></i>
                 </a>
+                <div class="s2s-empty" data-filter-empty hidden>No tasks match your search.</div>
             </div>
         </div>
     </div>

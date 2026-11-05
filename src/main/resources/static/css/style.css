@@ -846,3 +846,9 @@ body { color: var(--s2s-ink); }
 .alert-item.ok .alert-icon { background: #e8f5e9; color: var(--s2s-green); }
 .alert-action { flex: none; font-size: .8rem; font-weight: 600; color: var(--s2s-green); white-space: nowrap; }
 .flex-none { flex: none; }
+
+/* Search box at the top of a list panel */
+.list-search { position: relative; padding: .6rem .9rem; border-bottom: 1px solid var(--bs-border-color, #e5e9ee); }
+.list-search .bi-search { position: absolute; left: 1.55rem; top: 50%; transform: translateY(-50%); color: #8a96a1; font-size: .85rem; pointer-events: none; }
+.list-search input { padding-left: 2rem; }
+.alert-item .title, .alert-item .meta { white-space: normal; overflow: visible; text-overflow: clip; }

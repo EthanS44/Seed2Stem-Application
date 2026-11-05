@@ -37,9 +37,6 @@ class DashboardControllerTest {
     private ChecklistRunRepository runRepo;
 
     @Mock
-    private BatchRecordService batchRecordService;
-
-    @Mock
     private RegistrationRequestRepository registrationRequestRepo;
 
     @Mock
@@ -155,11 +152,6 @@ class DashboardControllerTest {
                 .thenReturn(List.of(new ChecklistRun(), new ChecklistRun(), new ChecklistRun()));
         when(timeEntryService.getAllActiveEntries())
                 .thenReturn(List.of(new TimeEntry(), new TimeEntry(), new TimeEntry(), new TimeEntry()));
-        java.util.Map<Room, FilterStatus> filters = new java.util.LinkedHashMap<>();
-        java.time.LocalDate today = java.time.LocalDate.now();
-        filters.put(Room.B1, new FilterStatus(Room.B1, today.minusDays(20), today));
-        filters.put(Room.B2, new FilterStatus(Room.B2, today.minusDays(1), today));
-        when(batchRecordService.filterStatuses()).thenReturn(filters);
 
         String result = controller.managerDashboard(session, model);
 
@@ -168,7 +160,6 @@ class DashboardControllerTest {
         assertEquals(2, model.getAttribute("pendingCount"));
         assertEquals(3, model.getAttribute("allActiveTaskCount"));
         assertEquals(4L, model.getAttribute("clockedInCount"));
-        assertEquals(1, ((List<?>) model.getAttribute("filterAlerts")).size()); // only the overdue room
     }
 
     // --- developerDashboard ---
@@ -188,7 +179,6 @@ class DashboardControllerTest {
         when(checklistRunService.getPendingChecklists()).thenReturn(List.of());
         when(checklistRunService.getAllActiveRuns()).thenReturn(List.of(new ChecklistRun()));
         when(timeEntryService.getAllActiveEntries()).thenReturn(List.of(new TimeEntry()));
-        when(batchRecordService.filterStatuses()).thenReturn(java.util.Map.of());
         when(ticketRepo.countByStatus(TicketStatus.OPEN)).thenReturn(3L);
 
         String result = controller.developerDashboard(session, model);
