@@ -26,7 +26,7 @@
 
             <a th:href="@{/auth/forgot-password}" class="d-block mt-3 text-decoration-none">Forgot password?</a>
             <a th:href="@{/auth/register}" class="d-block mt-2 text-decoration-none">Create an account</a>
-            <div class="text-muted small mt-3">&copy; Seed2Stem</div>
+            <div class="text-muted small mt-3">&copy; Seed2Stem &middot; <span th:text="${@appInfo.label}">v1.0.0</span></div>
         </div>
     </div>
 </div>

@@ -25,7 +25,10 @@
     </button>
     <!-- Brand shows on all sizes. On phones it shrinks to 1rem (see style.css
          mobile media query) so hamburger + brand + logo all fit on one row. -->
-    <span class="navbar-brand mb-0">Triton Cannabis Group</span>
+    <span class="topbar-title">
+        <span class="navbar-brand mb-0">Triton Cannabis Group</span>
+        <span class="app-version" th:text="${@appInfo.label}" title="App version">v1.0.0</span>
+    </span>
     <img th:src="@{/Seed2Stem_Logo.png}" alt="Seed2Stem" class="topbar-logo">
 </nav>
 

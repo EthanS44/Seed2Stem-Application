@@ -10,7 +10,8 @@
     </parent>
     <groupId>com.example</groupId>
     <artifactId>Seed2Stem</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <!-- The app version shown at the top of every screen. Bump it here for each release. -->
+    <version>1.0.0</version>
     <name>Seed2Stem</name>
     <description>Seed2Stem</description>
     <url/>

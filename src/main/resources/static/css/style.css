@@ -33,6 +33,11 @@ body {
     height: 40px;
 }
 
+/* Brand with the app version beside it (stacked under it on phones, see below). */
+.s2s-topbar .topbar-title { display: flex; align-items: baseline; gap: 0.5rem; min-width: 0; margin-right: auto; }
+.s2s-topbar .topbar-title .navbar-brand { margin-right: 0; }
+.s2s-topbar .app-version { font-size: 0.75rem; font-weight: 600; color: var(--s2s-muted, #6c757d); white-space: nowrap; }
+
 /* ===== Sidebar =====
    `!important` on background-color: Bootstrap's `.offcanvas-md` class (used
    on the sidebar nav so it converts to a drawer on phones) applies
@@ -337,7 +342,11 @@ body {
        with the 40px logo and 48px hamburger overflows a 375px viewport. */
     .s2s-topbar .navbar-brand {
         font-size: 1rem;
+        padding: 0;
+        line-height: 1.2;
     }
+    .s2s-topbar .topbar-title { flex-direction: column; align-items: flex-start; gap: 0; }
+    .s2s-topbar .app-version { font-size: 0.68rem; line-height: 1.1; }
 
     /* Align the drawer to the top of the viewport (desktop rule sets
        top: 56px to dodge the topbar — irrelevant when it's a sliding
