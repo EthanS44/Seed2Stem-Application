@@ -32,9 +32,6 @@ public class DashboardController {
     private final TimeEntryService timeEntryService;
     private final TaskPauseRepository taskPauseRepository;
     private final ChecklistRunRepository runRepo;
-    private final RegistrationRequestRepository registrationRequestRepo;
-    private final PasswordResetRequestRepository passwordResetRequestRepo;
-    private final TicketRepository ticketRepo;
     private final NotificationService notificationService;
 
     public DashboardController(TaskRepository taskRepo,
@@ -43,9 +40,6 @@ public class DashboardController {
                                TimeEntryService timeEntryService,
                                TaskPauseRepository taskPauseRepository,
                                ChecklistRunRepository runRepo,
-                               RegistrationRequestRepository registrationRequestRepo,
-                               PasswordResetRequestRepository passwordResetRequestRepo,
-                               TicketRepository ticketRepo,
                                NotificationService notificationService) {
         this.taskRepo = taskRepo;
         this.checklistRunService = checklistRunService;
@@ -53,9 +47,6 @@ public class DashboardController {
         this.timeEntryService = timeEntryService;
         this.taskPauseRepository = taskPauseRepository;
         this.runRepo = runRepo;
-        this.registrationRequestRepo = registrationRequestRepo;
-        this.passwordResetRequestRepo = passwordResetRequestRepo;
-        this.ticketRepo = ticketRepo;
         this.notificationService = notificationService;
     }
 
@@ -109,10 +100,6 @@ public class DashboardController {
         if (user == null) return "redirect:/auth/login";
 
         addStaffDashboard(model, user);
-        model.addAttribute("registrationCount",
-                registrationRequestRepo.findByStatus(RegistrationStatus.PENDING).size());
-        model.addAttribute("passwordResetCount", passwordResetRequestRepo.countByStatus(PasswordResetStatus.PENDING));
-        model.addAttribute("openTicketCount", ticketRepo.countByStatus(TicketStatus.OPEN));
         return "staff-dashboard";
     }
 

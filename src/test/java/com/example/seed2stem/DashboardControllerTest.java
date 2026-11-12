@@ -37,15 +37,6 @@ class DashboardControllerTest {
     private ChecklistRunRepository runRepo;
 
     @Mock
-    private RegistrationRequestRepository registrationRequestRepo;
-
-    @Mock
-    private PasswordResetRequestRepository passwordResetRequestRepo;
-
-    @Mock
-    private TicketRepository ticketRepo;
-
-    @Mock
     private NotificationService notificationService;
 
     @InjectMocks
@@ -179,7 +170,6 @@ class DashboardControllerTest {
         when(checklistRunService.getPendingChecklists()).thenReturn(List.of());
         when(checklistRunService.getAllActiveRuns()).thenReturn(List.of(new ChecklistRun()));
         when(timeEntryService.getAllActiveEntries()).thenReturn(List.of(new TimeEntry()));
-        when(ticketRepo.countByStatus(TicketStatus.OPEN)).thenReturn(3L);
 
         String result = controller.developerDashboard(session, model);
 
@@ -188,7 +178,6 @@ class DashboardControllerTest {
         assertEquals(0, model.getAttribute("pendingCount"));
         assertEquals(1, model.getAttribute("allActiveTaskCount"));
         assertEquals(1L, model.getAttribute("clockedInCount"));
-        assertEquals(3L, model.getAttribute("openTicketCount"));
     }
 
     // --- taskDashboard ---

@@ -91,6 +91,26 @@ class NotificationServiceTest {
         verifyNoInteractions(registrationRequestRepo, ticketRepo);
     }
 
+    @Test
+    void developer_alsoSeesTheAdminQueue() {
+        User dev = new User("dev", "h", "Dee", "Dev", AccountType.DEVELOPER);
+        dev.setId(3L);
+        when(runService.getPendingChecklists()).thenReturn(List.of());
+        PayPeriod week = PayPeriod.custom(LocalDate.now(), LocalDate.now());
+        when(payrollService.resolvePeriod(eq("week"), any(), any(), any())).thenReturn(week);
+        PayrollReport report = mock(PayrollReport.class);
+        when(payrollService.build(eq(week), any())).thenReturn(report);
+        when(batchRecordService.filterStatuses()).thenReturn(Map.of());
+        when(registrationRequestRepo.findByStatus(RegistrationStatus.PENDING)).thenReturn(List.of(new RegistrationRequest()));
+        when(passwordResetRequestRepo.countByStatus(PasswordResetStatus.PENDING)).thenReturn(0L);
+        when(ticketRepo.countByStatus(TicketStatus.OPEN)).thenReturn(3L);
+
+        List<Notification> alerts = service.forUser(dev);
+
+        assertEquals(List.of("1 registration request to review", "3 open tickets"),
+                alerts.stream().map(Notification::getTitle).toList());
+    }
+
     private static Task task(boolean userCreated) {
         Task t = new Task();
         t.setTitle("AM Inspection");
