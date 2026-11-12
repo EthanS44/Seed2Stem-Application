@@ -69,7 +69,7 @@
     <div class="row g-3">
         <!-- Team hours by day / week -->
         <div class="col-lg-7">
-            <div class="s2s-panel h-100">
+            <div class="s2s-panel h-100" id="teamHours">
                 <div class="panel-head">
                     <h6><i class="bi bi-bar-chart me-2"></i>Team hours by <span th:text="${period.days <= 16 ? 'day' : 'week'}">day</span></h6>
                 </div>
@@ -88,7 +88,7 @@
 
         <!-- Shifts that need a look before payroll -->
         <div class="col-lg-5" id="to-check">
-            <div class="s2s-panel h-100">
+            <div class="s2s-panel h-100" id="toCheckPanel" th:attr="data-mobile-open=${!flagged.isEmpty()} ? 'true' : null">
                 <div class="panel-head">
                     <h6><i class="bi bi-exclamation-triangle me-2"></i>Shifts to check</h6>
                     <span th:if="${!flagged.isEmpty()}" class="pill bad" th:text="${flagged.size()}">2</span>
@@ -114,7 +114,7 @@
     </div>
 
     <!-- Hours per employee -->
-    <div class="s2s-panel mt-3">
+    <div class="s2s-panel mt-3" id="byEmployee" data-mobile-open="true">
         <div class="panel-head">
             <h6><i class="bi bi-table me-2"></i>Hours by employee</h6>
             <span class="small text-muted" th:text="${report.employees.size() + (report.employees.size() == 1 ? ' person' : ' people')}">0 people</span>

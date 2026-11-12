@@ -157,6 +157,88 @@
                 if (empty) empty.hidden = shown > 0;
             });
         });
+
+        // Phones: every list section becomes a dropdown so pages need less scrolling.
+        // Sections marked data-mobile-open start open (if none are, the first one does);
+        // each viewer's open/closed choices are remembered per page in this browser.
+        (function () {
+            if (!window.matchMedia || !window.matchMedia('(max-width: 767.98px)').matches) return;
+            var panels = Array.prototype.filter.call(document.querySelectorAll('.s2s-panel'), function (p) {
+                var head = p.firstElementChild;
+                return head && head.classList.contains('panel-head') && !p.hasAttribute('data-no-collapse');
+            });
+            if (panels.length < 2) return;   // a page with one section has nothing to fold away
+
+            var key = 's2s-sections:' + location.pathname;
+            var saved = {};
+            try { saved = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) { saved = {}; }
+            var anyMarked = panels.some(function (p) { return p.hasAttribute('data-mobile-open'); });
+
+            function setOpen(p, open) {
+                p.classList.toggle('closed', !open);
+                p.firstElementChild.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
+
+            panels.forEach(function (p, i) {
+                var head = p.firstElementChild;
+                var body = document.createElement('div');
+                body.className = 'panel-body';
+                while (head.nextSibling) body.appendChild(head.nextSibling);
+                p.appendChild(body);
+
+                var id = p.id || ('section-' + i);
+                body.id = id + '-body';
+                p.classList.add('collapsible');
+                head.setAttribute('role', 'button');
+                head.setAttribute('tabindex', '0');
+                head.setAttribute('aria-controls', body.id);
+
+                // Show how many rows a closed section holds when its header has no count of its own.
+                var rows = body.querySelectorAll('.s2s-row').length;
+                if (rows > 0 && !head.querySelector('.pill, .count')) {
+                    var n = document.createElement('span');
+                    n.className = 'panel-count';
+                    n.textContent = rows;
+                    head.appendChild(n);
+                }
+                var chev = document.createElement('i');
+                chev.className = 'bi bi-chevron-down panel-chevron';
+                chev.setAttribute('aria-hidden', 'true');
+                head.appendChild(chev);
+
+                var open = Object.prototype.hasOwnProperty.call(saved, id) ? saved[id]
+                    : (anyMarked ? p.hasAttribute('data-mobile-open') : i === 0);
+                setOpen(p, open);
+
+                function toggle() {
+                    var nowOpen = p.classList.contains('closed');
+                    setOpen(p, nowOpen);
+                    saved[id] = nowOpen;
+                    try { localStorage.setItem(key, JSON.stringify(saved)); } catch (e) { /* not saved; fine */ }
+                }
+                head.addEventListener('click', function (e) {
+                    if (e.target.closest('a, button, input, select, textarea, form')) return;
+                    toggle();
+                });
+                head.addEventListener('keydown', function (e) {
+                    if (e.target !== head || (e.key !== 'Enter' && e.key !== ' ')) return;
+                    e.preventDefault();
+                    toggle();
+                });
+            });
+
+            // A link to something inside a closed section (e.g. #to-check) opens it.
+            function openForHash() {
+                if (!location.hash) return;
+                var target;
+                try { target = document.querySelector(location.hash); } catch (e) { return; }
+                if (!target) return;
+                var p = target.closest('.s2s-panel.collapsible') || target.querySelector('.s2s-panel.collapsible');
+                if (p && p.classList.contains('closed')) setOpen(p, true);
+            }
+            openForHash();
+            window.addEventListener('hashchange', openForHash);
+        })();
     </script>
 </div>
 

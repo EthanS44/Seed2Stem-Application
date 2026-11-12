@@ -870,3 +870,19 @@ body { color: var(--s2s-ink); }
     .dash-stats .s2s-stat .num { font-size: 1.3rem; }
     .dash-stats .s2s-stat .lbl { display: block; font-size: 0.74rem; line-height: 1.25; margin-top: 0.15rem; }
 }
+
+/* Phones: sections fold up into dropdowns (see the layout script). Desktop is unchanged. */
+.panel-chevron, .panel-count { display: none; }
+@media (max-width: 767.98px) {
+    .s2s-panel.collapsible > .panel-head { cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; min-height: 3rem; }
+    .s2s-panel.collapsible > .panel-head h6 { margin-right: auto; }
+    .s2s-panel.collapsible > .panel-head .panel-chevron { display: inline-block; flex: none; color: #8a96a1; transition: transform .15s ease; }
+    .s2s-panel.collapsible.closed > .panel-head .panel-chevron { transform: rotate(-90deg); }
+    .s2s-panel.collapsible > .panel-head .panel-count { display: inline-block; flex: none; font-size: .75rem; font-weight: 600; color: var(--s2s-muted); background: #f1f4f6; border-radius: 999px; padding: .05rem .5rem; }
+    .s2s-panel.collapsible.closed > .panel-head { border-bottom-color: transparent; }
+    .s2s-panel.collapsible.closed > .panel-body { display: none; }
+    /* Side-by-side columns stack on phones; let collapsed ones shrink instead of keeping equal heights. */
+    .s2s-panel.collapsible.h-100 { height: auto !important; }
+    /* List titles get up to two lines instead of being cut off next to a status badge. */
+    .s2s-row .title { white-space: normal; display: -webkit-box !important; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; }
+}

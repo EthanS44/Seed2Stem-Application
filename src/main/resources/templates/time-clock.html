@@ -69,7 +69,7 @@
 
         <div class="col-lg-7">
             <!-- Today -->
-            <div class="s2s-panel mb-3">
+            <div class="s2s-panel mb-3" id="today" data-mobile-open="true">
                 <div class="panel-head"><h6><i class="bi bi-calendar-day me-2"></i>Today</h6></div>
                 <div th:if="${#lists.isEmpty(todayEntries)}" class="s2s-empty">No time logged today.</div>
                 <div th:each="entry : ${todayEntries}" class="s2s-row">
@@ -87,7 +87,7 @@
             </div>
 
             <!-- Last 7 days -->
-            <div class="s2s-panel mb-3">
+            <div class="s2s-panel mb-3" id="lastWeek">
                 <div class="panel-head">
                     <h6><i class="bi bi-clock-history me-2"></i>Last 7 days</h6>
                     <a th:href="@{/time-clock/history}">View all</a>

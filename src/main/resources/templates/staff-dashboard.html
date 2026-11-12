@@ -45,7 +45,7 @@
     <div class="row g-3">
         <!-- Approvals -->
         <div class="col-lg-7">
-            <div class="s2s-panel mb-3" id="approvals">
+            <div class="s2s-panel mb-3" id="approvals" th:attr="data-mobile-open=${!pendingRuns.isEmpty()} ? 'true' : null">
                 <div class="panel-head">
                     <h6><i class="bi bi-clipboard-check me-2"></i>Needs your approval</h6>
                     <span class="pill warn" th:if="${pendingCount > 0}" th:text="${pendingCount + ' waiting'}">2 waiting</span>

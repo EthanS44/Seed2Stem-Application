@@ -28,7 +28,7 @@
     <div class="row g-3">
         <div class="col-lg-6">
             <!-- In progress: technicians see their own (resume); managers see everyone's -->
-            <div class="s2s-panel mb-3">
+            <div class="s2s-panel mb-3" id="inProgress" th:attr="data-mobile-open=${!activeTasks.isEmpty()} ? 'true' : null">
                 <div class="panel-head">
                     <h6><i class="bi bi-play-circle me-2"></i>In progress</h6>
                     <span class="pill info" th:if="${!activeTasks.isEmpty()}" th:text="${activeTasks.size()}">1</span>
@@ -80,7 +80,7 @@
             </div>
 
             <!-- Pending approval (managers and developers) -->
-            <div th:if="${isManager}" class="s2s-panel mb-3">
+            <div th:if="${isManager}" class="s2s-panel mb-3" id="needsApproval" th:attr="data-mobile-open=${pendingRuns != null and !pendingRuns.isEmpty()} ? 'true' : null">
                 <div class="panel-head">
                     <h6><i class="bi bi-clipboard-check me-2"></i>Needs approval</h6>
                     <span class="pill warn" th:if="${pendingRuns != null and !pendingRuns.isEmpty()}" th:text="${pendingRuns.size()}">2</span>
@@ -100,7 +100,7 @@
 
         <!-- Available tasks -->
         <div class="col-lg-6">
-            <div class="s2s-panel mb-3" id="availableTaskList">
+            <div class="s2s-panel mb-3" id="availableTaskList" data-mobile-open="true">
                 <div class="panel-head">
                     <h6><i class="bi bi-list-task me-2"></i>Start a task</h6>
                     <span class="count small text-muted" th:text="${availableTasks.size() + ' available'}">11 available</span>

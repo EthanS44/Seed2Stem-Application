@@ -50,7 +50,7 @@
     <div class="row g-3">
         <div class="col-lg-7">
             <!-- Continue where you left off -->
-            <div class="s2s-panel mb-3" id="continue">
+            <div class="s2s-panel mb-3" id="continue" th:attr="data-mobile-open=${!activeRuns.isEmpty()} ? 'true' : null">
                 <div class="panel-head"><h6><i class="bi bi-play-circle me-2"></i>Continue where you left off</h6></div>
                 <div th:if="${activeRuns.isEmpty()}" class="s2s-empty">No tasks in progress. Start one from the list.</div>
                 <a th:each="run : ${activeRuns}" class="s2s-row"

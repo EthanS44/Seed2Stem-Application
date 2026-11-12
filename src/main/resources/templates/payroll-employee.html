@@ -61,7 +61,7 @@
     </div>
 
     <!-- Hours per day or week -->
-    <div class="s2s-panel mb-3">
+    <div class="s2s-panel mb-3" id="byDay">
         <div class="panel-head"><h6><i class="bi bi-calendar-week me-2"></i>By <span th:text="${period.days <= 16 ? 'day' : 'week'}">day</span></h6></div>
         <div class="pay-chips">
             <div th:each="b, it : ${buckets}" class="pay-chip" th:classappend="${(emp.bucket(it.index) == 0 ? 'zero ' : '') + (b.today ? 'today' : '')}">
@@ -73,7 +73,7 @@
     </div>
 
     <!-- Shifts -->
-    <div class="s2s-panel">
+    <div class="s2s-panel" id="shifts" data-mobile-open="true">
         <div class="panel-head">
             <h6><i class="bi bi-list-ul me-2"></i>Shifts</h6>
             <span th:unless="${canEdit}" class="small text-muted">You can't edit your own hours</span>

@@ -94,7 +94,7 @@
             </div>
 
             <!-- Batch record entry -->
-            <div th:if="${batchEntry != null}" class="s2s-panel mb-3">
+            <div th:if="${batchEntry != null}" class="s2s-panel mb-3" id="batchEntry">
                 <div class="panel-head">
                     <h6><i class="bi bi-journal-text me-2"></i>Batch record — <span th:text="${batchEntry.action.getDisplayName()}">Action</span></h6>
                     <span class="pill"
@@ -133,7 +133,7 @@
             </div>
 
             <!-- Checklist answers, by section -->
-            <div th:each="sec : ${sections}" class="s2s-panel check-section" th:id="${sec.anchor}">
+            <div th:each="sec : ${sections}" class="s2s-panel check-section" th:id="${sec.anchor}" th:attr="data-mobile-open=${sec.failCount > 0} ? 'true' : null">
                 <div class="panel-head">
                     <h6 th:text="${sec.title != null ? sec.title.replaceAll(':\s*$', '') : 'Checklist'}">Room B1</h6>
                     <span th:if="${sec.failCount > 0}" class="pill bad" th:text="${sec.failCount + ' failed'}">1 failed</span>
@@ -166,7 +166,7 @@
 
         <!-- Manager decision -->
         <div class="col-lg-4" th:if="${canDecide}">
-            <div class="s2s-panel decision-card" id="decision">
+            <div class="s2s-panel decision-card" id="decision" data-no-collapse>
                 <div class="panel-head"><h6><i class="bi bi-clipboard-check me-2"></i>Your decision</h6></div>
                 <div class="p-3">
                     <p class="small mb-2" th:if="${!failures.isEmpty()}">

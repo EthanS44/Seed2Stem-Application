@@ -4,7 +4,7 @@
 
 <!-- Dashboard Alerts: what needs a look right now, most urgent first. Each alert is
      worked out from the current state, so it clears itself once it's dealt with. -->
-<div th:fragment="alerts(items)" class="s2s-panel mb-3 alerts-panel" id="alerts">
+<div th:fragment="alerts(items)" class="s2s-panel mb-3 alerts-panel" id="alerts" th:attr="data-mobile-open=${!items.isEmpty()} ? 'true' : null">
     <div class="panel-head">
         <h6><i class="bi bi-bell me-2"></i>Alerts</h6>
         <span th:if="${!items.isEmpty()}" class="pill"
