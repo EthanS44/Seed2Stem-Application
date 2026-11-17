@@ -2,7 +2,10 @@ package com.example.seed2stem;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.mindrot.jbcrypt.BCrypt;
 import org.slf4j.Logger;
@@ -38,6 +41,7 @@ public class DataLoader implements CommandLineRunner {
     @Transactional
     public void run(String... args) throws Exception {
         migrateCheckConstraints();
+        dropBatchEnumCheckConstraints();
         seedAdminIfMissing();
 
         // Only seed tasks if none exist yet
@@ -129,6 +133,41 @@ public class DataLoader implements CommandLineRunner {
                 AccountType.DEVELOPER);
         userRepo.save(admin);
         log.info("Seeded initial developer account: {}", normalized);
+    }
+
+    /**
+     * Older databases have CHECK constraints pinning the batch enum columns to the
+     * values that existed when they were created (e.g. task_batch_action_check), so
+     * new values like TRANSFER_TO_VEG, B3 or DRY_FLOWER are rejected and startup
+     * fails. These columns are plain varchar and the app validates them, so drop any
+     * such constraint, whatever it's called. Postgres only; skipped elsewhere.
+     */
+    private void dropBatchEnumCheckConstraints() {
+        String find = "SELECT rel.relname, con.conname, pg_get_constraintdef(con.oid) "
+                + "FROM pg_constraint con JOIN pg_class rel ON rel.oid = con.conrelid "
+                + "WHERE con.contype = 'c' AND rel.relname IN ('task', 'batch_record_entry', 'grow_batch')";
+        String[] enumColumns = {"batch_action", "action", "room", "material", "harvest_part", "filter_work", "source", "status"};
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+            List<String[]> toDrop = new ArrayList<>();
+            try (ResultSet rs = stmt.executeQuery(find)) {
+                while (rs.next()) {
+                    String def = rs.getString(3).toLowerCase();
+                    for (String col : enumColumns) {
+                        if (def.matches(".*\\b" + col + "\\b.*")) {
+                            toDrop.add(new String[] {rs.getString(1), rs.getString(2)});
+                            break;
+                        }
+                    }
+                }
+            }
+            for (String[] c : toDrop) {
+                stmt.execute("ALTER TABLE " + c[0] + " DROP CONSTRAINT IF EXISTS \"" + c[1] + "\"");
+                log.info("Dropped check constraint {} on {}", c[1], c[0]);
+            }
+        } catch (Exception e) {
+            log.info("Batch enum check constraint cleanup skipped: {}", e.getMessage());
+        }
     }
 
     private void migrateCheckConstraints() {
