@@ -15,10 +15,10 @@ public class BatchTotals {
     private int seedsReceived;
     private int clonesCut;
     private int plantsTransferred;
+    private int plantsToVeg;
     private int plantsHarvested;
     private int plantsTopped;
     private int plantsBottomed;
-    private int plantsProcessed;
     private int plantsDestroyed;
     private double wetKg;
     private double topsKg;
@@ -29,10 +29,12 @@ public class BatchTotals {
     private double flowerTrimmedKg;
     private double dryKg;
     private boolean hasDryWeight;
-    /** Stems, fan leaves and trim destroyed; whole plants are in {@link #plantsDestroyed}. */
+    /** Weighed material destroyed (stems, fan leaves, trim, dry flower); whole plants are in {@link #plantsDestroyed}. */
     private double destroyedKg;
     private final Map<DestructionMaterial, Double> destroyedKgByMaterial = new EnumMap<>(DestructionMaterial.class);
     private final Map<Room, Integer> transferredByRoom = new EnumMap<>(Room.class);
+    private final Map<Room, Integer> vegByRoom = new EnumMap<>(Room.class);
+    private LocalDate firstVegDate;
     private LocalDate firstTransferDate;
     private LocalDate firstHarvestDate;
 
@@ -47,6 +49,11 @@ public class BatchTotals {
         switch (e.getAction()) {
             case RECEIVE_SEEDS -> seedsReceived += plants;
             case CLONING -> clonesCut += plants;
+            case TRANSFER_TO_VEG -> {
+                plantsToVeg += plants;
+                if (e.getRoom() != null) vegByRoom.merge(e.getRoom(), plants, Integer::sum);
+                firstVegDate = earliest(firstVegDate, e.getEntryDate());
+            }
             case TRANSFER_TO_FLOWER -> {
                 plantsTransferred += plants;
                 if (e.getRoom() != null) transferredByRoom.merge(e.getRoom(), plants, Integer::sum);
@@ -69,7 +76,6 @@ public class BatchTotals {
                 firstHarvestDate = earliest(firstHarvestDate, e.getEntryDate());
             }
             case DEBUCK_DESTEM -> {
-                plantsProcessed += plants;
                 fanLeafKg += kg(e.getFanLeafKg());
                 stemKg += kg(e.getStemKg());
             }
@@ -117,12 +123,18 @@ public class BatchTotals {
 
     public double getDestroyedKg(DestructionMaterial m) { return destroyedKgByMaterial.getOrDefault(m, 0.0); }
 
+    /** Stems, fan leaves and trim destroyed (everything weighed except dry flower). */
+    public double getWasteDestroyedKg() { return round3(destroyedKg - getDestroyedKg(DestructionMaterial.DRY_FLOWER)); }
+
+    public double getDryFlowerDestroyedKg() { return round3(getDestroyedKg(DestructionMaterial.DRY_FLOWER)); }
+
     /** kg recorded but not yet destroyed, for the material types that are weighed beforehand. */
     public double getOnHandKg(DestructionMaterial m) {
         double recorded = switch (m) {
             case STEMS -> stemKg;
             case FAN_LEAVES -> fanLeafKg;
             case TRIM -> trimKg;
+            case DRY_FLOWER -> dryKg;
             case WHOLE_PLANTS -> 0.0;
         };
         return Math.max(0.0, round3(recorded - getDestroyedKg(m)));
@@ -131,6 +143,7 @@ public class BatchTotals {
     public double getOnHandStemsKg() { return getOnHandKg(DestructionMaterial.STEMS); }
     public double getOnHandFanLeafKg() { return getOnHandKg(DestructionMaterial.FAN_LEAVES); }
     public double getOnHandTrimKg() { return getOnHandKg(DestructionMaterial.TRIM); }
+    public double getOnHandDryFlowerKg() { return getOnHandKg(DestructionMaterial.DRY_FLOWER); }
 
     /** Loss in kg once a dry weight exists, else null. */
     public Double getLossKg() {
@@ -152,11 +165,13 @@ public class BatchTotals {
     public int getSeedsReceived() { return seedsReceived; }
     public int getClonesCut() { return clonesCut; }
     public int getPlantsTransferred() { return plantsTransferred; }
+    public int getPlantsToVeg() { return plantsToVeg; }
+    public Map<Room, Integer> getVegByRoom() { return vegByRoom; }
+    public LocalDate getFirstVegDate() { return firstVegDate; }
     public int getPlantsHarvested() { return plantsHarvested; }
     public int getPlantsTopped() { return plantsTopped; }
     public double getTopsKg() { return round3(topsKg); }
     public double getBottomsKg() { return round3(bottomsKg); }
-    public int getPlantsProcessed() { return plantsProcessed; }
     public int getPlantsDestroyed() { return plantsDestroyed; }
     public double getWetKg() { return round3(wetKg); }
     public double getFanLeafKg() { return round3(fanLeafKg); }
@@ -176,7 +191,9 @@ public class BatchTotals {
         if (getPlantsAwaitingBottoms() > 0) return "Harvesting";
         if (plantsHarvested > 0) return "Harvested";
         if (plantsTransferred > 0) return "Flowering";
-        if (getPlantsStarted() > 0) return "Vegetative";
+        // Veg is optional: a batch is only "Vegetative" once it's been transferred to veg.
+        if (plantsToVeg > 0) return "Vegetative";
+        if (getPlantsStarted() > 0) return "Propagation";
         return "Started";
     }
 }

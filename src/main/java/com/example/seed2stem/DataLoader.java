@@ -61,6 +61,8 @@ public class DataLoader implements CommandLineRunner {
                 "Log incoming seeds. Creates a new batch (YYMMDD-VVV-Room).");
         seedBatchTask(BatchAction.CLONING, "Cloning",
                 "Log clones cut. The first entry of the day for a variety and room creates the batch; later entries that day join it.");
+        seedBatchTask(BatchAction.TRANSFER_TO_VEG, "Transfer to Veg",
+                "Log plants moved into a veg room (B3). Veg comes before flowering but doesn't always happen. The batch moves to the room you choose once a manager approves.");
         seedBatchTask(BatchAction.TRANSFER_TO_FLOWER, "Transfer to Flower",
                 "Log plants moved into a flowering room. Flowering starts here: lights 12 h on, 12 h off, nutrient cycle changes, about 3 months to harvest.");
         seedBatchTask(BatchAction.FILTER_CHANGE, "Clean and Change Filters",
@@ -68,7 +70,7 @@ public class DataLoader implements CommandLineRunner {
         seedBatchTask(BatchAction.HARVEST, "Harvest",
                 "Harvest is done in two passes: tops first, then bottoms. Choose which, then log plants cut and the wet weight, before any leaves or stems come off. Plants count as harvested once their bottoms are in.");
         seedBatchTask(BatchAction.DEBUCK_DESTEM, "Debucking and Destemming",
-                "Log plants processed and the weight of fan leaves and stems removed.");
+                "Log the weight of fan leaves and stems removed.");
         seedBatchTask(BatchAction.TRIMMING, "Trimming",
                 "Log trim (sugar leaf) weight before it is declared waste, and the amount of flower trimmed.");
         seedBatchTask(BatchAction.DRY_WEIGHT, "Weigh Dried Flower",

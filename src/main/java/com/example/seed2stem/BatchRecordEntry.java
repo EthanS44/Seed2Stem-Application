@@ -174,6 +174,8 @@ public class BatchRecordEntry {
             case RECEIVE_SEEDS -> join("Seeds received", source != null ? "from " + source : null,
                     lotNumber != null ? "lot " + lotNumber : null);
             case CLONING -> join("Clones cut", source != null ? "from " + source : null);
+            case TRANSFER_TO_VEG -> plantCount + " plants transferred to " + (room != null ? room.getDisplayName() : "?")
+                    + " for veg";
             case TRANSFER_TO_FLOWER -> plantCount + " plants transferred to " + (room != null ? room.getDisplayName() : "?")
                     + " for flowering";
             case FILTER_CHANGE -> join(filterWork != null ? "Filters " + filterWork.getDisplayName().toLowerCase() : null,

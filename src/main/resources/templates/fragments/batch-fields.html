@@ -21,7 +21,7 @@
             <!-- Room -->
             <div class="col-md-4">
                 <label class="form-label fw-semibold" for="br_room"
-                       th:text="${act == 'RECEIVE_SEEDS' or act == 'CLONING'} ? 'Destination room' : (${act == 'TRANSFER_TO_FLOWER'} ? 'Flowering room' : 'Room')">Room</label>
+                       th:text="${act == 'RECEIVE_SEEDS' or act == 'CLONING'} ? 'Destination room' : (${act == 'TRANSFER_TO_FLOWER'} ? 'Flowering room' : (${act == 'TRANSFER_TO_VEG'} ? 'Veg room' : 'Room'))">Room</label>
                 <select class="form-select" id="br_room" name="br_room" required>
                     <option value="" th:selected="${batchEntry.room == null}">Choose room…</option>
                     <option th:each="r : ${rooms}" th:value="${r.name()}" th:text="${r.getDisplayName()}"
@@ -65,12 +65,13 @@
 
             <!-- Existing batch, suggested from the room -->
             <div class="col-md-8" th:unless="${creates}">
-                <label class="form-label fw-semibold" for="br_batchId">Batch</label>
+                <label class="form-label fw-semibold" for="br_batchId" th:text="${batchAction.isTransfer()} ? 'Batch to move' : 'Batch'">Batch</label>
                 <select class="form-select" id="br_batchId" name="br_batchId" required
                         th:attr="data-selected=${batchEntry.batch != null ? batchEntry.batch.id : ''}">
                     <option value="">Choose a room first…</option>
                 </select>
-                <div class="form-text" id="batchInfo">Suggested from the room — confirm or change.</div>
+                <div class="form-text" id="batchInfo"
+                     th:text="${batchAction.isTransfer()} ? 'Any batch, from any room. It moves to the room above once approved.' : 'Suggested from the room — confirm or change.'">Suggested from the room — confirm or change.</div>
             </div>
         </div>
 
@@ -105,8 +106,8 @@
                 </div>
             </th:block>
 
-            <!-- TRANSFER TO FLOWER -->
-            <th:block th:if="${act == 'TRANSFER_TO_FLOWER'}">
+            <!-- TRANSFER TO VEG / FLOWER -->
+            <th:block th:if="${act == 'TRANSFER_TO_FLOWER' or act == 'TRANSFER_TO_VEG'}">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold" for="br_plantCount">Number of plants you moved</label>
                     <input type="number" class="form-control" id="br_plantCount" name="br_plantCount" min="1" step="1" required th:value="${batchEntry.plantCount}">
@@ -169,15 +170,11 @@
 
             <!-- DEBUCK / DESTEM -->
             <th:block th:if="${act == 'DEBUCK_DESTEM'}">
-                <div class="col-md-4">
-                    <label class="form-label fw-semibold" for="br_plantCount">Plants processed</label>
-                    <input type="number" class="form-control" id="br_plantCount" name="br_plantCount" min="1" step="1" required th:value="${batchEntry.plantCount}">
-                </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label fw-semibold" for="br_fanLeafKg">Fan leaves (kg)</label>
                     <input type="number" class="form-control" id="br_fanLeafKg" name="br_fanLeafKg" min="0" step="0.001" required th:value="${batchEntry.fanLeafKg}">
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label fw-semibold" for="br_stemKg">Stems (kg)</label>
                     <input type="number" class="form-control" id="br_stemKg" name="br_stemKg" min="0" step="0.001" required th:value="${batchEntry.stemKg}">
                 </div>
@@ -237,7 +234,15 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold" for="br_witness">Witness</label>
-                    <input type="text" class="form-control" id="br_witness" name="br_witness" required th:value="${batchEntry.witness}">
+                    <select class="form-select" id="br_witness" name="br_witness" required>
+                        <option value="" th:text="${witnessOptions.isEmpty()} ? 'Nobody else is clocked in' : 'Choose who watched…'">Choose who watched…</option>
+                        <option th:each="w : ${witnessOptions}" th:value="${w}" th:text="${w}"
+                                th:selected="${batchEntry.witness != null and batchEntry.witness == w}">Pat Kim</option>
+                        <!-- A saved witness who has since clocked out stays visible, but must be changed to submit. -->
+                        <option th:if="${batchEntry.witness != null and !witnessOptions.contains(batchEntry.witness)}"
+                                th:value="${batchEntry.witness}" th:text="${batchEntry.witness + ' (not clocked in)'}" selected>Old witness</option>
+                    </select>
+                    <div class="form-text">Anyone clocked in right now, other than you.</div>
                 </div>
             </th:block>
         </div>
@@ -257,9 +262,14 @@
         const kg = v => (Math.round(v * 1000) / 1000).toFixed(3);
         const num = id => { const el = document.getElementById(id); return el && el.value !== '' ? parseFloat(el.value) : null; };
 
+        // Transfers move a batch into the chosen room, so they pick from every batch, not just the room's.
+        const IS_TRANSFER = ACTION === 'TRANSFER_TO_VEG' || ACTION === 'TRANSFER_TO_FLOWER';
+        const ALL_BATCHES = Object.values(BATCHES).flat();
+
         function currentBatch() {
-            if (!batchSel || !room.value) return null;
-            return (BATCHES[room.value] || []).find(b => String(b.id) === batchSel.value) || null;
+            if (!batchSel) return null;
+            const list = IS_TRANSFER ? ALL_BATCHES : (room.value ? (BATCHES[room.value] || []) : []);
+            return list.find(b => String(b.id) === batchSel.value) || null;
         }
 
         // ---- New batch number (seeds / cloning)
@@ -281,15 +291,17 @@
             const keep = batchSel.value || batchSel.dataset.selected;
             batchSel.dataset.selected = '';
             batchSel.innerHTML = '';
-            const list = room.value ? (BATCHES[room.value] || []) : [];
-            if (!room.value) {
+            const list = IS_TRANSFER ? ALL_BATCHES : (room.value ? (BATCHES[room.value] || []) : []);
+            if (!IS_TRANSFER && !room.value) {
                 batchSel.add(new Option('Choose a room first…', ''));
             } else if (list.length === 0) {
-                batchSel.add(new Option('No approved batches in ' + room.value, ''));
+                batchSel.add(new Option(IS_TRANSFER ? 'No approved batches yet' : 'No approved batches in ' + room.value, ''));
             } else {
-                list.forEach(b => batchSel.add(new Option(b.code + ' — ' + b.variety + ' (' + b.stage + ')', b.id)));
+                if (IS_TRANSFER) batchSel.add(new Option('Choose a batch…', ''));
+                list.forEach(b => batchSel.add(new Option(b.code + ' — ' + b.variety + ' (' + b.stage
+                        + (IS_TRANSFER ? ', in ' + b.room : '') + ')', b.id)));
                 const match = list.find(b => String(b.id) === String(keep));
-                batchSel.value = match ? match.id : list[0].id;
+                batchSel.value = match ? match.id : (IS_TRANSFER ? '' : list[0].id);
             }
             updateBatchInfo();
         }
@@ -297,10 +309,12 @@
         function updateBatchInfo() {
             const b = currentBatch();
             const info = document.getElementById('batchInfo');
-            if (info) info.textContent = b ? 'Stage: ' + b.stage + ' · ' + b.livePlants + ' live plants' : 'Suggested from the room — confirm or change.';
+            if (info) info.textContent = b ? 'Stage: ' + b.stage + ' · ' + b.livePlants + ' live plants' + (IS_TRANSFER ? ' · now in ' + b.room : '')
+                : (IS_TRANSFER ? 'Any batch, from any room. It moves to the room above once approved.' : 'Suggested from the room — confirm or change.');
             const hint = document.getElementById('actionHint');
             if (hint && b) {
-                if (ACTION === 'TRANSFER_TO_FLOWER') hint.textContent = b.transferable + ' plants left to transfer. Records "X plants transferred to ' + room.value + ' for flowering".';
+                if (ACTION === 'TRANSFER_TO_FLOWER') hint.textContent = b.transferable + ' plants left to transfer to flower.' + (room.value ? ' Records "X plants transferred to ' + room.value + ' for flowering".' : '');
+                if (ACTION === 'TRANSFER_TO_VEG') hint.textContent = b.vegTransferable + ' plants left to transfer to veg.' + (room.value ? ' Records "X plants transferred to ' + room.value + ' for veg".' : '');
                 if (ACTION === 'HARVEST') {
                     const part = document.querySelector('input[name=br_harvestPart]:checked');
                     hint.textContent = !part ? 'Choose tops or bottoms. ' + b.readyForTops + ' plants still need tops; ' + b.awaitingBottoms + ' are waiting for bottoms.'
@@ -310,7 +324,7 @@
             }
             const onHand = document.getElementById('onHandInfo');
             if (onHand) onHand.textContent = b
-                ? 'On hand for ' + b.code + ': stems ' + kg(b.onHandStems) + ' kg · fan leaves ' + kg(b.onHandFan) + ' kg · trim ' + kg(b.onHandTrim) + ' kg · live plants ' + b.livePlants
+                ? 'On hand for ' + b.code + ': stems ' + kg(b.onHandStems) + ' kg · fan leaves ' + kg(b.onHandFan) + ' kg · trim ' + kg(b.onHandTrim) + ' kg · dry flower ' + kg(b.onHandDry) + ' kg · live plants ' + b.livePlants
                 : 'Choose a batch to see material on hand.';
             updateLoss();
         }

@@ -67,8 +67,13 @@ public class BatchRecordExportService {
             }
 
             List<BatchRecordEntry> started = of(approved, e -> e.getAction().isCreatesBatch());
+            // The template has no veg row; veg transfers (optional) are noted on the cutting row.
+            String vegNote = t.getVegByRoom().isEmpty() ? null : t.getVegByRoom().entrySet().stream()
+                    .map(r -> r.getValue() + " plants transferred to " + r.getKey().getDisplayName() + " for veg")
+                    .collect(Collectors.joining("; "));
+            String cuttingNote = batch.getSource() == BatchSource.SEEDS ? "Seeds received" : null;
             fill(sheet, ROW_CUTTING, started, t.getPlantsStarted(),
-                    batch.getSource() == BatchSource.SEEDS ? "Seeds received" : null);
+                    cuttingNote == null ? vegNote : vegNote == null ? cuttingNote : cuttingNote + "; " + vegNote);
 
             LocalDate flowerStart = t.getFirstTransferDate();
             List<BatchRecordEntry> plantDestructions = of(approved, e -> e.getAction() == BatchAction.DESTRUCTION
@@ -79,9 +84,10 @@ public class BatchRecordExportService {
                     vegDestroyed.stream().mapToInt(e -> e.getPlantCount() != null ? e.getPlantCount() : 0).sum(), null);
 
             List<BatchRecordEntry> transfers = of(approved, e -> e.getAction() == BatchAction.TRANSFER_TO_FLOWER);
-            fill(sheet, ROW_FLOWERING, transfers, t.getPlantsTransferred(), t.getPlantsTransferred() > 0
-                    ? t.getPlantsTransferred() + " plants transferred to " + batch.getRoom().getDisplayName() + " for flowering"
-                    : null);
+            fill(sheet, ROW_FLOWERING, transfers, t.getPlantsTransferred(), t.getTransferredByRoom().isEmpty() ? null
+                    : t.getTransferredByRoom().entrySet().stream()
+                            .map(r -> r.getValue() + " plants transferred to " + r.getKey().getDisplayName() + " for flowering")
+                            .collect(Collectors.joining("; ")));
 
             // Plants are harvested when their bottoms come in; wet weight is tops plus bottoms.
             List<BatchRecordEntry> harvests = of(approved, e -> e.getAction() == BatchAction.HARVEST);
@@ -92,7 +98,8 @@ public class BatchRecordExportService {
                     ? String.format("Tops %.3f kg, bottoms %.3f kg", t.getTopsKg(), t.getBottomsKg()) : null);
 
             List<BatchRecordEntry> dry = of(approved, e -> e.getAction() == BatchAction.DRY_WEIGHT);
-            fillKg(sheet, ROW_DRY_WEIGHT, dry, t.getDryKg(), null);
+            fillKg(sheet, ROW_DRY_WEIGHT, dry, t.getDryKg(), t.getDryFlowerDestroyedKg() > 0
+                    ? String.format("%.3f kg of dry flower later destroyed", t.getDryFlowerDestroyedKg()) : null);
 
             List<BatchRecordEntry> trims = of(approved, e -> e.getAction() == BatchAction.TRIMMING);
             fillKg(sheet, ROW_FLOWER_WEIGHT, trims, t.getFlowerTrimmedKg(), "Flower trimmed");

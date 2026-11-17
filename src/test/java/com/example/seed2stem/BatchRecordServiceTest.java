@@ -28,6 +28,7 @@ class BatchRecordServiceTest {
     @Mock private VarietyRepository varietyRepo;
     @Mock private ChecklistRunRepository runRepo;
     @Mock private ChecklistRunService runService;
+    @Mock private TimeEntryRepository timeEntryRepo;
 
     @InjectMocks
     private BatchRecordService service;
@@ -62,6 +63,20 @@ class BatchRecordServiceTest {
         e.setRoom(Room.B1);
         e.setStatus(BatchEntryStatus.PENDING);
         return e;
+    }
+
+    /** Puts someone on the clock, so they can be chosen as a witness. */
+    private User clockedIn(String first, String last) {
+        User u = new User(first.toLowerCase(), "h", first, last, AccountType.TECHNICIAN);
+        u.setId((long) (first + last).hashCode());
+        TimeEntry t = new TimeEntry();
+        t.setUser(u);
+        t.setDate(LocalDate.now());
+        t.setClockInTime(LocalDateTime.now().minusHours(1));
+        List<TimeEntry> active = new ArrayList<>(timeEntryRepo.findAllActive());
+        active.add(t);
+        lenient().when(timeEntryRepo.findAllActive()).thenReturn(active);
+        return u;
     }
 
     private Batch batch(BatchSource source) {
@@ -354,6 +369,7 @@ class BatchRecordServiceTest {
         e.setWeightKg(2.5);
         e.setDestructionMethod("Grind and mix with soil");
         e.setWitness("Pat Lee");
+        clockedIn("Pat", "Lee");
         BatchRecordEntry debuck = approved(BatchAction.DEBUCK_DESTEM, 10, null);
         debuck.setStemKg(2.0);
         debuck.setFanLeafKg(0.0);
@@ -377,7 +393,7 @@ class BatchRecordServiceTest {
         when(entryRepo.findByRun(run)).thenReturn(Optional.of(e));
 
         BatchRecordException ex = assertThrows(BatchRecordException.class, () -> service.submitRun(10L, List.of()));
-        assertEquals("Enter the witness.", ex.getMessage());
+        assertEquals("Choose a witness.", ex.getMessage());
     }
 
     @Test
@@ -392,6 +408,146 @@ class BatchRecordServiceTest {
 
         BatchRecordException ex = assertThrows(BatchRecordException.class, () -> service.submitRun(10L, List.of()));
         assertEquals("Enter the number of plants destroyed.", ex.getMessage());
+    }
+
+    @Test
+    void submit_witnessMustBeSomeoneElseOnTheClock() {
+        BatchRecordEntry e = entry(BatchAction.DESTRUCTION);
+        e.setBatch(batch(BatchSource.CLONES));
+        e.setMaterial(DestructionMaterial.TRIM);
+        e.setWeightKg(0.5);
+        e.setDestructionMethod("Compost");
+        e.setWitness("Pat Lee");
+        when(runRepo.findById(10L)).thenReturn(Optional.of(run));
+        when(entryRepo.findByRun(run)).thenReturn(Optional.of(e));
+        clockedIn("Jo", "Park");
+
+        BatchRecordException ex = assertThrows(BatchRecordException.class, () -> service.submitRun(10L, List.of()));
+        assertEquals("The witness must be someone else who is clocked in right now.", ex.getMessage());
+    }
+
+    @Test
+    void witnessOptions_areEveryoneClockedInExceptTheTechnician() {
+        clockedIn("Pat", "Lee");
+        TimeEntry own = new TimeEntry();
+        own.setUser(tech);
+        List<TimeEntry> active = new ArrayList<>(timeEntryRepo.findAllActive());
+        active.add(own);
+        when(timeEntryRepo.findAllActive()).thenReturn(active);
+        clockedIn("Jo", "Park");
+
+        assertEquals(List.of("Jo Park", "Pat Lee"), service.witnessOptions(tech));
+    }
+
+    @Test
+    void submit_destroyMoreDryFlowerThanWeighed_isRejected() {
+        Batch b = batch(BatchSource.CLONES);
+        BatchRecordEntry e = entry(BatchAction.DESTRUCTION);
+        e.setBatch(b);
+        e.setMaterial(DestructionMaterial.DRY_FLOWER);
+        e.setWeightKg(2.0);
+        e.setDestructionMethod("Grind and mix with soil");
+        e.setWitness("Pat Lee");
+        clockedIn("Pat", "Lee");
+        when(runRepo.findById(10L)).thenReturn(Optional.of(run));
+        when(entryRepo.findByRun(run)).thenReturn(Optional.of(e));
+        when(entryRepo.findByBatchAndStatus(b, BatchEntryStatus.APPROVED))
+                .thenReturn(List.of(approved(BatchAction.DRY_WEIGHT, null, 1.5)));
+        when(entryRepo.findByBatchAndStatus(b, BatchEntryStatus.PENDING)).thenReturn(List.of(e));
+
+        BatchRecordException ex = assertThrows(BatchRecordException.class, () -> service.submitRun(10L, List.of()));
+        assertTrue(ex.getMessage().contains("Only 1.500 kg of dry flower"));
+    }
+
+    @Test
+    void totals_dryFlowerDestroyedIsTrackedOnItsOwn() {
+        BatchRecordEntry dryDestroyed = approved(BatchAction.DESTRUCTION, null, 0.5);
+        dryDestroyed.setMaterial(DestructionMaterial.DRY_FLOWER);
+        BatchRecordEntry stems = approved(BatchAction.DESTRUCTION, null, 1.0);
+        stems.setMaterial(DestructionMaterial.STEMS);
+
+        BatchTotals t = BatchTotals.of(List.of(approved(BatchAction.DRY_WEIGHT, null, 2.0), dryDestroyed, stems));
+
+        assertEquals(0.5, t.getDryFlowerDestroyedKg(), 1e-9);
+        assertEquals(1.0, t.getWasteDestroyedKg(), 1e-9);
+        assertEquals(1.5, t.getDestroyedKg(), 1e-9);
+        assertEquals(1.5, t.getOnHandDryFlowerKg(), 1e-9);
+    }
+
+    @Test
+    void submit_debuckNoLongerNeedsAPlantCount() {
+        Batch b = batch(BatchSource.CLONES);
+        BatchRecordEntry e = entry(BatchAction.DEBUCK_DESTEM);
+        e.setBatch(b);
+        e.setFanLeafKg(1.0);
+        e.setStemKg(0.5);
+        when(runRepo.findById(10L)).thenReturn(Optional.of(run));
+        when(entryRepo.findByRun(run)).thenReturn(Optional.of(e));
+
+        service.submitRun(10L, List.of());
+
+        assertEquals(BatchEntryStatus.PENDING, e.getStatus());
+    }
+
+    @Test
+    void transferToVeg_picksABatchFromAnyRoom_andMovesItOnApproval() {
+        Batch b = batch(BatchSource.CLONES);           // in B1
+        BatchRecordEntry e = entry(BatchAction.TRANSFER_TO_VEG);
+        e.setRoom(Room.B3);
+        e.setBatch(b);
+        e.setPlantCount(20);
+        when(runRepo.findById(10L)).thenReturn(Optional.of(run));
+        when(entryRepo.findByRun(run)).thenReturn(Optional.of(e));
+        when(entryRepo.findByBatchAndStatus(b, BatchEntryStatus.APPROVED))
+                .thenReturn(List.of(approved(BatchAction.CLONING, 40, null)));
+        when(entryRepo.findByBatchAndStatus(b, BatchEntryStatus.PENDING)).thenReturn(List.of(e));
+
+        service.submitRun(10L, List.of());
+        assertEquals(BatchEntryStatus.PENDING, e.getStatus());
+
+        when(entryRepo.findByRunId(10L)).thenReturn(Optional.of(e));
+        service.approveRun(10L, manager, "ok");
+
+        assertEquals(Room.B3, b.getRoom());
+        verify(batchRepo).save(b);
+    }
+
+    @Test
+    void transferToFlower_cantGoToTheVegRoom() {
+        BatchRecordEntry e = entry(BatchAction.TRANSFER_TO_FLOWER);
+        e.setRoom(Room.B3);
+        e.setBatch(batch(BatchSource.CLONES));
+        e.setPlantCount(5);
+        when(runRepo.findById(10L)).thenReturn(Optional.of(run));
+        when(entryRepo.findByRun(run)).thenReturn(Optional.of(e));
+
+        BatchRecordException ex = assertThrows(BatchRecordException.class, () -> service.submitRun(10L, List.of()));
+        assertEquals("B3 isn't a flowering room option.", ex.getMessage());
+    }
+
+    @Test
+    void rooms_b3IsOnlyOfferedOnTransferToVegAndDestruction() {
+        assertEquals(List.of(Room.B1, Room.B2, Room.B3), Room.forAction(BatchAction.TRANSFER_TO_VEG));
+        assertEquals(List.of(Room.B1, Room.B2, Room.B3), Room.forAction(BatchAction.DESTRUCTION));
+        assertEquals(List.of(Room.B1, Room.B2), Room.forAction(BatchAction.TRANSFER_TO_FLOWER));
+        assertEquals(List.of(Room.B1, Room.B2), Room.forAction(BatchAction.HARVEST));
+    }
+
+    @Test
+    void totals_vegIsOptionalAndComesBeforeFlowering() {
+        BatchTotals propagating = BatchTotals.of(List.of(approved(BatchAction.CLONING, 40, null)));
+        assertEquals("Propagation", propagating.getStage());
+
+        BatchRecordEntry veg = approved(BatchAction.TRANSFER_TO_VEG, 40, null);
+        veg.setRoom(Room.B3);
+        BatchTotals inVeg = BatchTotals.of(List.of(approved(BatchAction.CLONING, 40, null), veg));
+        assertEquals("Vegetative", inVeg.getStage());
+        assertEquals(40, inVeg.getPlantsToVeg());
+        assertEquals(java.util.Map.of(Room.B3, 40), inVeg.getVegByRoom());
+
+        BatchTotals flowering = BatchTotals.of(List.of(approved(BatchAction.CLONING, 40, null), veg,
+                approved(BatchAction.TRANSFER_TO_FLOWER, 40, null)));
+        assertEquals("Flowering", flowering.getStage());
     }
 
     // --- approval ---

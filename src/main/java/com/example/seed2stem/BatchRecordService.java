@@ -35,17 +35,20 @@ public class BatchRecordService {
     private final VarietyRepository varietyRepo;
     private final ChecklistRunRepository runRepo;
     private final ChecklistRunService runService;
+    private final TimeEntryRepository timeEntryRepo;
 
     public BatchRecordService(BatchRepository batchRepo,
                               BatchRecordEntryRepository entryRepo,
                               VarietyRepository varietyRepo,
                               ChecklistRunRepository runRepo,
-                              ChecklistRunService runService) {
+                              ChecklistRunService runService,
+                              TimeEntryRepository timeEntryRepo) {
         this.batchRepo = batchRepo;
         this.entryRepo = entryRepo;
         this.varietyRepo = varietyRepo;
         this.runRepo = runRepo;
         this.runService = runService;
+        this.timeEntryRepo = timeEntryRepo;
     }
 
     /** YYMMDD-VVV-Room, e.g. 261008-ABC-B1. */
@@ -110,7 +113,10 @@ public class BatchRecordService {
 
     public Map<Room, FilterStatus> filterStatuses() {
         Map<Room, FilterStatus> map = new LinkedHashMap<>();
-        for (Room room : Room.values()) map.put(room, filterStatus(room));
+        // Filter changes are tracked for flowering rooms only (not the veg room).
+        for (Room room : Room.values()) {
+            if (room.isFlowering()) map.put(room, filterStatus(room));
+        }
         return map;
     }
 
@@ -137,10 +143,13 @@ public class BatchRecordService {
                 o.put("livePlants", t.getLivePlants());
                 o.put("readyForTops", t.getPlantsReadyForTops());
                 o.put("awaitingBottoms", t.getPlantsAwaitingBottoms());
+                o.put("room", room.name());
                 o.put("transferable", Math.max(0, t.getPlantsStarted() - t.getPlantsDestroyed() - t.getPlantsTransferred()));
+                o.put("vegTransferable", Math.max(0, t.getPlantsStarted() - t.getPlantsDestroyed() - t.getPlantsToVeg()));
                 o.put("onHandStems", t.getOnHandKg(DestructionMaterial.STEMS));
                 o.put("onHandFan", t.getOnHandKg(DestructionMaterial.FAN_LEAVES));
                 o.put("onHandTrim", t.getOnHandKg(DestructionMaterial.TRIM));
+                o.put("onHandDry", t.getOnHandKg(DestructionMaterial.DRY_FLOWER));
                 o.put("wetKg", t.getWetKg());
                 o.put("fanKg", t.getFanLeafKg());
                 o.put("stemKg", t.getStemKg());
@@ -169,7 +178,8 @@ public class BatchRecordService {
         Map<String, Object> model = new LinkedHashMap<>();
         model.put("batchAction", action);
         model.put("batchEntry", entry);
-        model.put("rooms", Room.values());
+        model.put("rooms", Room.forAction(action));
+        model.put("witnessOptions", witnessOptions(run != null ? run.getCompletedBy() : null));
         model.put("varieties", varieties);
         model.put("filterWorkOptions", FilterWork.values());
         model.put("materialOptions", DestructionMaterial.values());
@@ -181,6 +191,20 @@ public class BatchRecordService {
         model.put("filterStatusByRoom", filters);
         model.put("newVarietyValue", NEW_VARIETY);
         return model;
+    }
+
+    /**
+     * Who can witness a destruction: everyone clocked in right now, except the
+     * person doing the task. Names, as stored on the entry.
+     */
+    public List<String> witnessOptions(User technician) {
+        return timeEntryRepo.findAllActive().stream()
+                .map(TimeEntry::getUser)
+                .filter(u -> u != null && (technician == null || !u.getId().equals(technician.getId())))
+                .map(User::getName)
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
     }
 
     /**
@@ -315,11 +339,18 @@ public class BatchRecordService {
 
         Batch batch = e.getBatch();
         require(batch != null, "Choose a batch.");
-        require(batch.getRoom() == e.getRoom(),
-                "Batch " + batch.getBatchCode() + " isn't in room " + e.getRoom().getDisplayName() + ".");
+        // Transfers move the batch into the chosen room; everything else happens where the batch is.
+        if (!action.isTransfer()) {
+            require(batch.getRoom() == e.getRoom(),
+                    "Batch " + batch.getBatchCode() + " isn't in room " + e.getRoom().getDisplayName() + ".");
+        }
 
         switch (action) {
-            case TRANSFER_TO_FLOWER -> require(positive(e.getPlantCount()), "Enter the number of plants moved.");
+            case TRANSFER_TO_VEG, TRANSFER_TO_FLOWER -> {
+                require(Room.forAction(action).contains(e.getRoom()),
+                        e.getRoom().getDisplayName() + " isn't a " + (action == BatchAction.TRANSFER_TO_VEG ? "veg" : "flowering") + " room option.");
+                require(positive(e.getPlantCount()), "Enter the number of plants moved.");
+            }
             case FILTER_CHANGE -> {
                 require(e.getFilterWork() != null, "Choose whether the filters were cleaned or changed.");
                 require(positive(e.getFilterCount()), "Enter the number of filters.");
@@ -332,7 +363,6 @@ public class BatchRecordService {
                 require(positive(e.getWeightKg()), "Enter the wet weight in kg.");
             }
             case DEBUCK_DESTEM -> {
-                require(positive(e.getPlantCount()), "Enter the number of plants processed.");
                 require(nonNegative(e.getFanLeafKg()), "Enter the fan leaf weight in kg (0 if none).");
                 require(nonNegative(e.getStemKg()), "Enter the stem weight in kg (0 if none).");
             }
@@ -349,7 +379,9 @@ public class BatchRecordService {
                     require(positive(e.getWeightKg()), "Enter the weight destroyed in kg.");
                 }
                 require(e.getDestructionMethod() != null, "Enter the destruction method.");
-                require(e.getWitness() != null, "Enter the witness.");
+                require(e.getWitness() != null, "Choose a witness.");
+                require(witnessOptions(e.getTechnician()).contains(e.getWitness()),
+                        "The witness must be someone else who is clocked in right now.");
             }
             default -> { }
         }
@@ -382,6 +414,12 @@ public class BatchRecordService {
             e.setBatch(batch);
         } else {
             checkCaps(e, false);
+            // The plants have moved: the batch now lives in the room they went to.
+            if (e.getAction().isTransfer() && e.getBatch() != null && e.getRoom() != null
+                    && e.getBatch().getRoom() != e.getRoom()) {
+                e.getBatch().setRoom(e.getRoom());
+                batchRepo.save(e.getBatch());
+            }
         }
         e.setStatus(BatchEntryStatus.APPROVED);
         entryRepo.save(e);
@@ -404,6 +442,11 @@ public class BatchRecordService {
         int plants = e.getPlantCount() != null ? e.getPlantCount() : 0;
 
         switch (e.getAction()) {
+            case TRANSFER_TO_VEG -> {
+                int left = approved.getPlantsStarted() - approved.getPlantsDestroyed()
+                        - approved.getPlantsToVeg() - pendingPlants(pending, BatchAction.TRANSFER_TO_VEG);
+                require(plants <= left, "Only " + Math.max(0, left) + " plants in " + code + " are left to transfer to veg.");
+            }
             case TRANSFER_TO_FLOWER -> {
                 int left = approved.getPlantsStarted() - approved.getPlantsDestroyed()
                         - approved.getPlantsTransferred() - pendingPlants(pending, BatchAction.TRANSFER_TO_FLOWER);

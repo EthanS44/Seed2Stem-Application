@@ -4,6 +4,7 @@ public enum DestructionMaterial {
     STEMS("Stems"),
     FAN_LEAVES("Fan leaves"),
     TRIM("Sugar leaves / trim"),
+    DRY_FLOWER("Dry flower"),
     WHOLE_PLANTS("Whole plants");
 
     private final String displayName;
